@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -484,7 +485,7 @@ namespace osu_Lyrics
             {
                 if (_Border == null)
                 {
-                    _Border = new Pen(BorderColor, BorderWidth);
+                    _Border = new Pen(BorderColor, BorderWidth) { LineJoin = LineJoin.Round };
                 }
                 return _Border;
             }

@@ -99,10 +99,9 @@ namespace osu_Lyrics
             try
             {
                 g = Graphics.FromImage(bmp);
-                g.SmoothingMode = SmoothingMode.HighQuality;
-                g.InterpolationMode = InterpolationMode.High;
-                g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
-                g.CompositingQuality = CompositingQuality.HighQuality;
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
                 DrawLyric(g);
 
                 hBitmap = bmp.GetHbitmap(Color.FromArgb(0));
