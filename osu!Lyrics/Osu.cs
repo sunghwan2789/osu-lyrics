@@ -228,7 +228,6 @@ namespace osu_Lyrics
             Task.Factory.StartNew(
                 () =>
                 {
-                    var log = new StreamWriter(File.OpenWrite(@"Z:\a.txt"));
                     var pipe = new NamedPipeClientStream(".", "osu!Lyrics", PipeDirection.In, PipeOptions.None);
                     pipe.Connect();
                     using (var sr = new StreamReader(pipe))
