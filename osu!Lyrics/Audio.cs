@@ -8,8 +8,6 @@ namespace osu_Lyrics
     {
         public string Path { get; private set; }
 
-        public string Hash { get; private set; }
-
         public AudioInfo Info { get; private set; }
 
         public double Sync { get; set; }

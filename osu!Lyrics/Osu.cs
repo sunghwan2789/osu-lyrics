@@ -163,7 +163,7 @@ namespace osu_Lyrics
 
         #endregion
 
-        #region InjectDLL(string dllName)
+        #region Listen(Action<string[]> onSignal)
 
         [DllImport("kernel32.dll")]
         private static extern IntPtr OpenProcess(int dwDesiredAccess, bool bInheritHandle, int dwProcessId);
@@ -200,18 +200,47 @@ namespace osu_Lyrics
         [DllImport("kernel32.dll")]
         private static extern Int32 CloseHandle(IntPtr hObject);
 
-        public static bool InjectDLL(string dllName)
+        private static bool InjectDLL(string dllName)
         {
-            var hProcess = OpenProcess(0x1F0FFF, true, Process.Id);
-            var libAddr = GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA");
-            var llParam = VirtualAllocEx(hProcess, IntPtr.Zero, dllName.Length + 1, 0x1000, 0x40);
+            const int PROCESS_ALL_ACCESS = 0x1F0FFF;
+            const int MEM_COMMIT = 0x1000;
+            const int PAGE_EXECUTE_READWRITE = 0x40;
 
+            var hProcess = OpenProcess(PROCESS_ALL_ACCESS, true, Process.Id);
+            var libAddr = GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA");
+            
+            var llParam = VirtualAllocEx(hProcess, IntPtr.Zero, dllName.Length + 1, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
             WriteProcessMemory(hProcess, llParam, dllName, dllName.Length + 1, IntPtr.Zero);
             var hThread = CreateRemoteThread(hProcess, IntPtr.Zero, 0, libAddr, llParam, 0, IntPtr.Zero);
             CloseHandle(hThread);
 
             CloseHandle(hProcess);
             return hThread != IntPtr.Zero;
+        }
+
+        public static bool Listen(Action<string[]> onSignal)
+        {
+            if (Program.Extract("osu_Lyrics.Server.dll", Settings._Server) && !InjectDLL(Settings._Server))
+            {
+                return false;
+            }
+
+            Task.Factory.StartNew(
+                () =>
+                {
+                    var log = new StreamWriter(File.OpenWrite(@"Z:\a.txt"));
+                    var pipe = new NamedPipeClientStream(".", "osu!Lyrics", PipeDirection.In, PipeOptions.None);
+                    pipe.Connect();
+                    using (var sr = new StreamReader(pipe))
+                    {
+                        while (pipe.IsConnected)
+                        {
+                            var data = sr.ReadLine().Split('|');
+                            Lyrics.Constructor.Invoke(new MethodInvoker(() => onSignal(data)));
+                        }
+                    }
+                });
+            return true;
         }
 
         #endregion
@@ -288,28 +317,6 @@ namespace osu_Lyrics
         {
             var val = Regex.Match(osu, key + @".*?:([^\r\n]*)").Groups[1].Value.Trim();
             return val == "" ? def : val;
-        }
-
-        #endregion
-
-        #region Listen(Action<string[]> onSignal)
-
-        public static void Listen(Action<string[]> onSignal)
-        {
-            Task.Factory.StartNew(
-                () =>
-                {
-                    var pipe = new NamedPipeClientStream(".", "osu!Lyrics", PipeDirection.In, PipeOptions.None);
-                    pipe.Connect();
-                    using (var sr = new StreamReader(pipe))
-                    {
-                        while (pipe.IsConnected)
-                        {
-                            var data = sr.ReadLine().Split('|');
-                            Lyrics.Constructor.Invoke(new MethodInvoker(() => onSignal(data)));
-                        }
-                    }
-                });
         }
 
         #endregion

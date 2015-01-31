@@ -39,8 +39,7 @@ namespace osu_Lyrics
         private static extern short GetAsyncKeyState(Keys vKey);
 
         public static readonly string _Path = Application.ExecutablePath + @".cfg";
-        public static readonly string _Port = Path.GetTempPath() + @"\osu!Lyrics.port";
-        public static readonly string _Server = Path.GetTempPath() + @"\osu!Lyrics.server";
+        public static readonly string _Server = Path.GetTempPath() + @"\osu!Lyrics.dll";
         public static readonly string _Grave = Path.GetTempPath() + @"\osu!Lyrics\";
 
         private static string Get(string section, string key)
@@ -56,12 +55,12 @@ namespace osu_Lyrics
         }
 
         private static int _LineCount = 0x40;
-        private static double _Opacity = -1;
+        private static int _Opacity = -1;
         private static int _VerticalAlign = -1;
         private static int _VerticalOffset = -1;
         private static int _HorizontalAlign = -1;
         private static int _HorizontalOffset = -1;
-        private static string _FontFamily = null;
+        private static FontFamily _FontFamily = null;
         private static int _FontStyle = -1;
         private static int _FontSize = -1;
         private static int _FontColor = -1;
@@ -91,28 +90,28 @@ namespace osu_Lyrics
             }
         }
 
-        public new static double Opacity
+        public new static int Opacity
         {
             get
             {
                 try
                 {
-                    if (_Opacity < 0.0)
+                    if (_Opacity < 0)
                     {
-                        _Opacity = Convert.ToDouble(Get("DESIGN", "Opacity"));
-                        if (_Opacity < 0.0 || _Opacity > 1.0)
+                        _Opacity = Convert.ToInt32(Get("DESIGN", "Opacity"));
+                        if (_Opacity < 0 || _Opacity > 100)
                         {
                             throw new OverflowException();
                         }
                     }
-                    else if (_Opacity > 1.0)
+                    else if (_Opacity > 100)
                     {
                         throw new OverflowException();
                     }
                 }
                 catch
                 {
-                    _Opacity = 1.0;
+                    _Opacity = 100;
                 }
                 return _Opacity;
             }
@@ -210,13 +209,20 @@ namespace osu_Lyrics
             }
         }
 
-        public static string FontFamily
+        public static FontFamily FontFamily
         {
             get
             {
                 if (_FontFamily == null)
                 {
-                    _FontFamily = Get("DESIGN", "FontFamily");
+                    try
+                    {
+                        _FontFamily = new FontFamily(Get("DESIGN", "FontFamily"));
+                    }
+                    catch
+                    {
+                        _FontFamily = FontFamily.GenericSerif;
+                    }
                 }
                 return _FontFamily;
             }
@@ -287,7 +293,7 @@ namespace osu_Lyrics
                         _FontColor = 0xFFFFFF;
                     }
                 }
-                return Color.FromArgb(((int) (Opacity * 255) << 24) | _FontColor);
+                return Color.FromArgb(Opacity * 255 / 100 << 24 | _FontColor);
             }
         }
 
@@ -333,7 +339,7 @@ namespace osu_Lyrics
                         _BorderColor = 0x000000;
                     }
                 }
-                return Color.FromArgb(((int) (Opacity * 255) << 24) | _BorderColor);
+                return Color.FromArgb(Opacity * 255 / 100 << 24 | _BorderColor);
             }
         }
 
@@ -431,12 +437,9 @@ namespace osu_Lyrics
 
 
         private static StringFormat _StringFormat = null;
-        private static Font _Font = null;
         private static SolidBrush _Brush = null;
         private static Pen _Border = null;
-        private static float _FontSizeInEm = -1;
-        private static PointF _DrawingOrigin = new PointF();
-        private static float _NoticeFontSizeInEm = -1;
+        private static Point _DrawingOrigin = Point.Empty;
 
         public static StringFormat StringFormat
         {
@@ -452,18 +455,6 @@ namespace osu_Lyrics
                     };
                 }
                 return _StringFormat;
-            }
-        }
-
-        public new static Font Font
-        {
-            get
-            {
-                if (_Font == null)
-                {
-                    _Font = new Font(FontFamily, FontSize, (FontStyle) FontStyle, GraphicsUnit.Point);
-                }
-                return _Font;
             }
         }
 
@@ -491,43 +482,19 @@ namespace osu_Lyrics
             }
         }
 
-        public static float FontSizeInEm
-        {
-            get
-            {
-                if (_FontSizeInEm < 0)
-                {
-                    throw new OverflowException();
-                }
-                return _FontSizeInEm;
-            }
-            set { _FontSizeInEm = value; }
-        }
-
-        public static PointF DrawingOrigin
+        public static Point DrawingOrigin
         {
             get
             {
                 if (_DrawingOrigin.IsEmpty)
                 {
-                    throw new OverflowException();
+                    _DrawingOrigin = new Point(
+                        HorizontalOffset + (int) HorizontalAlign * Lyrics.Constructor.Width / 2,
+                        VerticalOffset + (int) VerticalAlign * Lyrics.Constructor.Height / 2);
                 }
                 return _DrawingOrigin;
             }
             set { _DrawingOrigin = value; }
-        }
-
-        public static float NoticeFontSizeInEm
-        {
-            get
-            {
-                if (_NoticeFontSizeInEm < 0)
-                {
-                    throw new OverflowException();
-                }
-                return _NoticeFontSizeInEm;
-            }
-            set { _NoticeFontSizeInEm = value; }
         }
 
 
@@ -539,12 +506,12 @@ namespace osu_Lyrics
         {
             label17.Text = Application.ProductVersion;
             numericUpDown1.Value = LineCount;
-            trackBar1.Value = (int) Math.Floor(Opacity * 100);
+            trackBar1.Value = Opacity;
             comboBox1.SelectedIndex = (int) VerticalAlign;
             numericUpDown2.Value = Math.Abs(VerticalOffset);
             comboBox2.SelectedIndex = (int) HorizontalAlign;
             numericUpDown3.Value = Math.Abs(HorizontalOffset);
-            __Font = Font;
+            __Font = new Font(FontFamily, FontSize, (FontStyle) FontStyle, GraphicsUnit.Point);
             __FontColor = FontColor;
             numericUpDown4.Value = BorderWidth;
             __BorderColor = BorderColor;
@@ -614,12 +581,12 @@ namespace osu_Lyrics
             }
 
             _LineCount = (int) numericUpDown1.Value;
-            _Opacity = trackBar1.Value / 100.0;
+            _Opacity = trackBar1.Value;
             _VerticalAlign = comboBox1.SelectedIndex;
             _VerticalOffset = (int) numericUpDown2.Value;
             _HorizontalAlign = comboBox2.SelectedIndex;
             _HorizontalOffset = (int) numericUpDown3.Value;
-            _FontFamily = __Font.Name;
+            _FontFamily = __Font.FontFamily;
             _FontStyle = (int) __Font.Style;
             _FontSize = (int) Math.Round(__Font.Size);
             _FontColor = __FontColor.ToArgb() & 0xFFFFFF;
@@ -636,11 +603,9 @@ namespace osu_Lyrics
         private static void UpdateScreen()
         {
             _StringFormat = null;
-            _Font = null;
             _Brush = null;
             _Border = null;
-            _FontSizeInEm = -1;
-            _DrawingOrigin = new PointF();
+            _DrawingOrigin = Point.Empty;
 
             Lyrics.Constructor.Invoke(new MethodInvoker(Lyrics.Constructor.Refresh));
         }
@@ -652,12 +617,12 @@ namespace osu_Lyrics
                 Update();
 
                 Set("LAYOUT", "LineCount", _LineCount.ToString());
-                Set("DESIGN", "Opacity", _Opacity.ToString("F2"));
+                Set("DESIGN", "Opacity", _Opacity.ToString());
                 Set("LAYOUT", "VerticalAlign", _VerticalAlign.ToString());
                 Set("LAYOUT", "VerticalOffset", _VerticalOffset.ToString());
                 Set("LAYOUT", "HorizontalAlign", _HorizontalAlign.ToString());
                 Set("LAYOUT", "HorizontalOffset", _HorizontalOffset.ToString());
-                Set("DESIGN", "FontFamily", _FontFamily);
+                Set("DESIGN", "FontFamily", _FontFamily.Name);
                 Set("DESIGN", "FontStyle", _FontStyle.ToString());
                 Set("DESIGN", "FontSize", _FontSize.ToString());
                 Set("DESIGN", "FontColor", _FontColor.ToString("X6"));

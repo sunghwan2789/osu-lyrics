@@ -8,7 +8,6 @@ using System.Drawing.Text;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -94,16 +93,17 @@ namespace osu_Lyrics
             var hBitmap = IntPtr.Zero;
             var hOldBitmap = IntPtr.Zero;
 
-            var bmp = new Bitmap(Width, Height, PixelFormat.Format32bppArgb);
+            Bitmap bmp = null;
             Graphics g = null;
             try
             {
+                bmp = new Bitmap(Width, Height, PixelFormat.Format32bppArgb);
                 g = Graphics.FromImage(bmp);
                 g.SmoothingMode = SmoothingMode.AntiAlias;
                 g.InterpolationMode = InterpolationMode.HighQualityBicubic;
                 g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
-                DrawLyric(g);
 
+                DrawLyric(g);
                 hBitmap = bmp.GetHbitmap(Color.FromArgb(0));
                 hOldBitmap = SelectObject(hMemDC, hBitmap);
 
@@ -124,7 +124,10 @@ namespace osu_Lyrics
             {
                 g.Dispose();
             }
-            bmp.Dispose();
+            if (bmp != null)
+            {
+                bmp.Dispose();
+            }
 
             ReleaseDC(IntPtr.Zero, hDC);
             if (hBitmap != IntPtr.Zero)
@@ -139,29 +142,9 @@ namespace osu_Lyrics
 
         private void Lyrics_Load(object sender, EventArgs e)
         {
-            try
-            {
-                Directory.Delete(Settings._Grave, true);
-            }
-            catch {}
-            try
-            {
-                Directory.CreateDirectory(Settings._Grave);
-            }
-            catch {}
-            if (File.Exists(Settings._Server))
-            {
-                File.Move(Settings._Server, Settings._Grave + Path.GetRandomFileName());
-            }
-            using (var src = Assembly.GetExecutingAssembly().GetManifestResourceStream("osu_Lyrics.Server.dll"))
-            using (var dst = new FileStream(Settings._Server, FileMode.Create))
-            {
-                src.CopyTo(dst);
-            }
             Osu.Show();
-            Notice("osu!Lyrics {0}", Osu.InjectDLL(Settings._Server) ? Application.ProductVersion : "초기화 실패");
-            Osu.Listen(Osu_Signal);
-
+            Notice("osu!Lyrics {0}", Osu.Listen(Osu_Signal) ? Application.ProductVersion : "초기화 실패");
+            
             Osu.HookKeyboard(Osu_KeyDown);
             backgroundWorker1.RunWorkerAsync();
 
@@ -176,21 +159,27 @@ namespace osu_Lyrics
             while (!Osu.Process.HasExited)
             {
                 Osu.Refresh();
-                if (!Location.Equals(Osu.Location))
+                if (!Osu.Show(true))
                 {
-                    Location = Osu.Location;
+                    TopMost = Visible = true;
+                    if (!Location.Equals(Osu.Location))
+                    {
+                        Location = Osu.Location;
+                    }
+                    if (!ClientSize.Equals(Osu.ClientSize))
+                    {
+                        ClientSize = Osu.ClientSize;
+                        Settings.DrawingOrigin = Point.Empty;
+                    }
                 }
-                if (!ClientSize.Equals(Osu.ClientSize))
+                else
                 {
-                    ClientSize = Osu.ClientSize;
-                    Settings.DrawingOrigin = new PointF();
+                    Visible = false;
                 }
-                Visible = !Osu.Show(true);
-                TopMost = true;
 
                 if (NewLyricAvailable())
                 {
-                    Invalidate();
+                    Refresh();
                 }
 
                 Thread.Sleep(Settings.RefreshRate);
@@ -217,7 +206,7 @@ namespace osu_Lyrics
             timer1.Stop();
 
             _notice = value;
-            Invalidate();
+            Refresh();
 
             timer1.Start();
         }
@@ -339,13 +328,14 @@ namespace osu_Lyrics
 
         private void Osu_Signal(string[] data)
         {
-            // [ audioPath, audioPosition, beatmapPath ]
-            if (data[0] != curAudio.Path)
+            // [ time, audioPath, audioPosition, beatmapPath ]
+            if (data[1] != curAudio.Path)
             {
-                curAudio = new Audio(data[0]) { Beatmap = data[2] };
-                UpdateLyrics(File.ReadAllText(data[2]));
+                curAudio = new Audio(data[1]) { Beatmap = data[3] };
+                UpdateLyrics(File.ReadAllText(data[3]));
             }
-            curTime = curAudio.Info.Time(Convert.ToInt64(data[1]));
+            curTime = DateTimeOffset.Now.Subtract(DateTimeOffset.FromFileTime(Convert.ToInt64(data[0]))).TotalSeconds +
+                      curAudio.Info.Time(Convert.ToUInt32(data[2]));
         }
 
 
@@ -494,20 +484,9 @@ namespace osu_Lyrics
             {
                 using (var path = new GraphicsPath())
                 {
-                    while (true)
-                    {
-                        try
-                        {
-                            path.AddString(
-                                _notice, Settings.Font.FontFamily, Settings.FontStyle, Settings.NoticeFontSizeInEm,
-                                Point.Empty, StringFormat.GenericDefault);
-                            break;
-                        }
-                        catch
-                        {
-                            Settings.NoticeFontSizeInEm = g.DpiY * 14 / 72;
-                        }
-                    }
+                    path.AddString(
+                        _notice, Settings.FontFamily, Settings.FontStyle, g.DpiY * 14 / 72, Point.Empty,
+                        StringFormat.GenericDefault);
                     if (Settings.BorderWidth > 0)
                     {
                         g.DrawPath(Settings.Border, path);
@@ -555,24 +534,9 @@ namespace osu_Lyrics
 
             using (var path = new GraphicsPath())
             {
-                while (true)
-                {
-                    try
-                    {
-                        path.AddString(
-                            lyricBuilder.ToString(), Settings.Font.FontFamily, Settings.FontStyle, Settings.FontSizeInEm,
-                            Settings.DrawingOrigin, Settings.StringFormat);
-                        break;
-                    }
-                    catch
-                    {
-                        Settings.FontSizeInEm = g.DpiY * Settings.Font.Size / 72;
-                        Settings.DrawingOrigin =
-                            new PointF(
-                                Settings.HorizontalOffset + (int) Settings.HorizontalAlign * Width / 2F,
-                                Settings.VerticalOffset + (int) Settings.VerticalAlign * Height / 2F);
-                    }
-                }
+                path.AddString(
+                    lyricBuilder.ToString(), Settings.FontFamily, Settings.FontStyle, g.DpiY * Settings.FontSize / 72,
+                    Settings.DrawingOrigin, Settings.StringFormat);
                 if (Settings.BorderWidth > 0)
                 {
                     g.DrawPath(Settings.Border, path);
@@ -617,7 +581,6 @@ namespace osu_Lyrics
             if (e.Button == MouseButtons.Left)
             {
                 Osu.Show();
-                Invalidate();
             }
         }
 

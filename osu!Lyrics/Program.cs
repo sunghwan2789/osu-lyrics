@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -24,6 +25,37 @@ namespace osu_Lyrics
             else
             {
                 Osu.Show();
+            }
+        }
+
+        public static bool Extract(string res, string dst)
+        {
+            try
+            {
+                Directory.Delete(Settings._Grave, true);
+            }
+            catch {}
+            try
+            {
+                Directory.CreateDirectory(Settings._Grave);
+            }
+            catch {}
+            try
+            {
+                if (File.Exists(dst))
+                {
+                    File.Move(dst, Settings._Grave + Path.GetRandomFileName());
+                }
+                using (var src = Assembly.GetExecutingAssembly().GetManifestResourceStream(res))
+                using (var dest = new FileStream(dst, FileMode.Create))
+                {
+                    src.CopyTo(dest);
+                }
+                return true;
+            }
+            catch
+            {
+                return false;
             }
         }
     }
