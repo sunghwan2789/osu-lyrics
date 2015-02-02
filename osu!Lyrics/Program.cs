@@ -9,12 +9,25 @@ namespace osu_Lyrics
 {
     internal class Program
     {
-        private static readonly Mutex Mutex = new Mutex(
+        public static readonly Mutex Mutex = new Mutex(
             true, Assembly.GetExecutingAssembly().GetCustomAttributes(typeof(GuidAttribute), true)[0].ToString());
 
         [STAThread]
         private static void Main()
         {
+            var oldVer = Application.ExecutablePath + @".del";
+            while (File.Exists(oldVer))
+            {
+                try
+                {
+                    File.Delete(oldVer);
+                }
+                catch
+                {
+                    Thread.Sleep(1000);
+                }
+            }
+
             if (Mutex.WaitOne(TimeSpan.Zero, true))
             {
                 Application.EnableVisualStyles();

@@ -243,8 +243,7 @@ namespace osu_Lyrics
             }
             var content = data.Aggregate(Resources.ResourceManager.GetString(act), (o, i) => o.Replace(i.Key, i.Value));
 
-            var wr = (HttpWebRequest) WebRequest.Create(@"http://lyrics.alsong.co.kr/alsongwebservice/service1.asmx");
-            wr.ServicePoint.Expect100Continue = false;
+            var wr = Request.Create(@"http://lyrics.alsong.co.kr/alsongwebservice/service1.asmx");
             wr.Method = "POST";
             wr.UserAgent = "gSOAP";
             wr.ContentType = "application/soap+xml; charset=utf-8";

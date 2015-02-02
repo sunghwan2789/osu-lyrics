@@ -102,7 +102,7 @@
             this.numericUpDown1.Size = new System.Drawing.Size(42, 21);
             this.numericUpDown1.TabIndex = 0;
             this.numericUpDown1.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
-            this.numericUpDown1.ValueChanged += new System.EventHandler(this.Update);
+            this.numericUpDown1.ValueChanged += new System.EventHandler(this.UpdateSettings);
             // 
             // label2
             // 
@@ -179,7 +179,7 @@
             this.numericUpDown2.Size = new System.Drawing.Size(58, 21);
             this.numericUpDown2.TabIndex = 3;
             this.numericUpDown2.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
-            this.numericUpDown2.ValueChanged += new System.EventHandler(this.Update);
+            this.numericUpDown2.ValueChanged += new System.EventHandler(this.UpdateSettings);
             // 
             // numericUpDown3
             // 
@@ -193,7 +193,7 @@
             this.numericUpDown3.Size = new System.Drawing.Size(58, 21);
             this.numericUpDown3.TabIndex = 5;
             this.numericUpDown3.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
-            this.numericUpDown3.ValueChanged += new System.EventHandler(this.Update);
+            this.numericUpDown3.ValueChanged += new System.EventHandler(this.UpdateSettings);
             // 
             // label6
             // 
@@ -282,7 +282,7 @@
             0,
             0,
             0});
-            this.numericUpDown4.ValueChanged += new System.EventHandler(this.Update);
+            this.numericUpDown4.ValueChanged += new System.EventHandler(this.UpdateSettings);
             // 
             // button3
             // 

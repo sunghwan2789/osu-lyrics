@@ -4,8 +4,8 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
-using System.Net;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
@@ -528,19 +528,19 @@ namespace osu_Lyrics
         private void trackBar1_ValueChanged(object sender, EventArgs e)
         {
             label3.Text = trackBar1.Value.ToString("#0'%'");
-            Update();
+            UpdateSettings();
         }
 
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
             numericUpDown2.Enabled = comboBox1.SelectedIndex != 1;
-            Update();
+            UpdateSettings();
         }
 
         private void comboBox2_SelectedIndexChanged(object sender, EventArgs e)
         {
             numericUpDown3.Enabled = comboBox2.SelectedIndex != 1;
-            Update();
+            UpdateSettings();
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -549,7 +549,7 @@ namespace osu_Lyrics
             if (fontDialog1.ShowDialog() == DialogResult.OK)
             {
                 __Font = fontDialog1.Font;
-                Update();
+                UpdateSettings();
             }
         }
 
@@ -559,7 +559,7 @@ namespace osu_Lyrics
             if (colorDialog1.ShowDialog() == DialogResult.OK)
             {
                 __FontColor = colorDialog1.Color;
-                Update();
+                UpdateSettings();
             }
         }
 
@@ -569,11 +569,11 @@ namespace osu_Lyrics
             if (colorDialog1.ShowDialog() == DialogResult.OK)
             {
                 __BorderColor = colorDialog1.Color;
-                Update();
+                UpdateSettings();
             }
         }
 
-        private void Update(object sender = null, EventArgs e = null)
+        private void UpdateSettings(object sender = null, EventArgs e = null)
         {
             if (!Loaded)
             {
@@ -614,7 +614,7 @@ namespace osu_Lyrics
         {
             if (DialogResult == DialogResult.OK)
             {
-                Update();
+                UpdateSettings();
 
                 Set("LAYOUT", "LineCount", _LineCount.ToString());
                 Set("DESIGN", "Opacity", _Opacity.ToString());
@@ -707,56 +707,58 @@ namespace osu_Lyrics
             var textBox = (TextBox) sender;
             textBox.Text = key.ToString();
             textBox.Tag = key;
-            Update();
+            UpdateSettings();
         }
 
         private void button6_Click(object sender, EventArgs e)
         {
-            const string versionURL = @"http://bloodcat.com/_data/static/lv.txt";
-            const string programURL = @"http://bloodcat.com/_data/static/lz.zip";
+            const string url = @"http://bloodcat.com/_data/static/lv.txt";
 
             try
             {
-                using (var wc = new WebClient { Encoding = Encoding.UTF8 })
+                var current = Version.Parse(Application.ProductVersion);
+                Version latest = null;
+                var restartOsu = false;
+                var changes = new List<string>();
+                using (var sr = new StreamReader(Request.Create(url).GetResponse().GetResponseStream(), Encoding.UTF8))
                 {
-                    var current = Version.Parse(Application.ProductVersion);
-                    var data =
-                        wc.DownloadString(versionURL)
-                            .Replace("\r\n", "\n")
-                            .Replace("\r", "\n")
-                            .Split(new[] { "\n" }, StringSplitOptions.RemoveEmptyEntries)
-                            .Select(i => i.Split(new[] { '|' }, 2))
-                            .TakeWhile(i => Version.Parse(i[0]) > current)
-                            .ToList();
-                    data.Reverse();
-                    if (data.Count > 0)
+                    while (!sr.EndOfStream)
                     {
-                        var sb = new StringBuilder();
-                        sb.Append(current);
-                        sb.Append("->");
-                        sb.AppendLine(data[0][0]);
-                        sb.AppendLine();
-                        data.ForEach(i => sb.AppendLine(i[1]));
-                        if (
-                            MessageBox.Show(
-                                sb.ToString().TrimEnd(), @"최신 버전을 내려받을까요?", MessageBoxButtons.YesNo,
-                                MessageBoxIcon.Question) == DialogResult.Yes)
+                        var data = sr.ReadLine().Split('|');
+                        var version = Version.Parse(data[0]);
+                        if (latest == null)
                         {
-                            var dir = Path.GetDirectoryName(_Path);
-                            wc.DownloadFile(programURL, dir + @"\osu!Lyrics.zip");
-                            if (MessageBox.Show(@"최신 버전을 내려받아 osu!Lyrics.zip으로 저장했습니다.
-내려받은 폴더를 열고 프로그램을 종료하시겠습니까?", @"내려받기 완료", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-                            {
-                                Process.Start(dir);
-                                Application.Exit();
-                            }
+                            latest = version;
                         }
+                        if (version <= current)
+                        {
+                            break;
+                        }
+                        if (data[1][0] == '_')
+                        {
+                            restartOsu = true;
+                            data[1] = data[1].Remove(0, 1);
+                        }
+                        changes.Add(data[1].Replace(';', '\n'));
                     }
-                    else
+                }
+                if (changes.Any())
+                {
+                    changes.Reverse();
+                    var sb = new StringBuilder();
+                    sb.AppendFormat("최신 버전으로 업데이트할까요?{0}\n\n", restartOsu ? " (주의! osu! 재시작됨!!)" : "");
+                    sb.AppendFormat("{0}->{1} 변경사항\n", current, latest);
+                    changes.ForEach(i => sb.AppendLine(i));
+                    if (MessageBox.Show(sb.ToString(), @"업데이트 발견", MessageBoxButtons.YesNo, MessageBoxIcon.Question) ==
+                        DialogResult.Yes)
                     {
-                        MessageBox.Show(@"최신 버전입니다!
-기능추가 및 개선요청은 osu! 메세지로 보내주세요.", @"야호!", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        UpdateProgram(restartOsu);
                     }
+                }
+                else
+                {
+                    MessageBox.Show(@"최신 버전입니다!
+기능추가 및 개선요청은 osu! 메세지로 보내주세요.", @"야호!", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
             catch
@@ -768,6 +770,70 @@ namespace osu_Lyrics
         private void button7_Click(object sender, EventArgs e)
         {
             Process.Start(@"http://osu.ppy.sh/u/1112529");
+        }
+
+        private static int ReadInt(byte[] buff, int len)
+        {
+            var val = 0;
+            for (var i = 0; i < len; i++)
+            {
+                val |= buff[i] << 8 * i;
+            }
+            return val;
+        }
+
+        private static void UpdateProgram(bool restartOsu)
+        {
+            const string url = @"http://bloodcat.com/_data/static/lz.zip";
+
+            var current = Application.ExecutablePath;
+            var update = Path.GetTempFileName();
+            using (var zip = Request.Create(url).GetResponse().GetResponseStream())
+            using (var ms = new MemoryStream())
+            using (var fs = File.OpenWrite(update))
+            {
+                var buff = new byte[4096];
+                if (!Encoding.ASCII.GetString(buff, 0, zip.Read(buff, 0, 2)).Equals("PK", StringComparison.Ordinal) ||
+                    ReadInt(buff, zip.Read(buff, 0, 2)) != 0x0403)
+                {
+                    throw new Exception();
+                }
+
+                zip.Read(buff, 0, 14);
+                var length = ReadInt(buff, zip.Read(buff, 0, 4));
+                zip.Read(buff, 0, 4);
+                zip.Read(buff, 0, ReadInt(buff, zip.Read(buff, 0, 2)) + ReadInt(buff, zip.Read(buff, 0, 2)));
+
+                buff = new byte[4096];
+                while (length > 0)
+                {
+                    var read = zip.Read(buff, 0, buff.Length);
+                    length -= read;
+                    if (length <= 0)
+                    {
+                        read -= length;
+                    }
+                    ms.Write(buff, 0, read);
+                }
+
+                ms.Seek(0, SeekOrigin.Begin);
+                using (var deflate = new DeflateStream(ms, CompressionMode.Decompress))
+                {
+                    deflate.CopyTo(fs);
+                }
+            }
+
+            File.Move(current, current + @".del");
+            File.Move(update, current);
+
+            Lyrics.Constructor.Close();
+            if (restartOsu)
+            {
+                Osu.Process.Kill();
+            }
+            Program.Mutex.ReleaseMutex();
+            Process.Start(current);
+            Application.Exit();
         }
     }
 }
