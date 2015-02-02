@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -57,6 +58,17 @@ namespace osu_Lyrics
                 }
                 return _process;
             }
+        }
+
+        #endregion
+
+        #region Directory
+
+        private static string _Directory;
+
+        public static string Directory
+        {
+            get { return _Directory ?? (_Directory = Path.GetDirectoryName(Process.MainModule.FileName)); }
         }
 
         #endregion
@@ -218,6 +230,8 @@ namespace osu_Lyrics
             return hThread != IntPtr.Zero;
         }
 
+        private readonly static ConcurrentQueue<string> DataQueue = new ConcurrentQueue<string>();
+
         public static bool Listen(Action<string[]> onSignal)
         {
             if (Program.Extract("osu_Lyrics.Server.dll", Settings._Server) && !InjectDLL(Settings._Server))
@@ -228,14 +242,31 @@ namespace osu_Lyrics
             Task.Factory.StartNew(
                 () =>
                 {
-                    var pipe = new NamedPipeClientStream(".", "osu!Lyrics", PipeDirection.In, PipeOptions.None);
-                    pipe.Connect();
+                    using (var pipe = new NamedPipeClientStream(".", "osu!Lyrics", PipeDirection.In, PipeOptions.None))
                     using (var sr = new StreamReader(pipe))
                     {
+                        pipe.Connect();
                         while (pipe.IsConnected)
                         {
-                            var data = sr.ReadLine().Split('|');
-                            Lyrics.Constructor.Invoke(new MethodInvoker(() => onSignal(data)));
+                            // 파이프 통신을 할 때 버퍼가 다 차면
+                            // 비동기적으로 데이터를 보내는 프로그램도 멈추므로 빨리빨리 받기!
+                            DataQueue.Enqueue(sr.ReadLine());
+                        }
+                    }
+                });
+            Task.Factory.StartNew(
+                () =>
+                {
+                    while (true)
+                    {
+                        string data;
+                        if (DataQueue.TryDequeue(out data))
+                        {
+                            Lyrics.Constructor.Invoke(new MethodInvoker(() => onSignal(data.Split('|'))));
+                        }
+                        else
+                        {
+                            Thread.Sleep(100);
                         }
                     }
                 });

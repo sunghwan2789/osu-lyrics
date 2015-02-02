@@ -11,9 +11,7 @@ using namespace std;
 long long CurrentTime()
 {
     long long t;
-    SYSTEMTIME st;
-    GetSystemTime(&st);
-    SystemTimeToFileTime(&st, (LPFILETIME) &t);
+    GetSystemTimeAsFileTime((LPFILETIME) &t);
     return t;
 }
 
@@ -79,7 +77,7 @@ BOOL bPipeConnected;
 
 DWORD WINAPI PipeMan(LPVOID lParam)
 {
-    hPipe = CreateNamedPipe("\\\\.\\pipe\\osu!Lyrics", PIPE_ACCESS_OUTBOUND, PIPE_TYPE_MESSAGE | PIPE_WAIT, 1, BUF_SIZE, 0, 1000, NULL);
+    hPipe = CreateNamedPipe("\\\\.\\pipe\\osu!Lyrics", PIPE_ACCESS_OUTBOUND, PIPE_TYPE_MESSAGE | PIPE_WAIT, 1, BUF_SIZE * 5, 0, 1000, NULL);
     while (1)
     {
         if (ConnectNamedPipe(hPipe, NULL) || GetLastError() == ERROR_PIPE_CONNECTED)
@@ -105,6 +103,7 @@ BYTE bReadFile[5] = {};
 CRITICAL_SECTION lReadFile;
 OVERLAPPED overlapped;
 
+DWORD dirLen = 4;
 unordered_map<string, string> audioMap;
 
 BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped)
@@ -132,6 +131,8 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
         {
             if (strnicmp(token, "AudioFilename:", 14) == 0)
             {
+                char audio[MAX_PATH];
+
                 int i = 14;
                 for (; token[i] == ' '; i++);
                 buff[0] = '\0';
@@ -139,16 +140,19 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
 
                 token = strdup(path);
                 PathRemoveFileSpec(token);
-
-                char audio[MAX_PATH];
                 PathCombine(audio, token, buff);
-
                 free(token);
+
+                // 검색할 때 대소문자 구분하므로 제대로 된 파일명 얻기
+                WIN32_FIND_DATA fdata;
+                FindClose(FindFirstFile(audio, &fdata));
+                PathRemoveFileSpec(audio);
+                PathCombine(audio, audio, fdata.cFileName);
 
                 string tmp(audio);
                 if (audioMap.find(tmp) == audioMap.end())
                 {
-                    audioMap.insert(make_pair(tmp, string(path)));
+                    audioMap.insert(make_pair(tmp, string(&path[dirLen])));
                 }
                 break;
             }
@@ -162,7 +166,7 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
         if (pair != audioMap.end())
         {
             char buff[BUF_SIZE];
-            if (!WriteFileEx(hPipe, buff, sprintf(buff, "%lld|%s|%lu|%s\n", sReadFile, &path[4], SetFilePointer(hFile, 0, NULL, FILE_CURRENT) - *lpNumberOfBytesRead, &pair->second[4]), &overlapped, [](DWORD, DWORD, LPOVERLAPPED) {}))
+            if (!WriteFileEx(hPipe, buff, sprintf(buff, "%llx|%s|%lx|%s\n", sReadFile, &path[dirLen], SetFilePointer(hFile, 0, NULL, FILE_CURRENT) - *lpNumberOfBytesRead, pair->second), &overlapped, [](DWORD, DWORD, LPOVERLAPPED) {}))
             {
                 bPipeConnected = FALSE;
             }
@@ -177,6 +181,11 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
     if (fdwReason == DLL_PROCESS_ATTACH)
     {
         CloseHandle(CreateThread(NULL, 0, PipeMan, NULL, 0, NULL));
+
+        char dir[MAX_PATH];
+        GetModuleFileName(NULL, dir, MAX_PATH);
+        PathRemoveFileSpec(dir);
+        dirLen = 4 + strlen(dir);
 
         InitializeCriticalSection(&lReadFile);
         oReadFile = (tReadFile) GetProcAddress(GetModuleHandle("kernel32.dll"), "ReadFile");

@@ -20,7 +20,7 @@ namespace osu_Lyrics
         {
             Path = path;
 
-            using (var fs = new FileStream(Path, FileMode.Open, FileAccess.Read))
+            using (var fs = new FileStream(Osu.Directory + Path, FileMode.Open, FileAccess.Read))
             {
                 var buff = new byte[4];
                 Info = "OggS".Equals(

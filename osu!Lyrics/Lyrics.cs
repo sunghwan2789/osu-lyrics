@@ -331,11 +331,11 @@ namespace osu_Lyrics
             // [ time, audioPath, audioPosition, beatmapPath ]
             if (data[1] != curAudio.Path)
             {
-                curAudio = new Audio(data[1]) { Beatmap = data[3] };
-                UpdateLyrics(File.ReadAllText(data[3]));
+                curAudio = new Audio(data[1]) { Beatmap = Osu.Directory + data[3] };
+                UpdateLyrics(File.ReadAllText(curAudio.Beatmap));
             }
-            curTime = DateTimeOffset.Now.Subtract(DateTimeOffset.FromFileTime(Convert.ToInt64(data[0]))).TotalSeconds +
-                      curAudio.Info.Time(Convert.ToUInt32(data[2]));
+            curTime = DateTimeOffset.Now.Subtract(DateTimeOffset.FromFileTime(Convert.ToInt64(data[0], 16))).TotalSeconds +
+                      curAudio.Info.Time(Convert.ToUInt32(data[2], 16));
         }
 
 
@@ -365,7 +365,7 @@ namespace osu_Lyrics
                 return;
             }
 
-            lyricsCache = new List<Lyric> { new Lyric(0, "가사 받는 중") };
+            lyricsCache = new List<Lyric> { new Lyric(0, "가사 받는 중...") };
             _cts = new CancellationTokenSource();
             Task.Factory.StartNew(
                 () =>
@@ -435,11 +435,11 @@ namespace osu_Lyrics
             set
             {
                 _curLyric = value;
-                lyricsBuffer.Clear();
+                lyricBuffer.Clear();
             }
         }
 
-        private readonly StringBuilder lyricsBuffer = new StringBuilder();
+        private readonly List<string> lyricBuffer = new List<string>();
 
         private bool NewLyricAvailable()
         {
@@ -461,7 +461,7 @@ namespace osu_Lyrics
                         curLyric = lyric;
                         flag = true;
                     }
-                    lyricsBuffer.AppendLine(lyric.Text);
+                    lyricBuffer.Add(lyric.Text);
                     lyrics.Dequeue();
                 }
                 else
@@ -501,34 +501,31 @@ namespace osu_Lyrics
             }
 
             var lyricBuilder = new StringBuilder();
-
-            var lyricsArray = lyricsBuffer.ToString()
-                .Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
-            var lyricsLines = lyricsArray.Length;
+            var lyricCount = lyricBuffer.Count;
             if (Settings.LineCount == 0)
             {
-                foreach (var i in lyricsArray)
+                foreach (var i in lyricBuffer)
                 {
                     lyricBuilder.AppendLine(i);
                 }
             }
             else if (Settings.LineCount > 0)
             {
-                for (var i = 0; i < Settings.LineCount && i < lyricsLines; i++)
+                for (var i = 0; i < Settings.LineCount && i < lyricCount; i++)
                 {
-                    lyricBuilder.AppendLine(lyricsArray[i]);
+                    lyricBuilder.AppendLine(lyricBuffer[i]);
                 }
             }
             else
             {
-                var i = lyricsLines + Settings.LineCount;
+                var i = lyricCount + Settings.LineCount;
                 if (i < 0)
                 {
                     i = 0;
                 }
-                for (; i < lyricsLines; i++)
+                for (; i < lyricCount; i++)
                 {
-                    lyricBuilder.AppendLine(lyricsArray[i]);
+                    lyricBuilder.AppendLine(lyricBuffer[i]);
                 }
             }
 
