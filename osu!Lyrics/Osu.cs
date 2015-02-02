@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.IO.Pipes;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -234,7 +235,9 @@ namespace osu_Lyrics
 
         public static bool Listen(Action<string[]> onSignal)
         {
-            if (Program.Extract("osu_Lyrics.Server.dll", Settings._Server) && !InjectDLL(Settings._Server))
+            Program.Extract(
+                Assembly.GetExecutingAssembly().GetManifestResourceStream("osu_Lyrics.Server.dll"), Settings._Server);
+            if (!InjectDLL(Settings._Server))
             {
                 return false;
             }

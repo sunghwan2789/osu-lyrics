@@ -144,13 +144,13 @@ namespace osu_Lyrics
         {
             Osu.Show();
             Notice("osu!Lyrics {0}", Osu.Listen(Osu_Signal) ? Application.ProductVersion : "초기화 실패");
-            
+
             Osu.HookKeyboard(Osu_KeyDown);
             backgroundWorker1.RunWorkerAsync();
 
             if (!File.Exists(Settings._Path))
             {
-                toolStripMenuItem1.PerformClick();
+                Task.Factory.StartNew(() => Invoke(new MethodInvoker(toolStripMenuItem1.PerformClick)));
             }
         }
 
@@ -589,7 +589,6 @@ namespace osu_Lyrics
                 using (Settings = new Settings { TopMost = true })
                 {
                     Settings.ShowDialog();
-                    Osu.Show();
                 }
                 Settings = null;
             }

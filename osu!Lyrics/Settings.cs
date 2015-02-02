@@ -40,7 +40,7 @@ namespace osu_Lyrics
 
         public static readonly string _Path = Application.ExecutablePath + @".cfg";
         public static readonly string _Server = Path.GetTempPath() + @"\osu!Lyrics.dll";
-        public static readonly string _Grave = Path.GetTempPath() + @"\osu!Lyrics\";
+        public static readonly string _BakExt = @".del";
 
         private static string Get(string section, string key)
         {
@@ -662,10 +662,7 @@ namespace osu_Lyrics
             Close();
         }
 
-        private bool Pressed(Keys key)
-        {
-            return Convert.ToBoolean(GetAsyncKeyState(key));
-        }
+
 
         private void textBox1_KeyDown(object sender, KeyEventArgs e)
         {
@@ -690,7 +687,7 @@ namespace osu_Lyrics
                 {
                     if (i.Key == key)
                     {
-                        foreach (var j in i.Value.Where(Pressed))
+                        foreach (var j in i.Value.Where(k => Convert.ToBoolean(GetAsyncKeyState(k))))
                         {
                             flag = true;
                             key = j;
@@ -709,6 +706,8 @@ namespace osu_Lyrics
             textBox.Tag = key;
             UpdateSettings();
         }
+
+
 
         private void button6_Click(object sender, EventArgs e)
         {
@@ -772,6 +771,8 @@ namespace osu_Lyrics
             Process.Start(@"http://osu.ppy.sh/u/1112529");
         }
 
+
+
         private static int ReadInt(byte[] buff, int len)
         {
             var val = 0;
@@ -790,7 +791,6 @@ namespace osu_Lyrics
             var update = Path.GetTempFileName();
             using (var zip = Request.Create(url).GetResponse().GetResponseStream())
             using (var ms = new MemoryStream())
-            using (var fs = File.OpenWrite(update))
             {
                 var buff = new byte[4096];
                 if (!Encoding.ASCII.GetString(buff, 0, zip.Read(buff, 0, 2)).Equals("PK", StringComparison.Ordinal) ||
@@ -817,23 +817,18 @@ namespace osu_Lyrics
                 }
 
                 ms.Seek(0, SeekOrigin.Begin);
-                using (var deflate = new DeflateStream(ms, CompressionMode.Decompress))
-                {
-                    deflate.CopyTo(fs);
-                }
+                Program.Extract(new DeflateStream(ms, CompressionMode.Decompress), update);
             }
 
-            File.Move(current, current + @".del");
+            File.Move(current, current + _BakExt);
             File.Move(update, current);
 
-            Lyrics.Constructor.Close();
+            Application.Exit();
             if (restartOsu)
             {
                 Osu.Process.Kill();
             }
-            Program.Mutex.ReleaseMutex();
             Process.Start(current);
-            Application.Exit();
         }
     }
 }
