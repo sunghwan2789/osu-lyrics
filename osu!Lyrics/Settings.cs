@@ -773,12 +773,12 @@ namespace osu_Lyrics
 
 
 
-        private static int ReadInt(byte[] buff, int len)
+        private static int ReadInt(byte[] buff, int offset, int len)
         {
             var val = 0;
-            for (var i = 0; i < len; i++)
+            for (var i = 0; i < len && i < 4; i++)
             {
-                val |= buff[i] << 8 * i;
+                val |= buff[offset + i] << 8 * i;
             }
             return val;
         }
@@ -793,18 +793,13 @@ namespace osu_Lyrics
             using (var ms = new MemoryStream())
             {
                 var buff = new byte[4096];
-                if (!Encoding.ASCII.GetString(buff, 0, zip.Read(buff, 0, 2)).Equals("PK", StringComparison.Ordinal) ||
-                    ReadInt(buff, zip.Read(buff, 0, 2)) != 0x0403)
+                if (ReadInt(buff, 0, zip.Read(buff, 0, 30)) != 0x04034B50)
                 {
                     throw new Exception();
                 }
 
-                zip.Read(buff, 0, 14);
-                var length = ReadInt(buff, zip.Read(buff, 0, 4));
-                zip.Read(buff, 0, 4);
-                zip.Read(buff, 0, ReadInt(buff, zip.Read(buff, 0, 2)) + ReadInt(buff, zip.Read(buff, 0, 2)));
-
-                buff = new byte[4096];
+                var length = ReadInt(buff, 18, 4);
+                zip.Read(buff, 0, ReadInt(buff, 26, 2) + ReadInt(buff, 28, 2));
                 while (length > 0)
                 {
                     var read = zip.Read(buff, 0, buff.Length);

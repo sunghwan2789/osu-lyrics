@@ -8,11 +8,11 @@ namespace osu_Lyrics
     {
         protected long RawPosition = 0;
 
-        protected int KBitrate = 0;
+        protected int BitRate = 0;
 
         public double Time(long position)
         {
-            return KBitrate > 0 ? 8.0 * (position - RawPosition) / KBitrate : 0;
+            return BitRate > 0 ? 8.0 * (position - RawPosition) / BitRate : 0;
         }
 
         public string Hash { get; protected set; }

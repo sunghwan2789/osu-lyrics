@@ -13,7 +13,7 @@ namespace osu_Lyrics
             // identification header
             var buff = new byte[4];
             s.Read(buff, 0, buff.Length);
-            KBitrate = buff[0] | buff[1] << 8 | buff[2] << 16 | buff[3] << 24;
+            BitRate = buff[0] | buff[1] << 8 | buff[2] << 16 | buff[3] << 24;
 
             // setup header
             buff = new byte[4096];
