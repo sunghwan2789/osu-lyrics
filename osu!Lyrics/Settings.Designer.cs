@@ -67,6 +67,8 @@
             this.label14 = new System.Windows.Forms.Label();
             this.label18 = new System.Windows.Forms.Label();
             this.label17 = new System.Windows.Forms.Label();
+            this.checkBox1 = new System.Windows.Forms.CheckBox();
+            this.checkBox2 = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.trackBar1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown2)).BeginInit();
@@ -468,8 +470,7 @@
             this.label18.Size = new System.Drawing.Size(11, 12);
             this.label18.TabIndex = 40;
             this.label18.Text = "?";
-            this.toolTip1.SetToolTip(this.label18, "핫키로 조절한 싱크 타이밍은 플레이 시작할 때마다 초기화됨\r\nEscape 키로 핫키 취소\r\n\r\n싱크 느리게 & 싱크 빠르게: 싱크 0.5초만큼 조" +
-        "절\r\n토글: 가사 숨김/보임");
+            this.toolTip1.SetToolTip(this.label18, "핫키로 조절한 싱크 타이밍은 곡이 바뀔 때마다 초기화됨\r\nEscape 키로 핫키 취소\r\n\r\n싱크 느리게 & 싱크 빠르게: 싱크 0.5초만큼 조절\r\n토글: 가사 숨김/보임\r\n\r\n핫키 전송 막기 기능은 핫키가 제구실하면 작동함");
             // 
             // label17
             // 
@@ -481,12 +482,34 @@
             this.label17.Text = "1.0.0.0";
             this.label17.TextAlign = System.Drawing.ContentAlignment.TopRight;
             // 
+            // checkBox1
+            // 
+            this.checkBox1.AutoSize = true;
+            this.checkBox1.Location = new System.Drawing.Point(14, 173);
+            this.checkBox1.Name = "checkBox1";
+            this.checkBox1.Size = new System.Drawing.Size(160, 16);
+            this.checkBox1.TabIndex = 41;
+            this.checkBox1.Text = "싱크 조절 가사 보일 때만";
+            this.checkBox1.UseVisualStyleBackColor = true;
+            // 
+            // checkBox2
+            // 
+            this.checkBox2.AutoSize = true;
+            this.checkBox2.Location = new System.Drawing.Point(187, 173);
+            this.checkBox2.Name = "checkBox2";
+            this.checkBox2.Size = new System.Drawing.Size(104, 16);
+            this.checkBox2.TabIndex = 42;
+            this.checkBox2.Text = "핫키 전송 막기";
+            this.checkBox2.UseVisualStyleBackColor = true;
+            // 
             // Settings
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.Window;
             this.ClientSize = new System.Drawing.Size(379, 248);
+            this.Controls.Add(this.checkBox2);
+            this.Controls.Add(this.checkBox1);
             this.Controls.Add(this.label18);
             this.Controls.Add(this.label17);
             this.Controls.Add(this.label14);
@@ -579,5 +602,7 @@
         private System.Windows.Forms.Button button7;
         private System.Windows.Forms.Label label17;
         private System.Windows.Forms.Label label18;
+        private System.Windows.Forms.CheckBox checkBox1;
+        private System.Windows.Forms.CheckBox checkBox2;
     }
 }

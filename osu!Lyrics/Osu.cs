@@ -125,20 +125,11 @@ namespace osu_Lyrics
 
         private delegate IntPtr HOOKPROC(int code, IntPtr wParam, IntPtr lParam);
 
-        private struct KBDLLHOOKSTRUCT
-        {
-            public int vkCode;
-            public int scanCode;
-            public int flags;
-            public int time;
-            public IntPtr dwExtraInfo;
-        }
-
         private static IntPtr _hhkk; // hookHandleKeyKeyboard
         private static HOOKPROC _hpk; // hookProcKeyboard
-        private static Action<Keys> _hak; // hookActionKeyboard
+        private static Func<Keys, bool> _hak; // hookActionKeyboard
 
-        public static void HookKeyboard(Action<Keys> action)
+        public static void HookKeyboard(Func<Keys, bool> action)
         {
             const int WH_KEYBOARD_LL = 13;
 
@@ -161,9 +152,9 @@ namespace osu_Lyrics
             if (!Show(true) && nCode == HC_ACTION)
             {
                 var state = wParam.ToInt32();
-                if (state == WM_KEYDOWN || state == WM_SYSKEYDOWN)
+                if ((state == WM_KEYDOWN || state == WM_SYSKEYDOWN) && _hak((Keys) Marshal.ReadInt32(lParam)) && Settings.SuppressKey)
                 {
-                    _hak((Keys) ((KBDLLHOOKSTRUCT) Marshal.PtrToStructure(lParam, typeof(KBDLLHOOKSTRUCT))).vkCode);
+                    return (IntPtr) 1;
                 }
             }
             return CallNextHookEx(_hhkk, nCode, wParam, lParam);

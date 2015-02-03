@@ -70,6 +70,8 @@ namespace osu_Lyrics
         private static int _KeyBackward = -1;
         private static int _KeyForward = -1;
         private static int _KeyToggle = -1;
+        private static int _BlockSyncOnHide = -1;
+        private static int _SuppressKey = -1;
 
         public static int LineCount
         {
@@ -94,9 +96,9 @@ namespace osu_Lyrics
         {
             get
             {
-                try
+                if (_Opacity < 0 || _Opacity > 100)
                 {
-                    if (_Opacity < 0)
+                    try
                     {
                         _Opacity = Convert.ToInt32(Get("DESIGN", "Opacity"));
                         if (_Opacity < 0 || _Opacity > 100)
@@ -104,14 +106,10 @@ namespace osu_Lyrics
                             throw new OverflowException();
                         }
                     }
-                    else if (_Opacity > 100)
+                    catch
                     {
-                        throw new OverflowException();
+                        _Opacity = 100;
                     }
-                }
-                catch
-                {
-                    _Opacity = 100;
                 }
                 return _Opacity;
             }
@@ -435,6 +433,52 @@ namespace osu_Lyrics
             }
         }
 
+        public static bool BlockSyncOnHide
+        {
+            get
+            {
+                if (_BlockSyncOnHide < 0 || _BlockSyncOnHide > 1)
+                {
+                    try
+                    {
+                        _BlockSyncOnHide = Convert.ToInt32(Get("PROGRAM", "BlockSyncOnHide"));
+                        if (_BlockSyncOnHide < 0 || _BlockSyncOnHide > 1)
+                        {
+                            throw new OverflowException();
+                        }
+                    }
+                    catch
+                    {
+                        _BlockSyncOnHide = 0;
+                    }
+                }
+                return _BlockSyncOnHide == 1;
+            }
+        }
+
+        public static bool SuppressKey
+        {
+            get
+            {
+                if (_SuppressKey < 0 || _SuppressKey > 1)
+                {
+                    try
+                    {
+                        _SuppressKey = Convert.ToInt32(Get("PROGRAM", "SuppressKey"));
+                        if (_SuppressKey < 0 || _SuppressKey > 1)
+                        {
+                            throw new OverflowException();
+                        }
+                    }
+                    catch
+                    {
+                        _SuppressKey = 0;
+                    }
+                }
+                return _SuppressKey == 1;
+            }
+        }
+
 
         private static StringFormat _StringFormat = null;
         private static SolidBrush _Brush = null;
@@ -522,6 +566,8 @@ namespace osu_Lyrics
             textBox2.Tag = KeyForward;
             textBox3.Text = KeyToggle.ToString();
             textBox3.Tag = KeyToggle;
+            checkBox1.Checked = BlockSyncOnHide;
+            checkBox2.Checked = SuppressKey;
             Loaded = true;
         }
 
@@ -596,6 +642,8 @@ namespace osu_Lyrics
             _KeyBackward = (int) textBox1.Tag;
             _KeyForward = (int) textBox2.Tag;
             _KeyToggle = (int) textBox3.Tag;
+            _BlockSyncOnHide = checkBox1.Checked ? 1 : 0;
+            _SuppressKey = checkBox2.Checked ? 1 : 0;
 
             UpdateScreen();
         }
@@ -632,6 +680,8 @@ namespace osu_Lyrics
                 Set("PROGRAM", "KeyBackward", _KeyBackward.ToString());
                 Set("PROGRAM", "KeyForward", _KeyForward.ToString());
                 Set("PROGRAM", "KeyToggle", _KeyToggle.ToString());
+                Set("PROGRAM", "BlockSyncOnHide", _BlockSyncOnHide.ToString());
+                Set("PROGRAM", "SuppressKey", _SuppressKey.ToString());
             }
             else
             {
@@ -651,6 +701,8 @@ namespace osu_Lyrics
                 _KeyBackward = -1;
                 _KeyForward = -1;
                 _KeyToggle = -1;
+                _BlockSyncOnHide = -1;
+                _SuppressKey = -1;
 
                 UpdateScreen();
             }

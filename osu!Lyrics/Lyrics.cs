@@ -545,24 +545,31 @@ namespace osu_Lyrics
 
 
 
-        private void Osu_KeyDown(Keys key)
+        private bool Osu_KeyDown(Keys key)
         {
-            if (key == Settings.KeyBackward)
-            {
-                curAudio.Sync += 0.5;
-                lyricsCache = lyricsCache;
-                Notice("싱크 느리게({0}초)", curAudio.Sync.ToString("F1"));
-            }
-            else if (key == Settings.KeyForward)
-            {
-                curAudio.Sync -= 0.5;
-                Notice("싱크 빠르게({0}초)", curAudio.Sync.ToString("F1"));
-            }
-            else if (key == Settings.KeyToggle)
+            if (key == Settings.KeyToggle)
             {
                 showLyric = !showLyric;
                 Notice("가사 {0}", showLyric ? "보임" : "숨김");
+                return true;
             }
+            if (!Settings.BlockSyncOnHide || (Settings.BlockSyncOnHide && showLyric))
+            {
+                if (key == Settings.KeyBackward)
+                {
+                    curAudio.Sync += 0.5;
+                    lyricsCache = lyricsCache;
+                    Notice("싱크 느리게({0}초)", curAudio.Sync.ToString("F1"));
+                    return true;
+                }
+                if (key == Settings.KeyForward)
+                {
+                    curAudio.Sync -= 0.5;
+                    Notice("싱크 빠르게({0}초)", curAudio.Sync.ToString("F1"));
+                    return true;
+                }
+            }
+            return false;
         }
 
 
