@@ -825,16 +825,6 @@ namespace osu_Lyrics
 
 
 
-        private static int ReadInt(byte[] buff, int offset, int len)
-        {
-            var val = 0;
-            for (var i = 0; i < len && i < 4; i++)
-            {
-                val |= buff[offset + i] << 8 * i;
-            }
-            return val;
-        }
-
         private static void UpdateProgram(bool restartOsu)
         {
             const string url = @"http://bloodcat.com/_data/static/lz.zip";
@@ -845,13 +835,13 @@ namespace osu_Lyrics
             using (var ms = new MemoryStream())
             {
                 var buff = new byte[4096];
-                if (ReadInt(buff, 0, zip.Read(buff, 0, 30)) != 0x04034B50)
+                if (Program.IntB(buff, 0, zip.Read(buff, 0, 30)) != 0x504B0304) // "PK"
                 {
                     throw new Exception();
                 }
 
-                var length = ReadInt(buff, 18, 4);
-                zip.Read(buff, 0, ReadInt(buff, 26, 2) + ReadInt(buff, 28, 2));
+                var length = Program.Int(buff, 18);
+                zip.Read(buff, 0, Program.Int(buff, 26, 2) + Program.Int(buff, 28, 2));
                 while (length > 0)
                 {
                     var read = zip.Read(buff, 0, buff.Length);

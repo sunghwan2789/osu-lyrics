@@ -1,6 +1,4 @@
-﻿using System;
-using System.IO;
-using System.Text;
+﻿using System.IO;
 
 namespace osu_Lyrics
 {
@@ -16,7 +14,7 @@ namespace osu_Lyrics
             do
             {
                 read = s.Read(buff, 0, buff.Length);
-                if ("ID3".Equals(Encoding.ASCII.GetString(buff, 0, 3), StringComparison.Ordinal))
+                if (Program.IntB(buff, 0, 3) == 0x494433) // "ID3"
                 {
                     s.Seek(buff[6] << 21 | buff[7] << 14 | buff[8] << 7 | buff[9], SeekOrigin.Current);
                 }
@@ -34,49 +32,40 @@ namespace osu_Lyrics
                 read = s.Read(buff, 0, buff.Length);
                 for (var i = 3; i < read; i++)
                 {
-                    var header = ReadInt(buff, i - 3);
+                    var header = Program.IntB(buff, i - 3);
                     if (Validate(header))
                     {
-                        s.Seek(-read + i + 1, SeekOrigin.Current);
-                        read = ParseVersion(header) == 3
-                            ? (ParseMode(header) == 3 ? 17 : 32)
-                            : (ParseMode(header) == 3 ? 9 : 17);
-                        s.Seek(read, SeekOrigin.Current);
-                        s.Read(buff, 0, 12);
-                        s.Seek(-(read + 12), SeekOrigin.Current);
-                        BitRate = GetBitRate(header, LoadVBR(buff), s.Length);
+                        RawPosition = s.Position - read + i - 3;
                         read = 0;
+
+                        s.Seek(RawPosition + 4 + LoadStream(header), SeekOrigin.Begin);
+                        s.Read(buff, 0, 12);
+                        BitRate = GetBitRate(header, LoadVBR(buff), s.Length - RawPosition);
                         break;
                     }
                 }
                 s.Seek(-4, SeekOrigin.Current);
             } while (read == buff.Length);
 
-            RawPosition = s.Position;
             SetHash(s);
         }
 
-        private static int ReadInt(byte[] buff, int offset)
+        private static int LoadStream(int header)
         {
-            var val = 0;
-            for (var i = 0; i < 4; i++)
-            {
-                val |= buff[offset + i] << 8 * (3 - i);
-            }
-            return val;
+            return ParseVersion(header) == 3 ? (ParseMode(header) == 3 ? 17 : 32) : (ParseMode(header) == 3 ? 9 : 17);
         }
 
         private static int LoadVBR(byte[] buff)
         {
-            return Encoding.ASCII.GetString(buff, 0, 4).Equals("Xing", StringComparison.Ordinal)
-                ? (ReadInt(buff, 4) & 1) == 1 ? ReadInt(buff, 8) : -1
+            return Program.IntB(buff, 0) == 0x58696E67 // "Xing"
+                ? (Program.IntB(buff, 4) & 1) == 1 ? Program.IntB(buff, 8) : -1
                 : 0;
         }
 
         private static bool Validate(int header)
         {
             return ((header >> 21) & 0x7FF) == 0x7FF && ParseVersion(header) != 1 && ParseLayer(header) != 0 &&
-                   ParseBitRate(header) != 0 && ParseBitRate(header) != 15 && ParseSampleRate(header) != 3 &&
+                   ParseBitRate(header) != 0 && ParseBitRate(header) != 0xF && ParseSampleRate(header) != 3 &&
                    ParseEmphasis(header) != 2;
         }
 
@@ -92,7 +81,7 @@ namespace osu_Lyrics
 
         private static int ParseBitRate(int header)
         {
-            return (header >> 12) & 15;
+            return (header >> 12) & 0xF;
         }
 
         private static int ParseSampleRate(int header)
