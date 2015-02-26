@@ -269,39 +269,10 @@ namespace osu_Lyrics
 
         #endregion
 
-        #region Refesch()
-
-        public static void Refresh()
-        {
-            Process.Refresh();
-            _location = new Point();
-            _clientSize = new Size();
-        }
-
-        #endregion
-
-        #region Location
+        #region WindowInfo()
 
         [DllImport("user32.dll")]
         private static extern bool ClientToScreen(IntPtr hWnd, out Point lpPoint);
-
-        private static Point _location;
-
-        public static Point Location
-        {
-            get
-            {
-                if (_location.IsEmpty)
-                {
-                    ClientToScreen(Process.MainWindowHandle, out _location);
-                }
-                return _location;
-            }
-        }
-
-        #endregion
-
-        #region ClientSize
 
         [DllImport("user32.dll")]
         private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
@@ -314,23 +285,27 @@ namespace osu_Lyrics
             public int bottom;
         }
 
-        private static Size _clientSize;
-
-        public static Size ClientSize
+        public struct WNDINFO
         {
-            get
+            public Point Location;
+            public Size ClientSize;
+        }
+
+        public static WNDINFO WindowInfo()
+        {
+            Point location;
+            ClientToScreen(Process.MainWindowHandle, out location);
+
+            RECT rect;
+            GetWindowRect(Process.MainWindowHandle, out rect);
+            var border = location.X - rect.left;
+            var title = location.Y - rect.top;
+
+            return new WNDINFO
             {
-                if (_clientSize.IsEmpty)
-                {
-                    RECT rect;
-                    GetWindowRect(Process.MainWindowHandle, out rect);
-                    var borderWidth = Location.X - rect.left;
-                    var titleHeight = Location.Y - rect.top;
-                    _clientSize = new Size(
-                        rect.right - rect.left - 2 * borderWidth, rect.bottom - rect.top - borderWidth - titleHeight);
-                }
-                return _clientSize;
-            }
+                Location = location,
+                ClientSize = new Size(rect.right - rect.left - border * 2, rect.bottom - rect.top - border - title)
+            };
         }
 
         #endregion

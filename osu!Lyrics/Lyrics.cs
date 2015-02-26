@@ -158,19 +158,19 @@ namespace osu_Lyrics
         {
             while (!Osu.Process.HasExited)
             {
-                Osu.Refresh();
                 if (!Osu.Show(true))
                 {
-                    TopMost = Visible = true;
-                    if (!Location.Equals(Osu.Location))
+                    var osu = Osu.WindowInfo();
+                    if (!Location.Equals(osu.Location))
                     {
-                        Location = Osu.Location;
+                        Location = osu.Location;
                     }
-                    if (!ClientSize.Equals(Osu.ClientSize))
+                    if (!ClientSize.Equals(osu.ClientSize))
                     {
-                        ClientSize = Osu.ClientSize;
+                        ClientSize = osu.ClientSize;
                         Settings.DrawingOrigin = Point.Empty;
                     }
+                    TopMost = Visible = true;
                 }
                 else
                 {
