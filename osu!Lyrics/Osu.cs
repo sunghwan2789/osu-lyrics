@@ -200,7 +200,9 @@ namespace osu_Lyrics
             IntPtr lpParameter,
             int dwCreationFlags,
             IntPtr lpThreadId);
-
+        [DllImport("kernel32.dll")]
+        private static extern uint WaitForSingleObject(IntPtr hHandle, uint dwMilliseconds);
+        
         [DllImport("kernel32.dll")]
         private static extern Int32 CloseHandle(IntPtr hObject);
 
@@ -216,9 +218,12 @@ namespace osu_Lyrics
             var llParam = VirtualAllocEx(hProcess, IntPtr.Zero, dllName.Length + 1, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
             WriteProcessMemory(hProcess, llParam, dllName, dllName.Length + 1, IntPtr.Zero);
             var hThread = CreateRemoteThread(hProcess, IntPtr.Zero, 0, libAddr, llParam, 0, IntPtr.Zero);
+            
+            WaitForSingleObject(hThread);
+            
             CloseHandle(hThread);
-
             CloseHandle(hProcess);
+            
             return hThread != IntPtr.Zero;
         }
 
