@@ -186,6 +186,12 @@ namespace osu_Lyrics
             int flProtect);
 
         [DllImport("kernel32.dll")]
+        private static extern IntPtr VirtualFreeEx(IntPtr hProcess,
+            IntPtr lpAddress,
+            int dwSize,
+            int dwFreeType);
+
+        [DllImport("kernel32.dll")]
         private static extern bool WriteProcessMemory(IntPtr hProcess,
             IntPtr lpBaseAddress,
             string lpBuffer,
@@ -207,18 +213,23 @@ namespace osu_Lyrics
         private static bool InjectDLL(string dllName)
         {
             const int PROCESS_ALL_ACCESS = 0x1F0FFF;
+
+            const int MEM_RESERVE = 0x2000;
             const int MEM_COMMIT = 0x1000;
-            const int PAGE_EXECUTE_READWRITE = 0x40;
+            const int PAGE_READWRITE = 0x40;
+            const int MEM_RELEASE = 0x8000;
 
             var hProcess = OpenProcess(PROCESS_ALL_ACCESS, true, Process.Id);
-            var libAddr = GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA");
+            var pLoadLibrary = GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA");
             
-            var llParam = VirtualAllocEx(hProcess, IntPtr.Zero, dllName.Length + 1, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
-            WriteProcessMemory(hProcess, llParam, dllName, dllName.Length + 1, IntPtr.Zero);
-            var hThread = CreateRemoteThread(hProcess, IntPtr.Zero, 0, libAddr, llParam, 0, IntPtr.Zero);
-            CloseHandle(hThread);
+            var pdllName = VirtualAllocEx(hProcess, IntPtr.Zero, dllName.Length + 1, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+            WriteProcessMemory(hProcess, pdllName, dllName, dllName.Length + 1, IntPtr.Zero);
+            var hThread = CreateRemoteThread(hProcess, IntPtr.Zero, 0, pLoadLibrary, pdllName, 0, IntPtr.Zero);
+            VirtualFreeEx(hProcess, pdllName, 0, MEM_RELEASE);
 
+            CloseHandle(hThread);
             CloseHandle(hProcess);
+
             return hThread != IntPtr.Zero;
         }
 
