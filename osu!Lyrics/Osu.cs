@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Microsoft.Win32;
+using System.Linq;
 
 namespace osu_Lyrics
 {
@@ -24,40 +25,40 @@ namespace osu_Lyrics
         {
             get
             {
-                if (_process == null)
+                if (_process != null)
                 {
-                    try
-                    {
-                        _process = Process.GetProcessesByName("osu!")[0];
-                    }
-                    catch
-                    {
-                        try
-                        {
-                            _process = new Process
-                            {
-                                StartInfo =
-                                    new ProcessStartInfo(
-                                        Registry.GetValue(@"HKEY_CLASSES_ROOT\osu!\DefaultIcon\", null, null)
-                                            .ToString()
-                                            .Split('"')[1])
-                            };
-                            _process.Start();
-                        }
-                        catch
-                        {
-                            MessageBox.Show(@"osu!가 설치되어있나요?");
-                            Application.Exit();
-                            return null;
-                        }
-                    }
-
                     while (_process.MainWindowHandle == IntPtr.Zero)
                     {
                         Thread.Sleep(1000);
                     }
+                    return _process;
                 }
-                return _process;
+
+                // osu!가 실행 중인지 확인하고 _process로 연결
+                _process = Process.GetProcessesByName("osu!").FirstOrDefault();
+                if (_process != null)
+                {
+                    return Process;
+                }
+
+                // osu!가 실행 중이 아니므로 하나 띄운다
+                var exec = Convert.ToString(Registry.GetValue(@"HKEY_CLASSES_ROOT\osu!\shell\open\command", null, null));
+                if (exec != null)
+                {
+                    _process = new Process
+                    {
+                        StartInfo = new ProcessStartInfo
+                        {
+                            FileName = exec.Split(new[] { '"' }, StringSplitOptions.RemoveEmptyEntries).First()
+                        }
+                    };
+                    _process.Start();
+                    return Process;
+                }
+
+                MessageBox.Show("osu!가 설치되어있나요?");
+                Application.Exit();
+                return null;
             }
         }
 
@@ -152,8 +153,10 @@ namespace osu_Lyrics
             if (!Show(true) && nCode == HC_ACTION)
             {
                 var state = wParam.ToInt32();
-                if ((state == WM_KEYDOWN || state == WM_SYSKEYDOWN) && _hak((Keys) Marshal.ReadInt32(lParam)) && Settings.SuppressKey)
+                if ((state == WM_KEYDOWN || state == WM_SYSKEYDOWN) &&
+                    _hak((Keys) Marshal.ReadInt32(lParam)) && Settings.SuppressKey)
                 {
+                    // 설정 중 "핫키 전송 막기" 활성화시 osu!로 핫기 전송 막는 부분..
                     return (IntPtr) 1;
                 }
             }
@@ -208,73 +211,79 @@ namespace osu_Lyrics
             IntPtr lpThreadId);
 
         [DllImport("kernel32.dll")]
-        private static extern Int32 CloseHandle(IntPtr hObject);
-
-        private static bool InjectDLL(string dllName)
+        private static extern bool CloseHandle(IntPtr hObject);
+        
+        private static bool InjectDLL(string dllPath)
         {
             const int PROCESS_ALL_ACCESS = 0x1F0FFF;
 
             const int MEM_RESERVE = 0x2000;
             const int MEM_COMMIT = 0x1000;
-            const int PAGE_READWRITE = 0x40;
+            const int PAGE_EXECUTE_READWRITE = 0x40;
             const int MEM_RELEASE = 0x8000;
-
-            var hProcess = OpenProcess(PROCESS_ALL_ACCESS, true, Process.Id);
-            var pLoadLibrary = GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA");
             
-            var pdllName = VirtualAllocEx(hProcess, IntPtr.Zero, dllName.Length + 1, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-            WriteProcessMemory(hProcess, pdllName, dllName, dllName.Length + 1, IntPtr.Zero);
-            var hThread = CreateRemoteThread(hProcess, IntPtr.Zero, 0, pLoadLibrary, pdllName, 0, IntPtr.Zero);
-            VirtualFreeEx(hProcess, pdllName, 0, MEM_RELEASE);
+            var hProcess = OpenProcess(PROCESS_ALL_ACCESS, true, Process.Id);
 
+            var pLoadLibrary = GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA");
+            var pDllPath = VirtualAllocEx(hProcess, IntPtr.Zero, dllPath.Length + 1, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+            WriteProcessMemory(hProcess, pDllPath, dllPath, dllPath.Length + 1, IntPtr.Zero);
+
+            var hThread = CreateRemoteThread(hProcess, IntPtr.Zero, 0, pLoadLibrary, pDllPath, 0, IntPtr.Zero);
+            VirtualFreeEx(hProcess, pDllPath, 0, MEM_RELEASE);
             CloseHandle(hThread);
             CloseHandle(hProcess);
+
 
             return hThread != IntPtr.Zero;
         }
 
+        private static int hinstDLL;
         private readonly static ConcurrentQueue<string> DataQueue = new ConcurrentQueue<string>();
 
         public static bool Listen(Action<string[]> onSignal)
         {
-            Program.Extract(
-                Assembly.GetExecutingAssembly().GetManifestResourceStream("osu_Lyrics.Server.dll"), Settings._Server);
+            Program.Extract(Assembly.GetExecutingAssembly().GetManifestResourceStream("osu_Lyrics.Server.dll"), Settings._Server);
             if (!InjectDLL(Settings._Server))
             {
                 return false;
             }
 
-            Task.Factory.StartNew(
-                () =>
+            // Receive
+            Task.Run(() =>
+            {
+                using (var pipe = new NamedPipeClientStream(".", "osu!Lyrics", PipeDirection.In, PipeOptions.None))
+                using (var sr = new StreamReader(pipe))
                 {
-                    using (var pipe = new NamedPipeClientStream(".", "osu!Lyrics", PipeDirection.In, PipeOptions.None))
-                    using (var sr = new StreamReader(pipe))
+                    pipe.Connect();
+                    while (pipe.IsConnected)
                     {
-                        pipe.Connect();
-                        while (pipe.IsConnected)
-                        {
-                            // 파이프 통신을 할 때 버퍼가 다 차면
-                            // 비동기적으로 데이터를 보내는 프로그램도 멈추므로 빨리빨리 받기!
-                            DataQueue.Enqueue(sr.ReadLine());
-                        }
+                        // 파이프 통신을 할 때 버퍼가 다 차면
+                        // 비동기적으로 데이터를 보내는 프로그램도 멈추므로 빨리빨리 받기!
+                        DataQueue.Enqueue(sr.ReadLine());
                     }
-                });
-            Task.Factory.StartNew(
-                () =>
+                }
+            });
+            // Process
+            Task.Run(() =>
+            {
+                while (true)
                 {
-                    while (true)
+                    string data;
+                    if (DataQueue.TryDequeue(out data))
                     {
-                        string data;
-                        if (DataQueue.TryDequeue(out data))
+                        if (data.StartsWith("_"))
                         {
-                            Lyrics.Constructor.Invoke(new MethodInvoker(() => onSignal(data.Split('|'))));
+                            hinstDLL = Convert.ToInt32(data.Substring(1));
+                            continue;
                         }
-                        else
-                        {
-                            Thread.Sleep(100);
-                        }
+                        Lyrics.Constructor.Invoke(new MethodInvoker(() => onSignal(data.Split('|'))));
                     }
-                });
+                    else
+                    {
+                        Thread.Sleep(100);
+                    }
+                }
+            });
             return true;
         }
 

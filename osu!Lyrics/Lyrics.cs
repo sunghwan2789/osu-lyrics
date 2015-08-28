@@ -150,7 +150,7 @@ namespace osu_Lyrics
 
             if (!File.Exists(Settings._Path))
             {
-                Task.Factory.StartNew(() => Invoke(new MethodInvoker(toolStripMenuItem1.PerformClick)));
+                Task.Run(() => Invoke(new MethodInvoker(toolStripMenuItem1.PerformClick)));
             }
         }
 
@@ -263,41 +263,6 @@ namespace osu_Lyrics
                         .Select(i => new Lyric(i))
                         .Where(i => i.Text.Length != 0)
                         .ToList();
-
-                #region FOR DEBUG
-
-                /*var builder = new StringBuilder();
-                var d2 = d.Remove(0, 38).Split(new[] { "<" }, StringSplitOptions.RemoveEmptyEntries);
-                var level = 0;
-                
-                foreach (var line in d2)
-                {
-                    if (line.StartsWith("/"))
-                    {
-                        level--;
-                        continue;
-                    }
-
-                    for (var i = 0; i < level; i++)
-                    {
-                        builder.Append("  ");
-                    }
-                    builder.Append("<");
-                    builder.AppendLine(line);
-
-                    if (!line.StartsWith("/") && !line.EndsWith("/>"))
-                    {
-                        level++;
-                    }
-                }
-
-                using (var w = new StreamWriter(@"E:\a.txt", false, Encoding.UTF8))
-                {
-                    w.Write(builder.ToString());
-                }
-                Process.Start(@"E:\a.txt");*/
-
-                #endregion
             }
         }
 
@@ -330,7 +295,7 @@ namespace osu_Lyrics
             // [ time, audioPath, audioPosition, beatmapPath ]
             if (data[1] != curAudio.Path)
             {
-                curAudio = new Audio(data[1]) { Beatmap = Osu.Directory + data[3] };
+                curAudio = new Audio(data[1]) { Beatmap = data[3] };
                 UpdateLyrics(File.ReadAllText(curAudio.Beatmap));
             }
             curTime = DateTimeOffset.Now.Subtract(DateTimeOffset.FromFileTime(Convert.ToInt64(data[0], 16))).TotalSeconds +
@@ -366,61 +331,55 @@ namespace osu_Lyrics
 
             lyricsCache = new List<Lyric> { new Lyric(0, "가사 받는 중...") };
             _cts = new CancellationTokenSource();
-            Task.Factory.StartNew(
-                () =>
+            Task.Run(() =>
+            {
+                List<Lyric> data;
+                try
                 {
-                    List<Lyric> data;
+                    var hash = "";
+                    Invoke(new MethodInvoker(() => hash = curAudio.Info.Hash));
+                    _cts.Token.ThrowIfCancellationRequested();
+                    data = GetLyrics(new Dictionary<string, string> { { "[HASH]", hash } });
+                    data.Insert(0, new Lyric());
+                }
+                catch
+                {
                     try
                     {
-                        var hash = "";
-                        Invoke(new MethodInvoker(() => hash = curAudio.Info.Hash));
                         _cts.Token.ThrowIfCancellationRequested();
-                        data = GetLyrics(new Dictionary<string, string> { { "[HASH]", hash } });
+                        data = GetLyrics(new Dictionary<string, string>
+                        {
+                            {
+                                "[TITLE]",
+                                Osu.GetBeatmapSetting(
+                                    beatmap, "TitleUnicode", Osu.GetBeatmapSetting(beatmap, "Title"))
+                            },
+                            {
+                                "[ARTIST]",
+                                Osu.GetBeatmapSetting(
+                                    beatmap, "ArtistUnicode", Osu.GetBeatmapSetting(beatmap, "Artist"))
+                            }
+                        });
                         data.Insert(0, new Lyric());
                     }
                     catch
                     {
-                        try
-                        {
-                            _cts.Token.ThrowIfCancellationRequested();
-                            data =
-                                GetLyrics(
-                                    new Dictionary<string, string>
-                                    {
-                                        {
-                                            "[TITLE]",
-                                            Osu.GetBeatmapSetting(
-                                                beatmap, "TitleUnicode", Osu.GetBeatmapSetting(beatmap, "Title"))
-                                        },
-                                        {
-                                            "[ARTIST]",
-                                            Osu.GetBeatmapSetting(
-                                                beatmap, "ArtistUnicode", Osu.GetBeatmapSetting(beatmap, "Artist"))
-                                        }
-                                    });
-                            data.Insert(0, new Lyric());
-                        }
-                        catch
-                        {
-                            data = new List<Lyric> { new Lyric(0, "가사 없음") };
-                        }
+                        data = new List<Lyric> { new Lyric(0, "가사 없음") };
                     }
-                    _cts.Token.ThrowIfCancellationRequested();
-                    Invoke(new MethodInvoker(() => { lyricsCache = data; }));
-                }, _cts.Token).ContinueWith(
-                    result =>
-                    {
-                        Invoke(
-                            new MethodInvoker(
-                                () =>
-                                {
-                                    _cts = null;
-                                    if (result.IsCanceled)
-                                    {
-                                        UpdateLyrics(File.ReadAllText(curAudio.Beatmap));
-                                    }
-                                }));
-                    });
+                }
+                _cts.Token.ThrowIfCancellationRequested();
+                Invoke(new MethodInvoker(() =>
+                {
+                    lyricsCache = data;
+                }));
+            }, _cts.Token).ContinueWith(result => Invoke(new MethodInvoker(() =>
+            {
+                _cts = null;
+                if (result.IsCanceled)
+                {
+                    UpdateLyrics(File.ReadAllText(curAudio.Beatmap));
+                }
+            })));
         }
 
 

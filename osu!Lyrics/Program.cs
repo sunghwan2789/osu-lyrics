@@ -16,7 +16,7 @@ namespace osu_Lyrics
             {
                 if (createdNew)
                 {
-                    Task.Factory.StartNew(() => PostDel(Application.ExecutablePath + Settings._BakExt));
+                    Task.Run(() => PostDel(Application.ExecutablePath + Settings._BakExt));
 
                     Application.EnableVisualStyles();
                     Application.SetCompatibleTextRenderingDefault(false);

@@ -77,20 +77,18 @@ BOOL bPipeConnected;
 
 DWORD WINAPI PipeMan(LPVOID lParam)
 {
-    hPipe = CreateNamedPipe("\\\\.\\pipe\\osu!Lyrics", PIPE_ACCESS_OUTBOUND, PIPE_TYPE_MESSAGE | PIPE_WAIT, 1, BUF_SIZE * 5, 0, 1000, NULL);
-    while (1)
+    hPipe = CreateNamedPipe("\\\\.\\pipe\\osu!Lyrics", PIPE_ACCESS_OUTBOUND,
+        PIPE_TYPE_MESSAGE | PIPE_WAIT, 1, BUF_SIZE * 5, 0, INFINITE, NULL);
+    // 클라이언트가 연결할 때까지 무한 대기
+    while (ConnectNamedPipe(hPipe, NULL) || GetLastError() == ERROR_PIPE_CONNECTED)
     {
-        if (ConnectNamedPipe(hPipe, NULL) || GetLastError() == ERROR_PIPE_CONNECTED)
-        {
-            bPipeConnected = TRUE;
-        }
-        else
-        {
-            bPipeConnected = FALSE;
-			break;
-        }
+        bPipeConnected = TRUE;
+        // 일단 연결되면 ConnectNamedPipe는 ERROR_PIPE_CONNECTED만 반환:
+        // 오버로드 방지
         Sleep(1000);
     }
+    // 클라이언트 연결 종료
+    bPipeConnected = FALSE;
     DisconnectNamedPipe(hPipe);
     CloseHandle(hPipe);
     return 0;
@@ -98,79 +96,85 @@ DWORD WINAPI PipeMan(LPVOID lParam)
 
 
 typedef BOOL (WINAPI *tReadFile)(HANDLE, LPVOID, DWORD, LPDWORD, LPOVERLAPPED);
-tReadFile oReadFile;
-BYTE bReadFile[5] = {};
-CRITICAL_SECTION lReadFile;
+tReadFile pReadFile;
+BYTE pReadFileJMP[5];
+CRITICAL_SECTION locker;
 OVERLAPPED overlapped;
 
-DWORD dirLen = 4;
-unordered_map<string, string> audioMap;
+unordered_map<string, string> audioInfo;
 
+// osu!에서 ReadFile을 호출하면 정보를 빼내서 osu!Lyrics로 보냄
 BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped)
 {
-    long long sReadFile = CurrentTime();
-    EnterCriticalSection(&lReadFile);
+    long long calledAt = CurrentTime();
+    BOOL result = FALSE;
 
-    unhook_by_code("kernel32.dll", "ReadFile", bReadFile);
-    BOOL rReadFile = oReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
-    hook_by_code("kernel32.dll", "ReadFile", (PROC) hkReadFile, bReadFile);
-
-    LeaveCriticalSection(&lReadFile);
-    if (!rReadFile)
+    EnterCriticalSection(&locker);
     {
+        unhook_by_code("kernel32.dll", "ReadFile", pReadFileJMP);
+        result = pReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
+        hook_by_code("kernel32.dll", "ReadFile", (PROC) hkReadFile, pReadFileJMP);
+    }
+    LeaveCriticalSection(&locker);
+    if (!result)
+    {
+        // 통상 ReadFile이 실패하는 경우는 osu 프로토콜 읽을 때...
         return FALSE;
     }
 
     char path[MAX_PATH];
-    if (strnicmp(".osu", &path[GetFinalPathNameByHandle(hFile, path, MAX_PATH, VOLUME_NAME_DOS) - 4], 4) == 0 &&
+    DWORD pathLength = GetFinalPathNameByHandle(hFile, path, MAX_PATH, VOLUME_NAME_DOS);
+    //                  1: \\?\D:\Games\osu!\...
+    // 지금 읽는 파일이 비트맵 파일이고 앞부분을 읽었다면:
+    // AudioFilename은 앞부분에 있음 / 파일 핸들 또 열지 말고 일 한 번만 하자!
+    if (strnicmp(".osu", &path[pathLength - 4], 4) == 0 &&
         SetFilePointer(hFile, 0, NULL, FILE_CURRENT) == *lpNumberOfBytesRead)
     {
-        char *buff = strdup((char *) lpBuffer);
-        char *token = strtok(buff, "\n");
-        while (token != NULL)
+        // strtok은 소스를 변형하므로 일단 백업
+        char *buffer = strdup((char *) lpBuffer);
+        char *line = strtok(buffer, "\n");
+        while (line != NULL)
         {
-            if (strnicmp(token, "AudioFilename:", 14) == 0)
+            // 비트맵의 음악 파일 경로 얻기
+            if (strnicmp(line, "AudioFilename:", 14) == 0)
             {
-                char audio[MAX_PATH];
+                char *beatmapDir = strdup(path);
+                PathRemoveFileSpec(beatmapDir);
 
+                char audioPath[MAX_PATH];
+
+                // get value & trim
                 int i = 14;
-                for (; token[i] == ' '; i++);
-                buff[0] = '\0';
-                strncat(buff, &token[i], strlen(token) - i - 1);
+                for (; line[i] == ' '; i++);
+                buffer[0] = '\0';
+                strncat(buffer, &line[i], strlen(line) - i - 1);
+                PathCombine(audioPath, beatmapDir, buffer);
 
-                token = strdup(path);
-                PathRemoveFileSpec(token);
-                PathCombine(audio, token, buff);
-                free(token);
-
-                // 검색할 때 대소문자 구분하므로 제대로 된 파일명 얻기
+                // 검색할 때 대소문자 구분하므로 제대로 된 파일 경로 얻기
                 WIN32_FIND_DATA fdata;
-                FindClose(FindFirstFile(audio, &fdata));
-                PathRemoveFileSpec(audio);
-                PathCombine(audio, audio, fdata.cFileName);
+                FindClose(FindFirstFile(audioPath, &fdata));
+                PathRemoveFileSpec(audioPath);
+                PathCombine(audioPath, audioPath, fdata.cFileName);
 
-                string tmp(audio);
-                if (audioMap.find(tmp) == audioMap.end())
-                {
-                    audioMap.insert(make_pair(tmp, string(&path[dirLen])));
-                }
+                audioInfo.insert(make_pair(string(audioPath), string(path)));
+                
+                free(beatmapDir);
                 break;
             }
-            token = strtok(NULL, "\n");
+            line = strtok(NULL, "\n");
         }
-        free(buff);
+        free(buffer);
     }
     else if (bPipeConnected)
     {
-        auto pair = audioMap.find(string(path)); // [ audioPath, beatmapPath ]
-        if (pair != audioMap.end())
+        // [ audioPath, beatmapPath ]
+        unordered_map<string, string>::iterator it = audioInfo.find(string(path));
+        if (it != audioInfo.end())
         {
             char buffer[BUF_SIZE];
-			ZeroMemory(&buffer, sizeof(buffer));
-
-			sprintf(buffer, "%llx|%s|%lx|%s\n", sReadFile, &path[dirLen], SetFilePointer(hFile, 0, NULL, FILE_CURRENT) - *lpNumberOfBytesRead, pair->second);
-
-            if (!WriteFileEx(hPipe, buffer, strlen(buffer), &overlapped, [](DWORD, DWORD, LPOVERLAPPED) {}))
+            DWORD seekPosition = SetFilePointer(hFile, 0, NULL, FILE_CURRENT) - *lpNumberOfBytesRead;
+            int bufferLength = sprintf(buffer, "%llx|%s|%lx|%s\n", calledAt, &path[4], seekPosition, &it->second[4]);
+            if (!WriteFileEx(hPipe, buffer, bufferLength, &overlapped, [](DWORD, DWORD, LPOVERLAPPED) {}))
             {
                 bPipeConnected = FALSE;
             }
@@ -180,46 +184,42 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
 }
 
 
-HANDLE hPipeThread = nullptr;
+HANDLE hPipeManager;
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
     if (fdwReason == DLL_PROCESS_ATTACH)
     {
+        hPipeManager = CreateThread(NULL, 0, PipeMan, NULL, 0, NULL);
 
-		hPipeThread = CreateThread(NULL, 0, PipeMan, NULL, 0, NULL);
-
-        char dir[MAX_PATH];
-        GetModuleFileName(NULL, dir, MAX_PATH);
-        PathRemoveFileSpec(dir);
-        dirLen = 4 + strlen(dir);
-
-
-		char buffer[BUF_SIZE];
-		ZeroMemory(&buffer, sizeof(buffer));
-
-		sprintf(buffer, "%d", hinstDLL);
-		while (!bPipeConnected) 
-		{
-			WriteFileEx(hPipe, buffer, strlen(buffer), &overlapped, [](DWORD, DWORD, LPOVERLAPPED) {}); 
-			/*이부분 C#에서 받은 후에 숫자로 바꿔서 IntPtr로 변수화해주세요. 다음 작업은 이 이후에 패치합니다.*/
-		}
-
-        InitializeCriticalSection(&lReadFile);
-        oReadFile = (tReadFile) GetProcAddress(GetModuleHandle("kernel32.dll"), "ReadFile");
-        hook_by_code("kernel32.dll", "ReadFile", (PROC) hkReadFile, bReadFile);
+        char buffer[BUF_SIZE];
+        int bufferLength = sprintf(buffer, "_%d", hinstDLL);
+        while (!bPipeConnected)
+        {
+            WriteFileEx(hPipe, buffer, bufferLength, &overlapped, [](DWORD, DWORD, LPOVERLAPPED) {});
+            /*이부분 C#에서 받은 후에 숫자로 바꿔서 IntPtr로 변수화해주세요. 다음 작업은 이 이후에 패치합니다.*/
+        }
+        
+        InitializeCriticalSection(&locker);
+        EnterCriticalSection(&locker);
+        {
+            pReadFile = (tReadFile) GetProcAddress(GetModuleHandle("kernel32.dll"), "ReadFile");
+            hook_by_code("kernel32.dll", "ReadFile", (PROC) hkReadFile, pReadFileJMP);
+        }
+        LeaveCriticalSection(&locker);
     }
     else if (fdwReason == DLL_PROCESS_DETACH)
     {
-		WaitForSingleObject(hPipeThread, INFINITE);
-		CloseHandle(hPipeThread);
+        DisconnectNamedPipe(hPipe);
+        WaitForSingleObject(hPipeManager, INFINITE);
+        CloseHandle(hPipeManager);
 
-        EnterCriticalSection(&lReadFile);
-
-        unhook_by_code("kernel32.dll", "ReadFile", bReadFile);
-
-        LeaveCriticalSection(&lReadFile);
-        DeleteCriticalSection(&lReadFile);
+        EnterCriticalSection(&locker);
+        {
+            unhook_by_code("kernel32.dll", "ReadFile", pReadFileJMP);
+        }
+        LeaveCriticalSection(&locker);
+        DeleteCriticalSection(&locker);
     }
     return TRUE;
 }
