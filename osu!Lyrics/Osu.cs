@@ -219,7 +219,7 @@ namespace osu_Lyrics
             WriteProcessMemory(hProcess, llParam, dllName, dllName.Length + 1, IntPtr.Zero);
             var hThread = CreateRemoteThread(hProcess, IntPtr.Zero, 0, libAddr, llParam, 0, IntPtr.Zero);
             
-            WaitForSingleObject(hThread);
+            WaitForSingleObject(hThread, 0xFFFFFF);
             
             CloseHandle(hThread);
             CloseHandle(hProcess);
