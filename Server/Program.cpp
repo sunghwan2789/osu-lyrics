@@ -184,25 +184,25 @@ HANDLE hPipeThread = nullptr;
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
-    if (fdwReason == DLL_PROCESS_ATTACH)
-    {
+	if (fdwReason == DLL_PROCESS_ATTACH)
+	{
 
 		hPipeThread = CreateThread(NULL, 0, PipeMan, NULL, 0, NULL);
 
-        char dir[MAX_PATH];
-        GetModuleFileName(NULL, dir, MAX_PATH);
-        PathRemoveFileSpec(dir);
-        dirLen = 4 + strlen(dir);
+		char dir[MAX_PATH];
+		GetModuleFileName(NULL, dir, MAX_PATH);
+		PathRemoveFileSpec(dir);
+		dirLen = 4 + strlen(dir);
 
 
 		char buffer[BUF_SIZE];
 		ZeroMemory(&buffer, sizeof(buffer));
 
 		sprintf(buffer, "%d", hinstDLL);
-		while (!bPipeConnected) 
+		while (bPipeConnected)
 		{
-			WriteFileEx(hPipe, buffer, strlen(buffer), &overlapped, [](DWORD, DWORD, LPOVERLAPPED) {}); 
-			/*이부분 C#에서 받은 후에 숫자로 바꿔서 IntPtr로 변수화해주세요. 다음 작업은 이 이후에 패치합니다.*/
+			WriteFileEx(hPipe, buffer, strlen(buffer), &overlapped, [](DWORD, DWORD, LPOVERLAPPED) {});
+			/*이부분 전송한 것을 C#에서 받은 후에 숫자로 바꿔서 IntPtr로 변수화해주세요. 다음 작업은 이 이후에 패치합니다.*/
 		}
 
         InitializeCriticalSection(&lReadFile);
