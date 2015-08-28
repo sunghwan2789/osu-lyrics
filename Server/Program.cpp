@@ -21,16 +21,16 @@ BOOL unhook_by_code(LPCTSTR szDllName, LPCTSTR szFuncName, PBYTE pOrgBytes)
     FARPROC pFunc;
     DWORD dwOldProtect;
 
-    // API ÁÖ¼Ò ±¸ÇÑ´Ù
+    // API ì£¼ì†Œ êµ¬í•œë‹¤
     pFunc = GetProcAddress(GetModuleHandle(szDllName), szFuncName);
 
-    // ¿ø·¡ ÄÚµå (5 byte)¸¦ µ¤¾î¾²±â À§ÇØ ¸Ş¸ğ¸®¿¡ WRITE ¼Ó¼º Ãß°¡
+    // ì›ë˜ ì½”ë“œ (5 byte)ë¥¼ ë®ì–´ì“°ê¸° ìœ„í•´ ë©”ëª¨ë¦¬ì— WRITE ì†ì„± ì¶”ê°€
     VirtualProtect((LPVOID) pFunc, 5, PAGE_EXECUTE_READWRITE, &dwOldProtect);
 
     // Unhook
     memcpy(pFunc, pOrgBytes, 5);
 
-    // ¸Ş¸ğ¸® ¼Ó¼º º¹¿ø
+    // ë©”ëª¨ë¦¬ ì†ì„± ë³µì›
     VirtualProtect((LPVOID) pFunc, 5, dwOldProtect, &dwOldProtect);
 
     return TRUE;
@@ -43,29 +43,29 @@ BOOL hook_by_code(LPCTSTR szDllName, LPCTSTR szFuncName, PROC pfnNew, PBYTE pOrg
     BYTE pBuf[5] = { 0xE9, 0, };
     PBYTE pByte;
 
-    // ÈÄÅ·´ë»ó API ÁÖ¼Ò¸¦ ±¸ÇÑ´Ù
+    // í›„í‚¹ëŒ€ìƒ API ì£¼ì†Œë¥¼ êµ¬í•œë‹¤
     pfnOrg = (FARPROC) GetProcAddress(GetModuleHandle(szDllName), szFuncName);
     pByte = (PBYTE) pfnOrg;
 
-    // ¸¸¾à ÀÌ¹Ì ÈÄÅ·µÇ¾î ÀÖ´Ù¸é return FALSE
+    // ë§Œì•½ ì´ë¯¸ í›„í‚¹ë˜ì–´ ìˆë‹¤ë©´ return FALSE
     if (pByte[0] == 0xE9)
         return FALSE;
 
-    // 5 byte ÆĞÄ¡¸¦ À§ÇÏ¿© ¸Ş¸ğ¸®¿¡ WRITE ¼Ó¼º Ãß°¡
+    // 5 byte íŒ¨ì¹˜ë¥¼ ìœ„í•˜ì—¬ ë©”ëª¨ë¦¬ì— WRITE ì†ì„± ì¶”ê°€
     VirtualProtect((LPVOID) pfnOrg, 5, PAGE_EXECUTE_READWRITE, &dwOldProtect);
 
-    // ±âÁ¸ÄÚµå (5 byte) ¹é¾÷
+    // ê¸°ì¡´ì½”ë“œ (5 byte) ë°±ì—…
     memcpy(pOrgBytes, pfnOrg, 5);
 
-    // JMP ÁÖ¼Ò°è»ê (E9 XXXX)
+    // JMP ì£¼ì†Œê³„ì‚° (E9 XXXX)
     // => XXXX = pfnNew - pfnOrg - 5
     dwAddress = (DWORD) pfnNew - (DWORD) pfnOrg - 5;
     memcpy(&pBuf[1], &dwAddress, 4);
 
-    // Hook - 5 byte ÆĞÄ¡(JMP XXXX)
+    // Hook - 5 byte íŒ¨ì¹˜(JMP XXXX)
     memcpy(pfnOrg, pBuf, 5);
 
-    // ¸Ş¸ğ¸® ¼Ó¼º º¹¿ø
+    // ë©”ëª¨ë¦¬ ì†ì„± ë³µì›
     VirtualProtect((LPVOID) pfnOrg, 5, dwOldProtect, &dwOldProtect);
 
     return TRUE;
@@ -143,7 +143,7 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
                 PathCombine(audio, token, buff);
                 free(token);
 
-                // °Ë»öÇÒ ¶§ ´ë¼Ò¹®ÀÚ ±¸ºĞÇÏ¹Ç·Î Á¦´ë·Î µÈ ÆÄÀÏ¸í ¾ò±â
+                // ê²€ìƒ‰í•  ë•Œ ëŒ€ì†Œë¬¸ì êµ¬ë¶„í•˜ë¯€ë¡œ ì œëŒ€ë¡œ ëœ íŒŒì¼ëª… ì–»ê¸°
                 WIN32_FIND_DATA fdata;
                 FindClose(FindFirstFile(audio, &fdata));
                 PathRemoveFileSpec(audio);
@@ -180,7 +180,10 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
     if (fdwReason == DLL_PROCESS_ATTACH)
     {
-        CloseHandle(CreateThread(NULL, 0, PipeMan, NULL, 0, NULL));
+        HANDLE hThread = NULL;
+        hThread = CreateThread(NULL, 0, PipeMan, NULL, 0, NULL);
+        WaitForSingleObject(hThread, 0xFFFFFF);
+        CloseHandle(hThread);
 
         char dir[MAX_PATH];
         GetModuleFileName(NULL, dir, MAX_PATH);
