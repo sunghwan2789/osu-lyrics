@@ -87,7 +87,7 @@ DWORD WINAPI PipeMan(LPVOID lParam)
         else
         {
             bPipeConnected = FALSE;
-            DisconnectNamedPipe(hPipe);
+			break;
         }
         Sleep(1000);
     }
@@ -165,8 +165,12 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
         auto pair = audioMap.find(string(path)); // [ audioPath, beatmapPath ]
         if (pair != audioMap.end())
         {
-            char buff[BUF_SIZE];
-            if (!WriteFileEx(hPipe, buff, sprintf(buff, "%llx|%s|%lx|%s\n", sReadFile, &path[dirLen], SetFilePointer(hFile, 0, NULL, FILE_CURRENT) - *lpNumberOfBytesRead, pair->second), &overlapped, [](DWORD, DWORD, LPOVERLAPPED) {}))
+            char buffer[BUF_SIZE];
+			ZeroMemory(&buffer, sizeof(buffer));
+
+			sprintf(buffer, "%llx|%s|%lx|%s\n", sReadFile, &path[dirLen], SetFilePointer(hFile, 0, NULL, FILE_CURRENT) - *lpNumberOfBytesRead, pair->second);
+
+            if (!WriteFileEx(hPipe, buffer, strlen(buffer), &overlapped, [](DWORD, DWORD, LPOVERLAPPED) {}))
             {
                 bPipeConnected = FALSE;
             }
@@ -176,16 +180,30 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
 }
 
 
+HANDLE hPipeThread = nullptr;
+
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
     if (fdwReason == DLL_PROCESS_ATTACH)
     {
-        CloseHandle(CreateThread(NULL, 0, PipeMan, NULL, 0, NULL));
+
+		hPipeThread = CreateThread(NULL, 0, PipeMan, NULL, 0, NULL);
 
         char dir[MAX_PATH];
         GetModuleFileName(NULL, dir, MAX_PATH);
         PathRemoveFileSpec(dir);
         dirLen = 4 + strlen(dir);
+
+
+		char buffer[BUF_SIZE];
+		ZeroMemory(&buffer, sizeof(buffer));
+
+		sprintf(buffer, "%d", hinstDLL);
+		while (!bPipeConnected) 
+		{
+			WriteFileEx(hPipe, buffer, strlen(buffer), &overlapped, [](DWORD, DWORD, LPOVERLAPPED) {}); 
+			/*이부분 C#에서 받은 후에 숫자로 바꿔서 IntPtr로 변수화해주세요. 다음 작업은 이 이후에 패치합니다.*/
+		}
 
         InitializeCriticalSection(&lReadFile);
         oReadFile = (tReadFile) GetProcAddress(GetModuleHandle("kernel32.dll"), "ReadFile");
@@ -193,6 +211,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
     }
     else if (fdwReason == DLL_PROCESS_DETACH)
     {
+		WaitForSingleObject(hPipeThread, INFINITE);
+		CloseHandle(hPipeThread);
+
         EnterCriticalSection(&lReadFile);
 
         unhook_by_code("kernel32.dll", "ReadFile", bReadFile);
