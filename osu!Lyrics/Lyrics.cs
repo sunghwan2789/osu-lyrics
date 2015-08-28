@@ -192,6 +192,11 @@ namespace osu_Lyrics
             Osu.UnhookKeyboard();
         }
 
+
+
+
+
+
         #region Notice(...)
 
         private string _notice;
