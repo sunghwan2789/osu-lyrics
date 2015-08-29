@@ -29,48 +29,40 @@
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            this.backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
-            this.notifyIcon1 = new System.Windows.Forms.NotifyIcon(this.components);
-            this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
-            this.toolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
-            this.toolStripMenuItem2 = new System.Windows.Forms.ToolStripMenuItem();
+            this.trayIcon = new System.Windows.Forms.NotifyIcon(this.components);
+            this.trayMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.menuSetting = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuExit = new System.Windows.Forms.ToolStripMenuItem();
             this.timer1 = new System.Windows.Forms.Timer(this.components);
-            this.contextMenuStrip1.SuspendLayout();
+            this.trayMenu.SuspendLayout();
             this.SuspendLayout();
             // 
-            // backgroundWorker1
+            // tray
             // 
-            this.backgroundWorker1.DoWork += new System.ComponentModel.DoWorkEventHandler(this.backgroundWorker1_DoWork);
+            this.trayIcon.ContextMenuStrip = this.trayMenu;
+            this.trayIcon.Icon = global::osu_Lyrics.Properties.Resources.Icon;
+            this.trayIcon.Text = "osu!Lyrics";
+            this.trayIcon.Visible = true;
+            this.trayIcon.MouseUp += new System.Windows.Forms.MouseEventHandler(this.trayIcon_MouseUp);
             // 
-            // notifyIcon1
+            // trayMenu
             // 
-            this.notifyIcon1.ContextMenuStrip = this.contextMenuStrip1;
-            this.notifyIcon1.Icon = global::osu_Lyrics.Properties.Resources.Icon;
-            this.notifyIcon1.Text = "osu!Lyrics";
-            this.notifyIcon1.Visible = true;
-            this.notifyIcon1.MouseUp += new System.Windows.Forms.MouseEventHandler(this.notifyIcon1_MouseUp);
+            this.trayMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.menuSetting,
+            this.menuExit});
+            this.trayMenu.Name = "trayMenu";
             // 
-            // contextMenuStrip1
+            // menuSetting
             // 
-            this.contextMenuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.toolStripMenuItem1,
-            this.toolStripMenuItem2});
-            this.contextMenuStrip1.Name = "contextMenuStrip1";
-            this.contextMenuStrip1.Size = new System.Drawing.Size(99, 48);
+            this.menuSetting.Name = "menuSetting";
+            this.menuSetting.Text = "설정";
+            this.menuSetting.Click += new System.EventHandler(this.menuSetting_Click);
             // 
-            // toolStripMenuItem1
+            // menuExit
             // 
-            this.toolStripMenuItem1.Name = "toolStripMenuItem1";
-            this.toolStripMenuItem1.Size = new System.Drawing.Size(98, 22);
-            this.toolStripMenuItem1.Text = "설정";
-            this.toolStripMenuItem1.Click += new System.EventHandler(this.toolStripMenuItem1_Click);
-            // 
-            // toolStripMenuItem2
-            // 
-            this.toolStripMenuItem2.Name = "toolStripMenuItem2";
-            this.toolStripMenuItem2.Size = new System.Drawing.Size(98, 22);
-            this.toolStripMenuItem2.Text = "종료";
-            this.toolStripMenuItem2.Click += new System.EventHandler(this.toolStripMenuItem2_Click);
+            this.menuExit.Name = "menuExit";
+            this.menuExit.Text = "종료";
+            this.menuExit.Click += new System.EventHandler(this.menuExit_Click);
             // 
             // timer1
             // 
@@ -85,18 +77,17 @@
             this.Text = "osu!Lyrics";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Lyrics_FormClosing);
             this.Load += new System.EventHandler(this.Lyrics_Load);
-            this.contextMenuStrip1.ResumeLayout(false);
+            this.Shown += new System.EventHandler(this.Lyrics_Shown);
+            this.trayMenu.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }
 
         #endregion
-
-        private System.ComponentModel.BackgroundWorker backgroundWorker1;
-        private System.Windows.Forms.NotifyIcon notifyIcon1;
-        private System.Windows.Forms.ContextMenuStrip contextMenuStrip1;
-        private System.Windows.Forms.ToolStripMenuItem toolStripMenuItem1;
-        private System.Windows.Forms.ToolStripMenuItem toolStripMenuItem2;
+        private System.Windows.Forms.NotifyIcon trayIcon;
+        private System.Windows.Forms.ContextMenuStrip trayMenu;
+        private System.Windows.Forms.ToolStripMenuItem menuSetting;
+        private System.Windows.Forms.ToolStripMenuItem menuExit;
         private System.Windows.Forms.Timer timer1;
     }
 }

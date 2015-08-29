@@ -14,6 +14,7 @@ namespace osu_Lyrics
             bool createdNew;
             using (new Mutex(true, @"osu!Lyrics v" + Application.ProductVersion, out createdNew))
             {
+                Osu.Show();
                 if (createdNew)
                 {
                     Task.Run(() => PostDel(Application.ExecutablePath + Settings._BakExt));
@@ -21,10 +22,6 @@ namespace osu_Lyrics
                     Application.EnableVisualStyles();
                     Application.SetCompatibleTextRenderingDefault(false);
                     Application.Run(new Lyrics());
-                }
-                else
-                {
-                    Osu.Show();
                 }
             }
         }

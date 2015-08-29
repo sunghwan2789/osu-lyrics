@@ -243,7 +243,7 @@ namespace osu_Lyrics
                 while (true)
                 {
                     string data;
-                    if (DataQueue.TryDequeue(out data))
+                    if (DataQueue.TryDequeue(out data) && data != null)
                     {
                         if (data.StartsWith("_"))
                         {

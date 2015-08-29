@@ -142,19 +142,18 @@ namespace osu_Lyrics
 
         private void Lyrics_Load(object sender, EventArgs e)
         {
-            Osu.Show();
             Notice("osu!Lyrics {0}", Osu.Listen(Osu_Signal) ? Application.ProductVersion : "초기화 실패");
 
             Osu.HookKeyboard(Osu_KeyDown);
-            backgroundWorker1.RunWorkerAsync();
 
+            // 초기 설정을 위해 대화 상자 열기
             if (!File.Exists(Settings._Path))
             {
-                Task.Run(() => Invoke(new MethodInvoker(toolStripMenuItem1.PerformClick)));
+                Task.Run(() => Invoke(new MethodInvoker(menuSetting.PerformClick)));
             }
         }
 
-        private void backgroundWorker1_DoWork(object sender, DoWorkEventArgs e)
+        private async void Lyrics_Shown(object sender, EventArgs e)
         {
             while (!Osu.Process.HasExited)
             {
@@ -182,7 +181,7 @@ namespace osu_Lyrics
                     Refresh();
                 }
 
-                Thread.Sleep(Settings.RefreshRate);
+                await Task.Delay(Settings.RefreshRate);
             }
             Close();
         }
@@ -539,7 +538,7 @@ namespace osu_Lyrics
 
 
 
-        private void notifyIcon1_MouseUp(object sender, MouseEventArgs e)
+        private void trayIcon_MouseUp(object sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Left)
             {
@@ -549,7 +548,7 @@ namespace osu_Lyrics
 
         public static Settings Settings;
 
-        private void toolStripMenuItem1_Click(object sender, EventArgs e)
+        private void menuSetting_Click(object sender, EventArgs e)
         {
             if (Settings == null)
             {
@@ -566,7 +565,7 @@ namespace osu_Lyrics
             }
         }
 
-        private void toolStripMenuItem2_Click(object sender, EventArgs e)
+        private void menuExit_Click(object sender, EventArgs e)
         {
             Close();
         }
