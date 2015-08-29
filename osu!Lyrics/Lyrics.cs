@@ -310,7 +310,10 @@ namespace osu_Lyrics
             if (data[1] != curAudio.Path)
             {
                 curAudio = new Audio(data[1], data[3]);
-                lyricsCache = new List<Lyric> { new Lyric(0, "가사 받는 중...") };
+                lyricsCache = new List<Lyric>
+                {
+                    new Lyric(0, "가사 받는 중...")
+                };
 
                 // 파일 해시로 가사 검색
                 var newLyrics = await GetLyrics(new Dictionary<string, string>
@@ -332,7 +335,10 @@ namespace osu_Lyrics
                 }
                 else
                 {
-                    newLyrics = new List<Lyric> { new Lyric(0, "가사 없음") };
+                    newLyrics = new List<Lyric>
+                    {
+                        new Lyric(0, "가사 없음")
+                    };
                 }
 
                 lyricsCache = newLyrics;
