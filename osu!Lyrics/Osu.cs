@@ -182,15 +182,18 @@ namespace osu_Lyrics
         private static extern IntPtr CreateRemoteThread(IntPtr hProcess, IntPtr lpThreadAttributes, int dwStackSize, IntPtr lpStartAddress, IntPtr lpParameter, int dwCreationFlags, IntPtr lpThreadId);
 
         [DllImport("kernel32.dll")]
+        private static extern IntPtr WaitForSingleObject(IntPtr hHandle, int dwMilliseconds);
+
+        [DllImport("kernel32.dll")]
         private static extern bool CloseHandle(IntPtr hObject);
         
         private static bool InjectDLL(string dllPath)
         {
             const int PROCESS_ALL_ACCESS = 0x1F0FFF;
-
             const int MEM_RESERVE = 0x2000;
             const int MEM_COMMIT = 0x1000;
             const int PAGE_READWRITE = 0x04;
+            const int INFINITE = unchecked((int) 0xFFFFFFFF);
             const int MEM_RELEASE = 0x8000;
             
             var hProcess = OpenProcess(PROCESS_ALL_ACCESS, true, Process.Id);
@@ -200,8 +203,11 @@ namespace osu_Lyrics
             WriteProcessMemory(hProcess, pDllPath, dllPath, dllPath.Length + 1, IntPtr.Zero);
 
             var hThread = CreateRemoteThread(hProcess, IntPtr.Zero, 0, pLoadLibrary, pDllPath, 0, IntPtr.Zero);
-            VirtualFreeEx(hProcess, pDllPath, 0, MEM_RELEASE);
+            WaitForSingleObject(hThread, INFINITE);
             CloseHandle(hThread);
+
+            VirtualFreeEx(hProcess, pDllPath, 0, MEM_RELEASE);
+
             CloseHandle(hProcess);
 
             return hThread != IntPtr.Zero;

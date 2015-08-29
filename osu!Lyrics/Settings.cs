@@ -30,9 +30,9 @@ namespace osu_Lyrics
         [DllImport("user32.dll")]
         private static extern short GetAsyncKeyState(Keys vKey);
 
-        public static readonly string _Path = Application.ExecutablePath + @".cfg";
+        public static readonly string _Path = Application.ExecutablePath + ".cfg";
         public static readonly string _Server = Path.GetTempPath() + @"\osu!Lyrics.dll";
-        public static readonly string _BakExt = @".del";
+        public static readonly string _BakExt = ".del";
 
         private static string Get(string section, string key)
         {
@@ -755,7 +755,7 @@ namespace osu_Lyrics
 
         private void button6_Click(object sender, EventArgs e)
         {
-            const string url = @"http://bloodcat.com/_data/static/lv.txt";
+            const string url = "http://bloodcat.com/_data/static/lv.txt";
 
             try
             {
@@ -792,7 +792,7 @@ namespace osu_Lyrics
                     sb.AppendFormat("최신 버전으로 업데이트할까요?{0}\n\n", restartOsu ? " (주의! osu! 재시작됨!!)" : "");
                     sb.AppendFormat("{0}->{1} 변경사항\n", current, latest);
                     changes.ForEach(i => sb.AppendLine(i));
-                    if (MessageBox.Show(sb.ToString(), @"업데이트 발견", MessageBoxButtons.YesNo, MessageBoxIcon.Question) ==
+                    if (MessageBox.Show(sb.ToString(), "업데이트 발견", MessageBoxButtons.YesNo, MessageBoxIcon.Question) ==
                         DialogResult.Yes)
                     {
                         UpdateProgram(restartOsu);
@@ -800,26 +800,25 @@ namespace osu_Lyrics
                 }
                 else
                 {
-                    MessageBox.Show(@"최신 버전입니다!
-기능추가 및 개선요청은 osu! 메세지로 보내주세요.", @"야호!", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("최신 버전입니다!", "야호!", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
             catch
             {
-                MessageBox.Show(@"버전 정보를 받아오지 못했습니다.", null, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("버전 정보를 받아오지 못했습니다.", null, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
         private void button7_Click(object sender, EventArgs e)
         {
-            Process.Start(@"http://osu.ppy.sh/u/1112529");
+            Process.Start("https://github.com/sunghwan2789/osu-Lyrics");
         }
 
 
 
         private static void UpdateProgram(bool restartOsu)
         {
-            const string url = @"http://bloodcat.com/_data/static/lz.zip";
+            const string url = "http://bloodcat.com/_data/static/lz.zip";
 
             var current = Application.ExecutablePath;
             var update = Path.GetTempFileName();

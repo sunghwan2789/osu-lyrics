@@ -523,10 +523,11 @@ namespace osu_Lyrics
         {
             if (Settings == null)
             {
-                using (Settings = new Settings { TopMost = true })
+                Settings = new Settings
                 {
-                    Settings.ShowDialog();
-                }
+                    TopMost = true
+                };
+                Settings.ShowDialog();
                 Settings = null;
             }
             else
