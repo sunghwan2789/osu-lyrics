@@ -247,7 +247,7 @@ namespace osu_Lyrics
                 var wr = Request.Create(@"http://lyrics.alsong.co.kr/alsongwebservice/service1.asmx");
                 wr.Method = "POST";
                 wr.UserAgent = "gSOAP";
-                wr.ContentType = "application/soap+xml; charset=utf-8";
+                wr.ContentType = "application/soap+xml; charset=UTF-8";
                 wr.Headers.Add("SOAPAction", "ALSongWebServer/" + act);
 
                 using (var rq = new StreamWriter(wr.GetRequestStream()))

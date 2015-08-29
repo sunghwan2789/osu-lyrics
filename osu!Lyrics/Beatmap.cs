@@ -59,7 +59,7 @@ namespace osu_Lyrics
                     var property = this.GetType().GetProperty(pair[0].Trim());
                     if (property != null)
                     {
-                        property.SetValue(this, pair[1].Trim(), null);
+                        property.SetValue(this, pair[1].Trim());
                     }
                 }
             }
