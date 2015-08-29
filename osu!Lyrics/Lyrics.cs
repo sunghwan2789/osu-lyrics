@@ -190,6 +190,7 @@ namespace osu_Lyrics
         private void Lyrics_FormClosing(object sender, FormClosingEventArgs e)
         {
             Osu.UnhookKeyboard();
+            Osu.Shutdown();
         }
 
 

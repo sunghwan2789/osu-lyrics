@@ -4,6 +4,7 @@
 #include <Windows.h>
 #include <Shlwapi.h>
 #include <unordered_map>
+#include <queue>
 using namespace std;
 
 #define BUF_SIZE MAX_PATH * 3
@@ -73,22 +74,26 @@ BOOL hook_by_code(LPCTSTR szDllName, LPCTSTR szFuncName, PROC pfnNew, PBYTE pOrg
 
 
 HANDLE hPipe;
-BOOL bPipeConnected;
+queue<string> pipeQueue;
 
-DWORD WINAPI PipeMan(LPVOID lParam)
+DWORD WINAPI PipeManager(LPVOID lParam)
 {
     hPipe = CreateNamedPipe("\\\\.\\pipe\\osu!Lyrics", PIPE_ACCESS_OUTBOUND,
         PIPE_TYPE_MESSAGE | PIPE_WAIT, 1, BUF_SIZE * 5, 0, INFINITE, NULL);
     // 클라이언트가 연결할 때까지 무한 대기
     while (ConnectNamedPipe(hPipe, NULL) || GetLastError() == ERROR_PIPE_CONNECTED)
     {
-        bPipeConnected = TRUE;
-        // 일단 연결되면 ConnectNamedPipe는 ERROR_PIPE_CONNECTED만 반환:
-        // 오버로드 방지
-        Sleep(1000);
+        if (!pipeQueue.empty())
+        {
+            string message = pipeQueue.front();
+            OVERLAPPED overlapped = {};
+            if (WriteFileEx(hPipe, message.c_str(), message.length(), &overlapped, [](DWORD, DWORD, LPOVERLAPPED) {}))
+            {
+                pipeQueue.pop();
+            }
+        }
     }
     // 클라이언트 연결 종료
-    bPipeConnected = FALSE;
     DisconnectNamedPipe(hPipe);
     CloseHandle(hPipe);
     return 0;
@@ -98,8 +103,7 @@ DWORD WINAPI PipeMan(LPVOID lParam)
 typedef BOOL (WINAPI *tReadFile)(HANDLE, LPVOID, DWORD, LPDWORD, LPOVERLAPPED);
 tReadFile pReadFile;
 BYTE pReadFileJMP[5];
-CRITICAL_SECTION locker;
-OVERLAPPED overlapped;
+CRITICAL_SECTION hMutex;
 
 unordered_map<string, string> audioInfo;
 
@@ -109,13 +113,13 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
     long long calledAt = CurrentTime();
     BOOL result = FALSE;
 
-    EnterCriticalSection(&locker);
+    EnterCriticalSection(&hMutex);
     {
         unhook_by_code("kernel32.dll", "ReadFile", pReadFileJMP);
         result = pReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
         hook_by_code("kernel32.dll", "ReadFile", (PROC) hkReadFile, pReadFileJMP);
     }
-    LeaveCriticalSection(&locker);
+    LeaveCriticalSection(&hMutex);
     if (!result)
     {
         // 통상 ReadFile이 실패하는 경우는 osu 프로토콜 읽을 때...
@@ -125,10 +129,10 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
     char path[MAX_PATH];
     DWORD pathLength = GetFinalPathNameByHandle(hFile, path, MAX_PATH, VOLUME_NAME_DOS);
     //                  1: \\?\D:\Games\osu!\...
+    DWORD seekPosition = SetFilePointer(hFile, 0, NULL, FILE_CURRENT) - *lpNumberOfBytesRead;
     // 지금 읽는 파일이 비트맵 파일이고 앞부분을 읽었다면:
     // AudioFilename은 앞부분에 있음 / 파일 핸들 또 열지 말고 일 한 번만 하자!
-    if (strnicmp(".osu", &path[pathLength - 4], 4) == 0 &&
-        SetFilePointer(hFile, 0, NULL, FILE_CURRENT) == *lpNumberOfBytesRead)
+    if (strnicmp(".osu", &path[pathLength - 4], 4) == 0 && seekPosition == 0)
     {
         // strtok은 소스를 변형하므로 일단 백업
         char *buffer = strdup((char *) lpBuffer);
@@ -165,61 +169,53 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
         }
         free(buffer);
     }
-    else if (bPipeConnected)
+    else
     {
         // [ audioPath, beatmapPath ]
         unordered_map<string, string>::iterator it = audioInfo.find(string(path));
         if (it != audioInfo.end())
         {
             char buffer[BUF_SIZE];
-            DWORD seekPosition = SetFilePointer(hFile, 0, NULL, FILE_CURRENT) - *lpNumberOfBytesRead;
-            int bufferLength = sprintf(buffer, "%llx|%s|%lx|%s\n", calledAt, &path[4], seekPosition, &it->second[4]);
-            if (!WriteFileEx(hPipe, buffer, bufferLength, &overlapped, [](DWORD, DWORD, LPOVERLAPPED) {}))
-            {
-                bPipeConnected = FALSE;
-            }
+            sprintf(buffer, "%llx|%s|%lx|%s\n", calledAt, &path[4], seekPosition, &it->second[4]);
+            pipeQueue.push(string(buffer));
         }
     }
     return TRUE;
 }
 
 
-HANDLE hPipeManager;
+HANDLE hPipeThread;
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
     if (fdwReason == DLL_PROCESS_ATTACH)
     {
-        hPipeManager = CreateThread(NULL, 0, PipeMan, NULL, 0, NULL);
+        hPipeThread = CreateThread(NULL, 0, PipeManager, NULL, 0, NULL);
 
         char buffer[BUF_SIZE];
-        int bufferLength = sprintf(buffer, "_%d", hinstDLL);
-        while (!bPipeConnected)
-        {
-            WriteFileEx(hPipe, buffer, bufferLength, &overlapped, [](DWORD, DWORD, LPOVERLAPPED) {});
-            /*이부분 C#에서 받은 후에 숫자로 바꿔서 IntPtr로 변수화해주세요. 다음 작업은 이 이후에 패치합니다.*/
-        }
+        sprintf(buffer, "_%d\n", hinstDLL);
+        pipeQueue.push(string(buffer));
         
-        InitializeCriticalSection(&locker);
-        EnterCriticalSection(&locker);
+        InitializeCriticalSection(&hMutex);
+        EnterCriticalSection(&hMutex);
         {
             pReadFile = (tReadFile) GetProcAddress(GetModuleHandle("kernel32.dll"), "ReadFile");
             hook_by_code("kernel32.dll", "ReadFile", (PROC) hkReadFile, pReadFileJMP);
         }
-        LeaveCriticalSection(&locker);
+        LeaveCriticalSection(&hMutex);
     }
     else if (fdwReason == DLL_PROCESS_DETACH)
     {
         DisconnectNamedPipe(hPipe);
-        WaitForSingleObject(hPipeManager, INFINITE);
-        CloseHandle(hPipeManager);
+        WaitForSingleObject(hPipeThread, INFINITE);
+        CloseHandle(hPipeThread);
 
-        EnterCriticalSection(&locker);
+        EnterCriticalSection(&hMutex);
         {
             unhook_by_code("kernel32.dll", "ReadFile", pReadFileJMP);
         }
-        LeaveCriticalSection(&locker);
-        DeleteCriticalSection(&locker);
+        LeaveCriticalSection(&hMutex);
+        DeleteCriticalSection(&hMutex);
     }
     return TRUE;
 }

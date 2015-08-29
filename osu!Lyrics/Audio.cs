@@ -18,7 +18,7 @@ namespace osu_Lyrics
         {
             Path = path;
 
-            using (var fs = new FileStream(Osu.Directory + Path, FileMode.Open, FileAccess.Read))
+            using (var fs = new FileStream(Path, FileMode.Open, FileAccess.Read))
             {
                 var buff = new byte[4];
                 Info = Program.IntB(buff, 0, fs.Read(buff, 0, 4)) == 0x4F676753 // "OggS"

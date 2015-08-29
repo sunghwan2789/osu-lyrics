@@ -42,14 +42,14 @@ namespace osu_Lyrics
                 }
 
                 // osu!가 실행 중이 아니므로 하나 띄운다
-                var exec = Convert.ToString(Registry.GetValue(@"HKEY_CLASSES_ROOT\osu!\shell\open\command", null, null));
+                var exec = Registry.GetValue(@"HKEY_CLASSES_ROOT\osu!\shell\open\command", null, null);
                 if (exec != null)
                 {
                     _process = new Process
                     {
                         StartInfo = new ProcessStartInfo
                         {
-                            FileName = exec.Split(new[] { '"' }, StringSplitOptions.RemoveEmptyEntries).First()
+                            FileName = exec.ToString().Split(new[] { '"' }, StringSplitOptions.RemoveEmptyEntries).First()
                         }
                     };
                     _process.Start();
@@ -60,17 +60,6 @@ namespace osu_Lyrics
                 Application.Exit();
                 return null;
             }
-        }
-
-        #endregion
-
-        #region Directory
-
-        private static string _Directory;
-
-        public static string Directory
-        {
-            get { return _Directory ?? (_Directory = Path.GetDirectoryName(Process.MainModule.FileName)); }
         }
 
         #endregion
@@ -233,7 +222,6 @@ namespace osu_Lyrics
             CloseHandle(hThread);
             CloseHandle(hProcess);
 
-
             return hThread != IntPtr.Zero;
         }
 
@@ -285,6 +273,27 @@ namespace osu_Lyrics
                 }
             });
             return true;
+        }
+
+        public static void Shutdown()
+        {
+            const int PROCESS_ALL_ACCESS = 0x1F0FFF;
+
+            const int MEM_RESERVE = 0x2000;
+            const int MEM_COMMIT = 0x1000;
+            const int PAGE_EXECUTE_READWRITE = 0x40;
+            const int MEM_RELEASE = 0x8000;
+
+            var hProcess = OpenProcess(PROCESS_ALL_ACCESS, true, Process.Id);
+
+            var pFreeLibrary = GetProcAddress(GetModuleHandle("kernel32.dll"), "FreeLibraryA");
+            var pHModule = VirtualAllocEx(hProcess, IntPtr.Zero, 4, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+            WriteProcessMemory(hProcess, pHModule, BitConverter.ToString(BitConverter.GetBytes(hinstDLL)), 4, IntPtr.Zero);
+
+            var hThread = CreateRemoteThread(hProcess, IntPtr.Zero, 0, pFreeLibrary, pHModule, 0, IntPtr.Zero);
+            VirtualFreeEx(hProcess, pHModule, 0, MEM_RELEASE);
+            CloseHandle(hThread);
+            CloseHandle(hProcess);
         }
 
         #endregion
