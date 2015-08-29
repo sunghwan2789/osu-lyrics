@@ -143,7 +143,6 @@ namespace osu_Lyrics
         private void Lyrics_Load(object sender, EventArgs e)
         {
             Notice("osu!Lyrics {0}", Osu.Listen(Osu_Signal) ? Application.ProductVersion : "초기화 실패");
-
             Osu.HookKeyboard(Osu_KeyDown);
 
             // 초기 설정을 위해 대화 상자 열기
@@ -219,7 +218,7 @@ namespace osu_Lyrics
         private void timer1_Tick(object sender, EventArgs e)
         {
             _notice = null;
-            Invalidate();
+            Invoke(new MethodInvoker(Invalidate));
         }
 
         #endregion
@@ -234,35 +233,40 @@ namespace osu_Lyrics
         /// </summary>
         /// <param name="data">[HASH]: ... | [ARTIST]: ..., [TITLE]: ...</param>
         /// <returns>List&lt;string&gt;</returns>
-        private static List<Lyric> GetLyrics(IDictionary<string, string> data)
+        private static async Task<List<Lyric>> GetLyrics(IDictionary<string, string> data)
         {
-            var act = "GetLyric5";
-            if (!data.ContainsKey("[HASH]"))
+            try
             {
-                act = "GetResembleLyric2";
-            }
-            var content = data.Aggregate(Resources.ResourceManager.GetString(act), (o, i) => o.Replace(i.Key, i.Value));
+                var act = "GetLyric5";
+                if (!data.ContainsKey("[HASH]"))
+                {
+                    act = "GetResembleLyric2";
+                }
+                var content = data.Aggregate(Resources.ResourceManager.GetString(act), (o, i) => o.Replace(i.Key, i.Value));
 
-            var wr = Request.Create(@"http://lyrics.alsong.co.kr/alsongwebservice/service1.asmx");
-            wr.Method = "POST";
-            wr.UserAgent = "gSOAP";
-            wr.ContentType = "application/soap+xml; charset=utf-8";
-            wr.Headers.Add("SOAPAction", "ALSongWebServer/" + act);
+                var wr = Request.Create(@"http://lyrics.alsong.co.kr/alsongwebservice/service1.asmx");
+                wr.Method = "POST";
+                wr.UserAgent = "gSOAP";
+                wr.ContentType = "application/soap+xml; charset=utf-8";
+                wr.Headers.Add("SOAPAction", "ALSongWebServer/" + act);
 
-            using (var rq = new StreamWriter(wr.GetRequestStream()))
-            {
-                rq.Write(content);
-            }
+                using (var rq = new StreamWriter(wr.GetRequestStream()))
+                {
+                    rq.Write(content);
+                }
 
-            using (var rp = new StreamReader(wr.GetResponse().GetResponseStream()))
-            {
-                return
-                    WebUtility.HtmlDecode(
-                        rp.ReadToEnd().Split(new[] { "<strLyric>", "</strLyric>" }, StringSplitOptions.None)[1])
+                using (var rp = new StreamReader(wr.GetResponse().GetResponseStream()))
+                {
+                    return WebUtility.HtmlDecode(rp.ReadToEnd().Split(new[] { "<strLyric>", "</strLyric>" }, StringSplitOptions.None)[1])
                         .Split(new[] { "<br>" }, StringSplitOptions.RemoveEmptyEntries)
                         .Select(i => new Lyric(i))
                         .Where(i => i.Text.Length != 0)
                         .ToList();
+                }
+            }
+            catch
+            {
+                return null;
             }
         }
 
@@ -289,27 +293,16 @@ namespace osu_Lyrics
                 _curTime = value;
             }
         }
-
-        private void Osu_Signal(string[] data)
-        {
-            // [ time, audioPath, audioPosition, beatmapPath ]
-            if (data[1] != curAudio.Path)
-            {
-                curAudio = new Audio(data[1]) { Beatmap = data[3] };
-                UpdateLyrics(File.ReadAllText(curAudio.Beatmap));
-            }
-            curTime = DateTimeOffset.Now.Subtract(DateTimeOffset.FromFileTime(Convert.ToInt64(data[0], 16))).TotalSeconds +
-                      curAudio.Info.Time(Convert.ToUInt32(data[2], 16));
-        }
-
-
-
+        
         private readonly Queue<Lyric> lyrics = new Queue<Lyric>();
         private List<Lyric> _lyricsCache = new List<Lyric> { new Lyric() };
 
         private List<Lyric> lyricsCache
         {
-            get { return _lyricsCache; }
+            get
+            {
+                return _lyricsCache;
+            }
             set
             {
                 _lyricsCache = value;
@@ -319,67 +312,43 @@ namespace osu_Lyrics
             }
         }
 
-        private CancellationTokenSource _cts;
-
-        private void UpdateLyrics(string beatmap = "")
+        private async void Osu_Signal(string[] data)
         {
-            if (_cts != null)
+            // [ time, audioPath, audioPosition, beatmapPath ]
+            // 재생 중인 곡이 바꼈다!
+            if (data[1] != curAudio.Path)
             {
-                _cts.Cancel();
-                return;
-            }
+                curAudio = new Audio(data[1], data[3]);
+                lyricsCache = new List<Lyric> { new Lyric(0, "가사 받는 중...") };
 
-            lyricsCache = new List<Lyric> { new Lyric(0, "가사 받는 중...") };
-            _cts = new CancellationTokenSource();
-            Task.Run(() =>
-            {
-                List<Lyric> data;
-                try
+                // 파일 해시로 가사 검색
+                var newLyrics = await GetLyrics(new Dictionary<string, string>
                 {
-                    var hash = "";
-                    Invoke(new MethodInvoker(() => hash = curAudio.Info.Hash));
-                    _cts.Token.ThrowIfCancellationRequested();
-                    data = GetLyrics(new Dictionary<string, string> { { "[HASH]", hash } });
-                    data.Insert(0, new Lyric());
-                }
-                catch
+                    { "[HASH]", curAudio.Info.Hash }
+                });
+                if (newLyrics == null)
                 {
-                    try
+                    // 음악 정보로 가사 검색
+                    newLyrics = await GetLyrics(new Dictionary<string, string>
                     {
-                        _cts.Token.ThrowIfCancellationRequested();
-                        data = GetLyrics(new Dictionary<string, string>
-                        {
-                            {
-                                "[TITLE]",
-                                Osu.GetBeatmapSetting(
-                                    beatmap, "TitleUnicode", Osu.GetBeatmapSetting(beatmap, "Title"))
-                            },
-                            {
-                                "[ARTIST]",
-                                Osu.GetBeatmapSetting(
-                                    beatmap, "ArtistUnicode", Osu.GetBeatmapSetting(beatmap, "Artist"))
-                            }
-                        });
-                        data.Insert(0, new Lyric());
-                    }
-                    catch
-                    {
-                        data = new List<Lyric> { new Lyric(0, "가사 없음") };
-                    }
+                        { "[TITLE]", curAudio.Beatmap.TitleUnicode ?? curAudio.Beatmap.Title },
+                        { "[ARTIST]", curAudio.Beatmap.ArtistUnicode ?? curAudio.Beatmap.Artist }
+                    });
                 }
-                _cts.Token.ThrowIfCancellationRequested();
-                Invoke(new MethodInvoker(() =>
+                if (newLyrics != null)
                 {
-                    lyricsCache = data;
-                }));
-            }, _cts.Token).ContinueWith(result => Invoke(new MethodInvoker(() =>
-            {
-                _cts = null;
-                if (result.IsCanceled)
-                {
-                    UpdateLyrics(File.ReadAllText(curAudio.Beatmap));
+                    newLyrics.Insert(0, new Lyric());
                 }
-            })));
+                else
+                {
+                    newLyrics = new List<Lyric> { new Lyric(0, "가사 없음") };
+                }
+
+                lyricsCache = newLyrics;
+            }
+            curTime = DateTimeOffset.Now.Subtract(
+                DateTimeOffset.FromFileTime(Convert.ToInt64(data[0], 16))).TotalSeconds +
+                curAudio.Info.Time(Convert.ToUInt32(data[2], 16));
         }
 
 

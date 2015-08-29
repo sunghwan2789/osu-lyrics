@@ -24,5 +24,16 @@ namespace osu_Lyrics
             var read = s.Read(buff, 0, buff.Length);
             Hash = string.Join("", MD5.Create().ComputeHash(buff, 0, read).Select(i => i.ToString("x2")));
         }
+
+        public static AudioInfo Parse(string path)
+        {
+            using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read))
+            {
+                var buff = new byte[4];
+                return Program.IntB(buff, 0, fs.Read(buff, 0, 4)) == 0x4F676753 ? // "OggS"
+                    (AudioInfo) new Ogg(fs) :
+                    (AudioInfo) new Mpeg(fs);
+            }
+        }
     }
 }

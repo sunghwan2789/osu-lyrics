@@ -250,7 +250,7 @@ namespace osu_Lyrics
                             hinstDLL = (IntPtr) Convert.ToInt32(data.Substring(1));
                             continue;
                         }
-                        Lyrics.Constructor.Invoke(new MethodInvoker(() => onSignal(data.Split('|'))));
+                        onSignal(data.Split('|'));
                     }
                     else
                     {
@@ -319,16 +319,6 @@ namespace osu_Lyrics
                 Location = location,
                 ClientSize = new Size(rect.right - rect.left - border * 2, rect.bottom - rect.top - border - title)
             };
-        }
-
-        #endregion
-
-        #region GetBeatmapSetting(string osu, string key, string def = "")
-
-        public static string GetBeatmapSetting(string osu, string key, string def = "")
-        {
-            var val = Regex.Match(osu, key + @".*?:([^\r\n]*)").Groups[1].Value.Trim();
-            return val == "" ? def : val;
         }
 
         #endregion

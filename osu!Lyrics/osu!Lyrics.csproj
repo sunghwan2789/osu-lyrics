@@ -52,6 +52,7 @@
   <ItemGroup>
     <Compile Include="Audio.cs" />
     <Compile Include="AudioInfo.cs" />
+    <Compile Include="Beatmap.cs" />
     <Compile Include="Lyric.cs" />
     <Compile Include="Lyrics.cs">
       <SubType>Form</SubType>
