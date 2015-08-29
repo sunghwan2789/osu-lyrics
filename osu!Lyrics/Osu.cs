@@ -180,9 +180,6 @@ namespace osu_Lyrics
         private static extern bool WriteProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, string lpBuffer, int nSize, IntPtr lpNumberOfBytesWritten);
 
         [DllImport("kernel32.dll")]
-        private static extern bool WriteProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, IntPtr lpBuffer, int nSize, IntPtr lpNumberOfBytesWritten);
-
-        [DllImport("kernel32.dll")]
         private static extern IntPtr CreateRemoteThread(IntPtr hProcess, IntPtr lpThreadAttributes, int dwStackSize, IntPtr lpStartAddress, IntPtr lpParameter, int dwCreationFlags, IntPtr lpThreadId);
 
         [DllImport("kernel32.dll")]
@@ -211,7 +208,6 @@ namespace osu_Lyrics
             return hThread != IntPtr.Zero;
         }
 
-        private static IntPtr hinstDLL;
         private readonly static ConcurrentQueue<string> DataQueue = new ConcurrentQueue<string>();
 
         public static bool Listen(Action<string[]> onSignal)
@@ -238,46 +234,24 @@ namespace osu_Lyrics
                 }
             });
             // Process
+            // 메인 프로그램이 종료될 때 같이 꺼진다고 믿고 무한 루프
             Task.Run(() =>
             {
                 while (true)
                 {
                     string data;
-                    if (DataQueue.TryDequeue(out data) && data != null)
+                    if (!DataQueue.TryDequeue(out data) && data == null)
                     {
-                        if (data.StartsWith("_"))
-                        {
-                            hinstDLL = (IntPtr) Convert.ToInt32(data.Substring(1));
-                            continue;
-                        }
-                        onSignal(data.Split('|'));
+                        Thread.Sleep(100);
+                        continue;
                     }
                     else
                     {
-                        Thread.Sleep(100);
+                        onSignal(data.Split('|'));
                     }
                 }
             });
             return true;
-        }
-
-        public static void Shutdown()
-        {
-            const int PROCESS_ALL_ACCESS = 0x1F0FFF;
-
-            const int MEM_RESERVE = 0x2000;
-            const int MEM_COMMIT = 0x1000;
-            const int PAGE_READWRITE = 0x04;
-
-            var hProcess = OpenProcess(PROCESS_ALL_ACCESS, true, Process.Id);
-
-            var pFreeLibrary = GetProcAddress(GetModuleHandle("kernel32.dll"), "FreeLibrary");
-            var pHModule = VirtualAllocEx(hProcess, IntPtr.Zero, 4, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-            WriteProcessMemory(hProcess, pHModule, hinstDLL, 4, IntPtr.Zero);
-
-            var hThread = CreateRemoteThread(hProcess, IntPtr.Zero, 0, pFreeLibrary, pHModule, 0, IntPtr.Zero);
-            CloseHandle(hThread);
-            CloseHandle(hProcess);
         }
 
         #endregion

@@ -75,23 +75,33 @@ BOOL hook_by_code(LPCTSTR szDllName, LPCTSTR szFuncName, PROC pfnNew, PBYTE pOrg
 
 HANDLE hPipe;
 queue<string> pipeQueue;
+BOOL bCancelPipeThread = FALSE;
 
 DWORD WINAPI PipeManager(LPVOID lParam)
 {
     hPipe = CreateNamedPipe("\\\\.\\pipe\\osu!Lyrics", PIPE_ACCESS_OUTBOUND,
         PIPE_TYPE_MESSAGE | PIPE_WAIT, 1, BUF_SIZE * 5, 0, INFINITE, NULL);
     // 클라이언트가 연결할 때까지 무한 대기
-    while (ConnectNamedPipe(hPipe, NULL) || GetLastError() == ERROR_PIPE_CONNECTED)
+    while (!bCancelPipeThread)
     {
-        if (!pipeQueue.empty())
+        if (ConnectNamedPipe(hPipe, NULL) || GetLastError() == ERROR_PIPE_CONNECTED)
         {
+            if (pipeQueue.empty())
+            {
+                Sleep(100);
+                continue;
+            }
             string message = pipeQueue.front();
             OVERLAPPED overlapped = {};
             if (WriteFileEx(hPipe, message.c_str(), message.length(), &overlapped, [](DWORD, DWORD, LPOVERLAPPED) {}))
             {
                 pipeQueue.pop();
+                continue;
             }
         }
+        // 연결 끊겼으면 큐를 비우고 다시 연결 대기
+        DisconnectNamedPipe(hPipe);
+        pipeQueue = {};
     }
     // 클라이언트 연결 종료
     DisconnectNamedPipe(hPipe);
@@ -191,10 +201,6 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
     if (fdwReason == DLL_PROCESS_ATTACH)
     {
         hPipeThread = CreateThread(NULL, 0, PipeManager, NULL, 0, NULL);
-
-        char buffer[BUF_SIZE];
-        sprintf(buffer, "_%d\n", hinstDLL);
-        pipeQueue.push(string(buffer));
         
         InitializeCriticalSection(&hMutex);
         EnterCriticalSection(&hMutex);
@@ -206,6 +212,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
     }
     else if (fdwReason == DLL_PROCESS_DETACH)
     {
+        bCancelPipeThread = TRUE;
         DisconnectNamedPipe(hPipe);
         WaitForSingleObject(hPipeThread, INFINITE);
         CloseHandle(hPipeThread);

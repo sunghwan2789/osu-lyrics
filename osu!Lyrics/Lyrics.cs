@@ -31,15 +31,7 @@ namespace osu_Lyrics
         private static extern IntPtr SelectObject(IntPtr hdc, IntPtr hgdiobj);
 
         [DllImport("user32.dll")]
-        private static extern bool UpdateLayeredWindow(IntPtr hwnd,
-            IntPtr hdcDst,
-            ref Point pptDst,
-            ref Size psize,
-            IntPtr hdcSrc,
-            ref Point pprSrc,
-            int crKey,
-            ref BLENDFUNCTION pblend,
-            int dwFlags);
+        private static extern bool UpdateLayeredWindow(IntPtr hwnd, IntPtr hdcDst, ref Point pptDst, ref Size psize, IntPtr hdcSrc, ref Point pprSrc, int crKey, ref BLENDFUNCTION pblend, int dwFlags);
 
         private struct BLENDFUNCTION
         {
@@ -188,7 +180,6 @@ namespace osu_Lyrics
         private void Lyrics_FormClosing(object sender, FormClosingEventArgs e)
         {
             Osu.UnhookKeyboard();
-            Osu.Shutdown();
         }
 
 
@@ -205,7 +196,7 @@ namespace osu_Lyrics
             timer1.Stop();
 
             _notice = value;
-            Refresh();
+            Invoke(new MethodInvoker(Refresh));
 
             timer1.Start();
         }
@@ -366,7 +357,10 @@ namespace osu_Lyrics
             }
         }
 
-        private readonly List<string> lyricBuffer = new List<string>();
+        private readonly List<string> lyricBuffer = new List<string>
+        {
+            "선곡하세요"
+        };
 
         private bool NewLyricAvailable()
         {
