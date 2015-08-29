@@ -171,33 +171,19 @@ namespace osu_Lyrics
         private static extern IntPtr GetProcAddress(IntPtr hModule, string lpProcName);
 
         [DllImport("kernel32.dll")]
-        private static extern IntPtr VirtualAllocEx(IntPtr hProcess,
-            IntPtr lpAddress,
-            int dwSize,
-            int flAllocationType,
-            int flProtect);
+        private static extern IntPtr VirtualAllocEx(IntPtr hProcess, IntPtr lpAddress, int dwSize, int flAllocationType, int flProtect);
 
         [DllImport("kernel32.dll")]
-        private static extern IntPtr VirtualFreeEx(IntPtr hProcess,
-            IntPtr lpAddress,
-            int dwSize,
-            int dwFreeType);
+        private static extern IntPtr VirtualFreeEx(IntPtr hProcess, IntPtr lpAddress, int dwSize, int dwFreeType);
 
         [DllImport("kernel32.dll")]
-        private static extern bool WriteProcessMemory(IntPtr hProcess,
-            IntPtr lpBaseAddress,
-            string lpBuffer,
-            int nSize,
-            IntPtr lpNumberOfBytesWritten);
+        private static extern bool WriteProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, string lpBuffer, int nSize, IntPtr lpNumberOfBytesWritten);
 
         [DllImport("kernel32.dll")]
-        private static extern IntPtr CreateRemoteThread(IntPtr hProcess,
-            IntPtr lpThreadAttributes,
-            int dwStackSize,
-            IntPtr lpStartAddress,
-            IntPtr lpParameter,
-            int dwCreationFlags,
-            IntPtr lpThreadId);
+        private static extern bool WriteProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, IntPtr lpBuffer, int nSize, IntPtr lpNumberOfBytesWritten);
+
+        [DllImport("kernel32.dll")]
+        private static extern IntPtr CreateRemoteThread(IntPtr hProcess, IntPtr lpThreadAttributes, int dwStackSize, IntPtr lpStartAddress, IntPtr lpParameter, int dwCreationFlags, IntPtr lpThreadId);
 
         [DllImport("kernel32.dll")]
         private static extern bool CloseHandle(IntPtr hObject);
@@ -208,13 +194,13 @@ namespace osu_Lyrics
 
             const int MEM_RESERVE = 0x2000;
             const int MEM_COMMIT = 0x1000;
-            const int PAGE_EXECUTE_READWRITE = 0x40;
+            const int PAGE_READWRITE = 0x04;
             const int MEM_RELEASE = 0x8000;
             
             var hProcess = OpenProcess(PROCESS_ALL_ACCESS, true, Process.Id);
 
             var pLoadLibrary = GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA");
-            var pDllPath = VirtualAllocEx(hProcess, IntPtr.Zero, dllPath.Length + 1, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+            var pDllPath = VirtualAllocEx(hProcess, IntPtr.Zero, dllPath.Length + 1, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
             WriteProcessMemory(hProcess, pDllPath, dllPath, dllPath.Length + 1, IntPtr.Zero);
 
             var hThread = CreateRemoteThread(hProcess, IntPtr.Zero, 0, pLoadLibrary, pDllPath, 0, IntPtr.Zero);
@@ -225,7 +211,7 @@ namespace osu_Lyrics
             return hThread != IntPtr.Zero;
         }
 
-        private static int hinstDLL;
+        private static IntPtr hinstDLL;
         private readonly static ConcurrentQueue<string> DataQueue = new ConcurrentQueue<string>();
 
         public static bool Listen(Action<string[]> onSignal)
@@ -261,7 +247,7 @@ namespace osu_Lyrics
                     {
                         if (data.StartsWith("_"))
                         {
-                            hinstDLL = Convert.ToInt32(data.Substring(1));
+                            hinstDLL = (IntPtr) Convert.ToInt32(data.Substring(1));
                             continue;
                         }
                         Lyrics.Constructor.Invoke(new MethodInvoker(() => onSignal(data.Split('|'))));
@@ -281,17 +267,15 @@ namespace osu_Lyrics
 
             const int MEM_RESERVE = 0x2000;
             const int MEM_COMMIT = 0x1000;
-            const int PAGE_EXECUTE_READWRITE = 0x40;
-            const int MEM_RELEASE = 0x8000;
+            const int PAGE_READWRITE = 0x04;
 
             var hProcess = OpenProcess(PROCESS_ALL_ACCESS, true, Process.Id);
 
             var pFreeLibrary = GetProcAddress(GetModuleHandle("kernel32.dll"), "FreeLibraryA");
-            var pHModule = VirtualAllocEx(hProcess, IntPtr.Zero, 4, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-            WriteProcessMemory(hProcess, pHModule, BitConverter.ToString(BitConverter.GetBytes(hinstDLL)), 4, IntPtr.Zero);
+            var pHModule = VirtualAllocEx(hProcess, IntPtr.Zero, 4, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+            WriteProcessMemory(hProcess, pHModule, hinstDLL, 4, IntPtr.Zero);
 
             var hThread = CreateRemoteThread(hProcess, IntPtr.Zero, 0, pFreeLibrary, pHModule, 0, IntPtr.Zero);
-            VirtualFreeEx(hProcess, pHModule, 0, MEM_RELEASE);
             CloseHandle(hThread);
             CloseHandle(hProcess);
         }
