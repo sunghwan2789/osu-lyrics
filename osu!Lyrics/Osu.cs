@@ -141,7 +141,9 @@ namespace osu_Lyrics
             if (!Show(true) && nCode == HC_ACTION)
             {
                 var state = wParam.ToInt32();
-                if ((state == WM_KEYDOWN || state == WM_SYSKEYDOWN) &&
+                // 설정 중이면 키보드 후킹 안 하기!
+                if (Lyrics.Settings == null &&
+                    (state == WM_KEYDOWN || state == WM_SYSKEYDOWN) &&
                     _hak((Keys) Marshal.ReadInt32(lParam)) && Settings.SuppressKey)
                 {
                     // 설정 중 "핫키 전송 막기" 활성화시 osu!로 핫기 전송 막는 부분..
