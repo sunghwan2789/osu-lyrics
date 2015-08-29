@@ -1,6 +1,4 @@
-﻿using System.IO;
-
-namespace osu_Lyrics
+﻿namespace osu_Lyrics
 {
     internal class Audio
     {
