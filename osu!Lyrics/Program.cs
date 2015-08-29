@@ -12,11 +12,12 @@ namespace osu_Lyrics
         private static void Main()
         {
             bool createdNew;
-            using (new Mutex(true, @"osu!Lyrics v" + Application.ProductVersion, out createdNew))
+            using (new Mutex(true, Settings._MutexName, out createdNew))
             {
                 Osu.Show();
                 if (createdNew)
                 {
+                    // 업데이트 전의 파일 삭제
                     Task.Run(() => PostDel(Application.ExecutablePath + Settings._BakExt));
 
                     Application.EnableVisualStyles();

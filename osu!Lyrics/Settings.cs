@@ -30,8 +30,9 @@ namespace osu_Lyrics
         [DllImport("user32.dll")]
         private static extern short GetAsyncKeyState(Keys vKey);
 
+        public static readonly string _MutexName = "osu!Lyrics." + Application.ProductVersion;
         public static readonly string _Path = Application.ExecutablePath + ".cfg";
-        public static readonly string _Server = Path.GetTempPath() + @"\osu!Lyrics.dll";
+        public static readonly string _Server = Path.Combine(Path.GetTempPath(), _MutexName + ".dll");
         public static readonly string _BakExt = ".del";
 
         private static string Get(string section, string key)
@@ -848,6 +849,7 @@ namespace osu_Lyrics
                 Program.Extract(new DeflateStream(ms, CompressionMode.Decompress), update);
             }
 
+            // 윈도우는 실행 중인 파일 삭제는 못 하지만 이름 변경은 가능
             File.Move(current, current + _BakExt);
             File.Move(update, current);
 
