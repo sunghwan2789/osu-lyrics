@@ -271,7 +271,7 @@ namespace osu_Lyrics
 
             var hProcess = OpenProcess(PROCESS_ALL_ACCESS, true, Process.Id);
 
-            var pFreeLibrary = GetProcAddress(GetModuleHandle("kernel32.dll"), "FreeLibraryA");
+            var pFreeLibrary = GetProcAddress(GetModuleHandle("kernel32.dll"), "FreeLibrary");
             var pHModule = VirtualAllocEx(hProcess, IntPtr.Zero, 4, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
             WriteProcessMemory(hProcess, pHModule, hinstDLL, 4, IntPtr.Zero);
 
