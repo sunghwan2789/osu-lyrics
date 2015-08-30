@@ -126,9 +126,9 @@ DWORD WINAPI PipeThread(LPVOID lParam)
 
         while (!MessageQueue.empty())
         {
-         string *message = MessageQueue.front();
-         delete message;
-         MessageQueue.pop();
+            string *message = MessageQueue.front();
+            delete message;
+            MessageQueue.pop();
         }
         QueueMutex.unlock();
     }
