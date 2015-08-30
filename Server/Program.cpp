@@ -80,7 +80,7 @@ BOOL bPipeConnected;
 
 HANDLE hQueueObject;
 mutex STLMutex;
-queue<string> PipeQueue;
+queue<string> MessageQueue;
 
 DWORD WINAPI PipeThread(LPVOID lParam)
 {
@@ -95,19 +95,19 @@ DWORD WINAPI PipeThread(LPVOID lParam)
         {
             bPipeConnected = TRUE;
 
-            if (PipeQueue.empty())
+            if (MessageQueue.empty())
             {
                 // 기다리는 중 파이프 연결이 끊겼다면 이거.. 어쩌나...?
                 WaitForSingleObject(hQueueObject, INFINITE);
             }
 
             OVERLAPPED overlapped = {};
-            string message = PipeQueue.front();
+            string message = MessageQueue.front();
             if (WriteFileEx(hPipe, message.c_str(), message.length(), &overlapped, [](DWORD, DWORD, LPOVERLAPPED) {}))
             {
                 STLMutex.lock();
                 {
-                    PipeQueue.pop();
+                    MessageQueue.pop();
                 }
                 STLMutex.unlock();
                 continue;
@@ -126,10 +126,10 @@ DWORD WINAPI PipeThread(LPVOID lParam)
 
 typedef BOOL (WINAPI *tReadFile)(HANDLE, LPVOID, DWORD, LPDWORD, LPOVERLAPPED);
 tReadFile pReadFile;
-BYTE pReadFileJMP[5];
-mutex BinaryMutex;
+mutex HookMutex;
+BYTE pReadFileHook[5];
 
-unordered_map<string, string> audioInfo;
+unordered_map<string, string> AudioInfo;
 
 // osu!에서 ReadFile을 호출하면 정보를 빼내서 osu!Lyrics로 보냄
 BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped)
@@ -137,13 +137,13 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
     long long calledAt = CurrentTime();
     
     BOOL result;
-    BinaryMutex.lock();
+    HookMutex.lock();
     {
-        unhook_by_code("kernel32.dll", "ReadFile", pReadFileJMP);
+        unhook_by_code("kernel32.dll", "ReadFile", pReadFileHook);
         result = pReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
-        hook_by_code("kernel32.dll", "ReadFile", (PROC) hkReadFile, pReadFileJMP);
+        hook_by_code("kernel32.dll", "ReadFile", (PROC) hkReadFile, pReadFileHook);
     }
-    BinaryMutex.unlock();
+    HookMutex.unlock();
     if (!result)
     {
         return FALSE;
@@ -183,7 +183,11 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
                 PathRemoveFileSpec(audioPath);
                 PathCombine(audioPath, audioPath, fdata.cFileName);
 
-                audioInfo.insert(make_pair(string(audioPath), string(path)));
+                STLMutex.lock();
+                {
+                    AudioInfo.insert(make_pair(string(audioPath), string(path)));
+                }
+                STLMutex.unlock();
                 
                 free(beatmapDir);
                 break;
@@ -197,14 +201,14 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
     else if (bPipeConnected)
     {
         // [ audioPath, beatmapPath ]
-        unordered_map<string, string>::iterator it = audioInfo.find(string(path));
-        if (it != audioInfo.end())
+        unordered_map<string, string>::iterator it = AudioInfo.find(string(path));
+        if (it != AudioInfo.end())
         {
             char message[BUF_SIZE];
             sprintf(message, "%llx|%s|%lx|%s\n", calledAt, &path[4], seekPosition, &it->second[4]);
             STLMutex.lock();
             {
-                PipeQueue.push(string(message));
+                MessageQueue.push(string(message));
             }
             STLMutex.unlock();
             SetEvent(hQueueObject);
@@ -223,20 +227,20 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
         hPipeThread = CreateThread(NULL, 0, PipeThread, NULL, 0, NULL);
         hQueueObject = CreateEventA(NULL, TRUE, FALSE, NULL);
         
-        BinaryMutex.lock();
+        HookMutex.lock();
         {
             pReadFile = (tReadFile) GetProcAddress(GetModuleHandle("kernel32.dll"), "ReadFile");
-            hook_by_code("kernel32.dll", "ReadFile", (PROC) hkReadFile, pReadFileJMP);
+            hook_by_code("kernel32.dll", "ReadFile", (PROC) hkReadFile, pReadFileHook);
         }
-        BinaryMutex.unlock();
+        HookMutex.unlock();
     }
     else if (fdwReason == DLL_PROCESS_DETACH)
     {
-        BinaryMutex.lock();
+        HookMutex.lock();
         {
-            unhook_by_code("kernel32.dll", "ReadFile", pReadFileJMP);
+            unhook_by_code("kernel32.dll", "ReadFile", pReadFileHook);
         }
-        BinaryMutex.unlock();
+        HookMutex.unlock();
 
         bCancelPipeThread = TRUE;
         DisconnectNamedPipe(hPipe);
