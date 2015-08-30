@@ -11,7 +11,7 @@
 
 using namespace std;
 
-#define BUF_SIZE MAX_PATH*3
+#define BUF_SIZE MAX_PATH * 3
 
 long long CurrentTime()
 {
@@ -93,16 +93,16 @@ DWORD WINAPI PipeManager(LPVOID lParam)
     {
         if ((bIsPipeConnected = ConnectNamedPipe(hPipe, NULL)) || GetLastError() == ERROR_PIPE_CONNECTED)
         {
-			pQueueMutex.lock(); //큐 뮤텍스가 언록될때까지 기다린다. 언록되면 록.
-			string message = buffer;
-			pQueueMutex.unlock(); //언록되면 buffer를 메세지로 카피한 수에 다시 언록한다.
+            pQueueMutex.lock(); //큐 뮤텍스가 언록될때까지 기다린다. 언록되면 록.
+            string message = buffer;
+            pQueueMutex.unlock(); //언록되면 buffer를 메세지로 카피한 수에 다시 언록한다.
             OVERLAPPED overlapped = {};
             if (WriteFileEx(hPipe, message.c_str(), message.length(), &overlapped, [](DWORD, DWORD, LPOVERLAPPED) {}))
             {
                 continue;
             }
         }
-		bIsPipeConnected = FALSE;
+        bIsPipeConnected = FALSE;
         DisconnectNamedPipe(hPipe);
     }
     // 클라이언트 연결 종료
@@ -124,13 +124,13 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
     long long calledAt = CurrentTime();
     BOOL result = FALSE;
 
-	pBinaryMutex.lock();
+    pBinaryMutex.lock();
     {
         unhook_by_code("kernel32.dll", "ReadFile", pReadFileJMP);
         result = pReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
         hook_by_code("kernel32.dll", "ReadFile", (PROC) hkReadFile, pReadFileJMP);
     }
-	pBinaryMutex.unlock();
+    pBinaryMutex.unlock();
     if (!result || !bIsPipeConnected)
     {
         // result가 실패하거나 파이프가 커넥트되어있지 않을경우엔 바로 함수를 리턴한다.
@@ -188,11 +188,11 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
         {
             char TmpBuffer[BUF_SIZE];
             sprintf(buffer, "%llx|%s|%lx|%s\n", calledAt, &path[4], seekPosition, &it->second[4]);
-			pQueueMutex.unlock(); //버퍼에 메세지를 쓰고나서 언록한다. 그러면 윗부분의 파이프에서 lock된다.
-			pQueueMutex.lock(); 
-			/*파이프에서 lock되고 이쪽의 뮤텍스는 다시 록 큐를 기다린다. 그레서 파이프가 언록된 직후에 다시 록된다.
-			  그레서 리피터(펄서) 같이 처리가 이루어진다. 이쪽이 다시 록되면 이쪽이 다시 메세지를 받아서 언록할때
-			  까지 파이프에서는 lock함수로 기다리게 된다.*/
+            pQueueMutex.unlock(); //버퍼에 메세지를 쓰고나서 언록한다. 그러면 윗부분의 파이프에서 lock된다.
+            pQueueMutex.lock(); 
+            /*파이프에서 lock되고 이쪽의 뮤텍스는 다시 록 큐를 기다린다. 그레서 파이프가 언록된 직후에 다시 록된다.
+              그레서 리피터(펄서) 같이 처리가 이루어진다. 이쪽이 다시 록되면 이쪽이 다시 메세지를 받아서 언록할때
+              까지 파이프에서는 lock함수로 기다리게 된다.*/
         }
     }
     return TRUE;
@@ -207,12 +207,12 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
     {
         hPipeThread = CreateThread(NULL, 0, PipeManager, NULL, 0, NULL);
         
-		pBinaryMutex.lock();
+        pBinaryMutex.lock();
         {
             pReadFile = (tReadFile) GetProcAddress(GetModuleHandle("kernel32.dll"), "ReadFile");
             hook_by_code("kernel32.dll", "ReadFile", (PROC) hkReadFile, pReadFileJMP);
         }
-		pBinaryMutex.unlock();
+        pBinaryMutex.unlock();
     }
     else if (fdwReason == DLL_PROCESS_DETACH)
     {
@@ -220,16 +220,16 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 
         WaitForSingleObject(hPipeThread, INFINITE);
 
-		DisconnectNamedPipe(hPipe);
+        DisconnectNamedPipe(hPipe);
 
         CloseHandle(hPipeThread);
-		CloseHandle(hPipe);
+        CloseHandle(hPipe);
 
-		pBinaryMutex.lock();
+        pBinaryMutex.lock();
         {
             unhook_by_code("kernel32.dll", "ReadFile", pReadFileJMP);
         }
-		pBinaryMutex.unlock();
+        pBinaryMutex.unlock();
     }
     return TRUE;
 }
