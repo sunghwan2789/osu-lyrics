@@ -74,20 +74,20 @@ BOOL hook_by_code(LPCTSTR szDllName, LPCTSTR szFuncName, PROC pfnNew, PBYTE pOrg
     return TRUE;
 }
 
-mutex STLMutex;
+mutex QueueMutex;
 
 
 HANDLE hPipe;
 volatile bool bCancelPipeThread;
 volatile bool bPipeConnected;
 
-queue<string> MessageQueue;
+queue<string*> MessageQueue;
 HANDLE hQueuePushed;
 
 DWORD WINAPI PipeThread(LPVOID lParam)
 {
     hPipe = CreateNamedPipeA("\\\\.\\pipe\\osu!Lyrics", PIPE_ACCESS_OUTBOUND,
-        PIPE_TYPE_MESSAGE | PIPE_WAIT, 1, BUF_SIZE * 5, 0, INFINITE, NULL);
+        PIPE_TYPE_MESSAGE | PIPE_WAIT, 1, BUF_SIZE, 0, INFINITE, NULL);
     // 스레드 종료 요청이 들어올 때까지 클라이언트 접속 무한 대기
     while (!bCancelPipeThread)
     {
@@ -97,9 +97,9 @@ DWORD WINAPI PipeThread(LPVOID lParam)
         {
             bPipeConnected = true;
 
-            STLMutex.lock();
+			QueueMutex.lock();
             bool empty = MessageQueue.empty();
-            STLMutex.unlock();
+			QueueMutex.unlock();
             if (empty)
             {
                 // 메세지 큐가 비었을 때 3초간 기다려도 신호가 없으면 다시 기다림
@@ -107,15 +107,15 @@ DWORD WINAPI PipeThread(LPVOID lParam)
                 continue;
             }
 
-            STLMutex.lock();
-            string message = MessageQueue.front();
-            STLMutex.unlock();
+			QueueMutex.lock();
+            string *message = MessageQueue.front();
+			MessageQueue.pop();
+			QueueMutex.unlock();
+
             OVERLAPPED overlapped = {};
-            if (WriteFileEx(hPipe, message.c_str(), message.length(), &overlapped, [](DWORD, DWORD, LPOVERLAPPED) {}))
+            if (WriteFileEx(hPipe, message->c_str(), message->length(), &overlapped, [](DWORD, DWORD, LPOVERLAPPED) {}))
             {
-                STLMutex.lock();
-                MessageQueue.pop();
-                STLMutex.unlock();
+				delete message;
                 continue;
             }
         }
@@ -186,9 +186,7 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
                 PathRemoveFileSpec(audioPath);
                 PathCombine(audioPath, audioPath, fdata.cFileName);
 
-                STLMutex.lock();
                 AudioInfo.insert(make_pair(string(audioPath), string(path)));
-                STLMutex.unlock();
 
                 free(beatmapDir);
                 break;
@@ -199,18 +197,16 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
     }
     else
     {
-        STLMutex.lock();
         // [ audioPath, beatmapPath ]
         unordered_map<string, string>::iterator pair = AudioInfo.find(string(path));
         bool found = pair != AudioInfo.end();
-        STLMutex.unlock();
         if (found)
         {
             char message[BUF_SIZE];
             sprintf(message, "%llx|%s|%lx|%s\n", calledAt, &path[4], seekPosition, &pair->second[4]);
-            STLMutex.lock();
-            MessageQueue.push(string(message));
-            STLMutex.unlock();
+			QueueMutex.lock();
+            MessageQueue.push(new string(message));
+			QueueMutex.unlock();
             SetEvent(hQueuePushed);
         }
     }
