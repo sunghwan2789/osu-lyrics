@@ -44,14 +44,7 @@ namespace osu_Lyrics
                 var exec = Registry.GetValue(@"HKEY_CLASSES_ROOT\osu!\shell\open\command", null, null);
                 if (exec != null)
                 {
-                    _process = new Process
-                    {
-                        StartInfo = new ProcessStartInfo
-                        {
-                            FileName = exec.ToString().Split(new[] { '"' }, StringSplitOptions.RemoveEmptyEntries).First()
-                        }
-                    };
-                    _process.Start();
+                    _process = Process.Start(exec.ToString().Split(new[] { '"' }, StringSplitOptions.RemoveEmptyEntries)[0]);
                     return Process;
                 }
 
@@ -219,8 +212,12 @@ namespace osu_Lyrics
 
         public static bool Listen(Action<string[]> onSignal)
         {
+            // dll의 fileVersion을 바탕으로 버전별로 겹치지 않는 경로에 압축 풀기:
+            // 시스템 커널에 이전 버전의 dll이 같은 이름으로 남아있을 수 있음
             Program.Extract(Assembly.GetExecutingAssembly().GetManifestResourceStream("osu_Lyrics.Server.dll"), Settings._Server);
-            if (!InjectDLL(Settings._Server))
+            var dest = Settings._Server + "." + FileVersionInfo.GetVersionInfo(Settings._Server).FileVersion;
+            Program.Move(Settings._Server, dest);
+            if (!InjectDLL(dest))
             {
                 return false;
             }
