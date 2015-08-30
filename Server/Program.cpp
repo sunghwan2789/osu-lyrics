@@ -97,9 +97,9 @@ DWORD WINAPI PipeThread(LPVOID lParam)
         {
             bPipeConnected = true;
 
-			QueueMutex.lock();
+            QueueMutex.lock();
             bool empty = MessageQueue.empty();
-			QueueMutex.unlock();
+            QueueMutex.unlock();
             if (empty)
             {
                 // 메세지 큐가 비었을 때 3초간 기다려도 신호가 없으면 다시 기다림
@@ -107,23 +107,20 @@ DWORD WINAPI PipeThread(LPVOID lParam)
                 continue;
             }
 
-			QueueMutex.lock();
+            QueueMutex.lock();
             string *message = MessageQueue.front();
-			MessageQueue.pop();
-			QueueMutex.unlock();
+            MessageQueue.pop();
+            QueueMutex.unlock();
 
             OVERLAPPED overlapped = {};
             if (WriteFileEx(hPipe, message->c_str(), message->length(), &overlapped, [](DWORD, DWORD, LPOVERLAPPED) {}))
             {
-				delete message;
+                delete message;
                 continue;
             }
         }
         bPipeConnected = false;
         DisconnectNamedPipe(hPipe);
-        STLMutex.lock();
-        MessageQueue = {};
-        STLMutex.unlock();
     }
     // 클라이언트 연결 종료
     bPipeConnected = false;
@@ -209,9 +206,9 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
         {
             char message[BUF_SIZE];
             sprintf(message, "%llx|%s|%lx|%s\n", calledAt, &path[4], seekPosition, &pair->second[4]);
-			QueueMutex.lock();
+            QueueMutex.lock();
             MessageQueue.push(new string(message));
-			QueueMutex.unlock();
+            QueueMutex.unlock();
             SetEvent(hQueuePushed);
         }
     }
