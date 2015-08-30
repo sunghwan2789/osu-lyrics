@@ -120,10 +120,10 @@ DWORD WINAPI PipeThread(LPVOID lParam)
                 continue;
             }
         }
-		QueueMutex.lock();
         bPipeConnected = false;
         DisconnectNamedPipe(hPipe);
 
+        QueueMutex.lock();
         while (!MessageQueue.empty())
         {
             string *message = MessageQueue.front();
@@ -219,6 +219,7 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
             QueueMutex.lock();
             MessageQueue.push(new string(message));
             QueueMutex.unlock();
+
             SetEvent(hQueuePushed);
         }
     }
