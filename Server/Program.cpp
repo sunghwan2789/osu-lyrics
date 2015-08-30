@@ -101,7 +101,8 @@ DWORD WINAPI PipeThread(LPVOID lParam)
             if (queueEmpty)
             {
                 // 기다리는 중 파이프 연결이 끊겼다면 이거.. 어쩌나...?
-                WaitForSingleObject(hQueueObject, INFINITE);
+                WaitForSingleObject(hQueueObject, 100);
+                continue;
             }
 
             STLMutex.lock();
