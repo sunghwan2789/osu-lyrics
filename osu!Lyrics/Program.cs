@@ -12,11 +12,12 @@ namespace osu_Lyrics
         private static void Main()
         {
             bool createdNew;
-            using (new Mutex(true, @"osu!Lyrics v" + Application.ProductVersion, out createdNew))
+            using (new Mutex(true, Settings._MutexName, out createdNew))
             {
                 Osu.Show();
                 if (createdNew)
                 {
+                    // 업데이트 전의 파일 삭제
                     Task.Run(() => PostDel(Application.ExecutablePath + Settings._BakExt));
 
                     Application.EnableVisualStyles();
@@ -26,7 +27,7 @@ namespace osu_Lyrics
             }
         }
 
-        public static void Extract(Stream s, string path)
+        public static void PreDel(string path)
         {
             try
             {
@@ -38,11 +39,22 @@ namespace osu_Lyrics
                 PostDel(bak);
                 File.Move(path, bak);
             }
+        }
+
+        public static void Extract(Stream s, string path)
+        {
+            PreDel(path);
             using (var fs = File.OpenWrite(path))
             {
                 s.CopyTo(fs);
             }
             s.Dispose();
+        }
+
+        public static void Move(string src, string dst)
+        {
+            PreDel(dst);
+            File.Move(src, dst);
         }
 
         public static void PostDel(string bak)

@@ -6,7 +6,6 @@ using System.IO;
 using System.IO.Pipes;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -45,14 +44,7 @@ namespace osu_Lyrics
                 var exec = Registry.GetValue(@"HKEY_CLASSES_ROOT\osu!\shell\open\command", null, null);
                 if (exec != null)
                 {
-                    _process = new Process
-                    {
-                        StartInfo = new ProcessStartInfo
-                        {
-                            FileName = exec.ToString().Split(new[] { '"' }, StringSplitOptions.RemoveEmptyEntries).First()
-                        }
-                    };
-                    _process.Start();
+                    _process = Process.Start(exec.ToString().Split(new[] { '"' }, StringSplitOptions.RemoveEmptyEntries)[0]);
                     return Process;
                 }
 
@@ -142,7 +134,9 @@ namespace osu_Lyrics
             if (!Show(true) && nCode == HC_ACTION)
             {
                 var state = wParam.ToInt32();
-                if ((state == WM_KEYDOWN || state == WM_SYSKEYDOWN) &&
+                // 설정 중이면 키보드 후킹 안 하기!
+                if (Lyrics.Settings == null &&
+                    (state == WM_KEYDOWN || state == WM_SYSKEYDOWN) &&
                     _hak((Keys) Marshal.ReadInt32(lParam)) && Settings.SuppressKey)
                 {
                     // 설정 중 "핫키 전송 막기" 활성화시 osu!로 핫기 전송 막는 부분..
@@ -180,10 +174,10 @@ namespace osu_Lyrics
         private static extern bool WriteProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, string lpBuffer, int nSize, IntPtr lpNumberOfBytesWritten);
 
         [DllImport("kernel32.dll")]
-        private static extern bool WriteProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, IntPtr lpBuffer, int nSize, IntPtr lpNumberOfBytesWritten);
+        private static extern IntPtr CreateRemoteThread(IntPtr hProcess, IntPtr lpThreadAttributes, int dwStackSize, IntPtr lpStartAddress, IntPtr lpParameter, int dwCreationFlags, IntPtr lpThreadId);
 
         [DllImport("kernel32.dll")]
-        private static extern IntPtr CreateRemoteThread(IntPtr hProcess, IntPtr lpThreadAttributes, int dwStackSize, IntPtr lpStartAddress, IntPtr lpParameter, int dwCreationFlags, IntPtr lpThreadId);
+        private static extern IntPtr WaitForSingleObject(IntPtr hHandle, int dwMilliseconds);
 
         [DllImport("kernel32.dll")]
         private static extern bool CloseHandle(IntPtr hObject);
@@ -191,10 +185,10 @@ namespace osu_Lyrics
         private static bool InjectDLL(string dllPath)
         {
             const int PROCESS_ALL_ACCESS = 0x1F0FFF;
-
             const int MEM_RESERVE = 0x2000;
             const int MEM_COMMIT = 0x1000;
             const int PAGE_READWRITE = 0x04;
+            const int INFINITE = unchecked((int) 0xFFFFFFFF);
             const int MEM_RELEASE = 0x8000;
             
             var hProcess = OpenProcess(PROCESS_ALL_ACCESS, true, Process.Id);
@@ -204,20 +198,26 @@ namespace osu_Lyrics
             WriteProcessMemory(hProcess, pDllPath, dllPath, dllPath.Length + 1, IntPtr.Zero);
 
             var hThread = CreateRemoteThread(hProcess, IntPtr.Zero, 0, pLoadLibrary, pDllPath, 0, IntPtr.Zero);
-            VirtualFreeEx(hProcess, pDllPath, 0, MEM_RELEASE);
+            WaitForSingleObject(hThread, INFINITE);
             CloseHandle(hThread);
+
+            VirtualFreeEx(hProcess, pDllPath, 0, MEM_RELEASE);
+
             CloseHandle(hProcess);
 
             return hThread != IntPtr.Zero;
         }
 
-        private static IntPtr hinstDLL;
         private readonly static ConcurrentQueue<string> DataQueue = new ConcurrentQueue<string>();
 
         public static bool Listen(Action<string[]> onSignal)
         {
+            // dll의 fileVersion을 바탕으로 버전별로 겹치지 않는 경로에 압축 풀기:
+            // 시스템 커널에 이전 버전의 dll이 같은 이름으로 남아있을 수 있음
             Program.Extract(Assembly.GetExecutingAssembly().GetManifestResourceStream("osu_Lyrics.Server.dll"), Settings._Server);
-            if (!InjectDLL(Settings._Server))
+            var dest = Settings._Server + "." + FileVersionInfo.GetVersionInfo(Settings._Server).FileVersion;
+            Program.Move(Settings._Server, dest);
+            if (!InjectDLL(dest))
             {
                 return false;
             }
@@ -238,46 +238,24 @@ namespace osu_Lyrics
                 }
             });
             // Process
+            // 메인 프로그램이 종료될 때 같이 꺼진다고 믿고 무한 루프
             Task.Run(() =>
             {
                 while (true)
                 {
                     string data;
-                    if (DataQueue.TryDequeue(out data) && data != null)
+                    if (!DataQueue.TryDequeue(out data) && data == null)
                     {
-                        if (data.StartsWith("_"))
-                        {
-                            hinstDLL = (IntPtr) Convert.ToInt32(data.Substring(1));
-                            continue;
-                        }
-                        onSignal(data.Split('|'));
+                        Thread.Sleep(100);
+                        continue;
                     }
                     else
                     {
-                        Thread.Sleep(100);
+                        onSignal(data.Split('|'));
                     }
                 }
             });
             return true;
-        }
-
-        public static void Shutdown()
-        {
-            const int PROCESS_ALL_ACCESS = 0x1F0FFF;
-
-            const int MEM_RESERVE = 0x2000;
-            const int MEM_COMMIT = 0x1000;
-            const int PAGE_READWRITE = 0x04;
-
-            var hProcess = OpenProcess(PROCESS_ALL_ACCESS, true, Process.Id);
-
-            var pFreeLibrary = GetProcAddress(GetModuleHandle("kernel32.dll"), "FreeLibrary");
-            var pHModule = VirtualAllocEx(hProcess, IntPtr.Zero, 4, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-            WriteProcessMemory(hProcess, pHModule, hinstDLL, 4, IntPtr.Zero);
-
-            var hThread = CreateRemoteThread(hProcess, IntPtr.Zero, 0, pFreeLibrary, pHModule, 0, IntPtr.Zero);
-            CloseHandle(hThread);
-            CloseHandle(hProcess);
         }
 
         #endregion

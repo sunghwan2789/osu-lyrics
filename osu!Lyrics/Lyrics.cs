@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
@@ -10,7 +9,6 @@ using System.Linq;
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using osu_Lyrics.Properties;
@@ -31,15 +29,7 @@ namespace osu_Lyrics
         private static extern IntPtr SelectObject(IntPtr hdc, IntPtr hgdiobj);
 
         [DllImport("user32.dll")]
-        private static extern bool UpdateLayeredWindow(IntPtr hwnd,
-            IntPtr hdcDst,
-            ref Point pptDst,
-            ref Size psize,
-            IntPtr hdcSrc,
-            ref Point pprSrc,
-            int crKey,
-            ref BLENDFUNCTION pblend,
-            int dwFlags);
+        private static extern bool UpdateLayeredWindow(IntPtr hwnd, IntPtr hdcDst, ref Point pptDst, ref Size psize, IntPtr hdcSrc, ref Point pprSrc, int crKey, ref BLENDFUNCTION pblend, int dwFlags);
 
         private struct BLENDFUNCTION
         {
@@ -75,9 +65,10 @@ namespace osu_Lyrics
             {
                 const int WS_EX_LAYERED = 0x80000;
                 const int WS_EX_TRANSPARENT = 0x20;
+                const int WS_EX_NOACTIVATE = 0x8000000;
 
                 var cp = base.CreateParams;
-                cp.ExStyle |= WS_EX_LAYERED | WS_EX_TRANSPARENT;
+                cp.ExStyle |= WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE;
                 return cp;
             }
         }
@@ -142,18 +133,17 @@ namespace osu_Lyrics
 
         private void Lyrics_Load(object sender, EventArgs e)
         {
-            Notice("osu!Lyrics {0}", Osu.Listen(Osu_Signal) ? Application.ProductVersion : "초기화 실패");
+            Notice(Osu.Listen(Osu_Signal) ? Settings._MutexName : "초기화 실패");
             Osu.HookKeyboard(Osu_KeyDown);
+        }
 
+        private async void Lyrics_Shown(object sender, EventArgs e)
+        {
             // 초기 설정을 위해 대화 상자 열기
             if (!File.Exists(Settings._Path))
             {
                 Task.Run(() => Invoke(new MethodInvoker(menuSetting.PerformClick)));
             }
-        }
-
-        private async void Lyrics_Shown(object sender, EventArgs e)
-        {
             while (!Osu.Process.HasExited)
             {
                 if (!Osu.Show(true))
@@ -168,7 +158,11 @@ namespace osu_Lyrics
                         ClientSize = osu.ClientSize;
                         Settings.DrawingOrigin = Point.Empty;
                     }
-                    TopMost = Visible = true;
+                    if (Settings == null)
+                    {
+                        TopMost = true;
+                    }
+                    Visible = true;
                 }
                 else
                 {
@@ -188,7 +182,6 @@ namespace osu_Lyrics
         private void Lyrics_FormClosing(object sender, FormClosingEventArgs e)
         {
             Osu.UnhookKeyboard();
-            Osu.Shutdown();
         }
 
 
@@ -205,7 +198,7 @@ namespace osu_Lyrics
             timer1.Stop();
 
             _notice = value;
-            Refresh();
+            Invoke(new MethodInvoker(Refresh));
 
             timer1.Start();
         }
@@ -319,7 +312,10 @@ namespace osu_Lyrics
             if (data[1] != curAudio.Path)
             {
                 curAudio = new Audio(data[1], data[3]);
-                lyricsCache = new List<Lyric> { new Lyric(0, "가사 받는 중...") };
+                lyricsCache = new List<Lyric>
+                {
+                    new Lyric(0, "가사 받는 중...")
+                };
 
                 // 파일 해시로 가사 검색
                 var newLyrics = await GetLyrics(new Dictionary<string, string>
@@ -341,7 +337,10 @@ namespace osu_Lyrics
                 }
                 else
                 {
-                    newLyrics = new List<Lyric> { new Lyric(0, "가사 없음") };
+                    newLyrics = new List<Lyric>
+                    {
+                        new Lyric(0, "가사 없음")
+                    };
                 }
 
                 lyricsCache = newLyrics;
@@ -366,7 +365,10 @@ namespace osu_Lyrics
             }
         }
 
-        private readonly List<string> lyricBuffer = new List<string>();
+        private readonly List<string> lyricBuffer = new List<string>
+        {
+            "선곡하세요"
+        };
 
         private bool NewLyricAvailable()
         {
@@ -521,10 +523,11 @@ namespace osu_Lyrics
         {
             if (Settings == null)
             {
-                using (Settings = new Settings { TopMost = true })
+                Settings = new Settings
                 {
-                    Settings.ShowDialog();
-                }
+                    TopMost = true
+                };
+                Settings.ShowDialog();
                 Settings = null;
             }
             else
