@@ -96,8 +96,8 @@ DWORD WINAPI PipeManager(LPVOID lParam)
         {
             bPipeConnected = TRUE;
 
-            string message; 
             OVERLAPPED overlapped = {};
+            string message;
             pQueueMutex.lock(); //큐 뮤텍스가 언록될때까지 기다린다. 언록되면 록.
             {
                 message = buffer;
@@ -122,7 +122,6 @@ DWORD WINAPI PipeManager(LPVOID lParam)
 typedef BOOL (WINAPI *tReadFile)(HANDLE, LPVOID, DWORD, LPDWORD, LPOVERLAPPED);
 tReadFile pReadFile;
 BYTE pReadFileJMP[5];
-
 mutex pBinaryMutex;
 
 unordered_map<string, string> audioInfo;
@@ -131,8 +130,8 @@ unordered_map<string, string> audioInfo;
 BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped)
 {
     long long calledAt = CurrentTime();
-    BOOL result = FALSE;
 
+    BOOL result;
     pBinaryMutex.lock();
     {
         unhook_by_code("kernel32.dll", "ReadFile", pReadFileJMP);
@@ -203,7 +202,7 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
               까지 파이프에서는 lock함수로 기다리게 된다.*/
         }
     }
-    return TRUE;
+    return result;
 }
 
 
