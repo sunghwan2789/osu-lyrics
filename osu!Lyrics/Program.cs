@@ -27,7 +27,7 @@ namespace osu_Lyrics
             }
         }
 
-        public static void Extract(Stream s, string path)
+        public static void PreDel(string path)
         {
             try
             {
@@ -39,11 +39,22 @@ namespace osu_Lyrics
                 PostDel(bak);
                 File.Move(path, bak);
             }
+        }
+
+        public static void Extract(Stream s, string path)
+        {
+            PreDel(path);
             using (var fs = File.OpenWrite(path))
             {
                 s.CopyTo(fs);
             }
             s.Dispose();
+        }
+
+        public static void Move(string src, string dst)
+        {
+            PreDel(dst);
+            File.Move(src, dst);
         }
 
         public static void PostDel(string bak)
