@@ -197,7 +197,9 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
         }
         free(buffer);
     }
-    else
+    // 파이프 연결이 끊겼으면 유저가 가사를 보고 싶지 않다는 것:
+    // osu!가 게임 플레이에만 집중하게 하자... 자원 낭비 금지
+    else if (bPipeConnected)
     {
         STLMutex.lock();
         // [ audioPath, beatmapPath ]
