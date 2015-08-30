@@ -80,7 +80,9 @@ BOOL hook_by_code(LPCTSTR szDllName, LPCTSTR szFuncName, PROC pfnNew, PBYTE pOrg
 HANDLE hPipe;
 char buffer[BUF_SIZE];
 mutex pQueueMutex;
-BOOL bCancelPipeThread = FALSE;
+
+volatile BOOL bCancelPipeThread = FALSE;
+volatile BOOL bIsPipeConnected = FALSE;
 
 DWORD WINAPI PipeManager(LPVOID lParam)
 {
@@ -89,7 +91,7 @@ DWORD WINAPI PipeManager(LPVOID lParam)
     // 클라이언트가 연결할 때까지 무한 대기
     while (!bCancelPipeThread)
     {
-        if (ConnectNamedPipe(hPipe, NULL) || GetLastError() == ERROR_PIPE_CONNECTED)
+        if ((bIsPipeConnected = ConnectNamedPipe(hPipe, NULL)) || GetLastError() == ERROR_PIPE_CONNECTED)
         {
 			pQueueMutex.lock(); //큐 뮤텍스가 언록될때까지 기다린다. 언록되면 록.
 			string message = buffer;
@@ -100,7 +102,7 @@ DWORD WINAPI PipeManager(LPVOID lParam)
                 continue;
             }
         }
-        // 연결 끊겼으면 큐를 비우고 다시 연결 대기
+		bIsPipeConnected = FALSE;
         DisconnectNamedPipe(hPipe);
     }
     // 클라이언트 연결 종료
@@ -129,10 +131,10 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
         hook_by_code("kernel32.dll", "ReadFile", (PROC) hkReadFile, pReadFileJMP);
     }
 	pBinaryMutex.unlock();
-    if (!result)
+    if (!result || !bIsPipeConnected)
     {
-        // 통상 ReadFile이 실패하는 경우는 osu 프로토콜 읽을 때...
-        return FALSE;
+        // result가 실패하거나 파이프가 커넥트되어있지 않을경우엔 바로 함수를 리턴한다.
+        return result;
     }
 
     char path[MAX_PATH];
