@@ -82,30 +82,40 @@ char buffer[BUF_SIZE];
 mutex pQueueMutex;
 
 volatile BOOL bCancelPipeThread = FALSE;
-volatile BOOL bIsPipeConnected = FALSE;
+volatile BOOL bPipeConnected = FALSE;
 
 DWORD WINAPI PipeManager(LPVOID lParam)
 {
     hPipe = CreateNamedPipe("\\\\.\\pipe\\osu!Lyrics", PIPE_ACCESS_OUTBOUND,
         PIPE_TYPE_MESSAGE | PIPE_WAIT, 1, BUF_SIZE * 5, 0, INFINITE, NULL);
-    // 클라이언트가 연결할 때까지 무한 대기
+    // 스레드 종료 요청이 들어올 때까지 클라이언트 접속 무한 대기
     while (!bCancelPipeThread)
     {
-        if ((bIsPipeConnected = ConnectNamedPipe(hPipe, NULL)) || GetLastError() == ERROR_PIPE_CONNECTED)
+        // ConnectNamedPipe는 클라이언트와 연결될 때까지 무한 대기함:
+        // 취소는 DisconnectNamedPipe로 가능
+        if (ConnectNamedPipe(hPipe, NULL) || GetLastError() == ERROR_PIPE_CONNECTED)
         {
-            pQueueMutex.lock(); //큐 뮤텍스가 언록될때까지 기다린다. 언록되면 록.
-            string message = buffer;
-            pQueueMutex.unlock(); //언록되면 buffer를 메세지로 카피한 수에 다시 언록한다.
+            bPipeConnected = TRUE;
+
+            string message; 
             OVERLAPPED overlapped = {};
+            pQueueMutex.lock(); //큐 뮤텍스가 언록될때까지 기다린다. 언록되면 록.
+            {
+                message = buffer;
+            }
+            pQueueMutex.unlock(); //언록되면 buffer를 메세지로 카피한 수에 다시 언록한다.
             if (WriteFileEx(hPipe, message.c_str(), message.length(), &overlapped, [](DWORD, DWORD, LPOVERLAPPED) {}))
             {
                 continue;
             }
+            // WriteFileEx 실패는 클라이언트와 연결이 끊어졌다는 것...
         }
-        bIsPipeConnected = FALSE;
+        bPipeConnected = FALSE;
         DisconnectNamedPipe(hPipe);
     }
     // 클라이언트 연결 종료
+    DisconnectNamedPipe(hPipe);
+    CloseHandle(hPipe);
     return 0;
 }
 
@@ -131,9 +141,8 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
         hook_by_code("kernel32.dll", "ReadFile", (PROC) hkReadFile, pReadFileJMP);
     }
     pBinaryMutex.unlock();
-    if (!result || !bIsPipeConnected)
+    if (!result)
     {
-        // result가 실패하거나 파이프가 커넥트되어있지 않을경우엔 바로 함수를 리턴한다.
         return result;
     }
 
@@ -180,16 +189,16 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
         }
         free(buffer);
     }
-    else
+    else if (bPipeConnected)
     {
         // [ audioPath, beatmapPath ]
         unordered_map<string, string>::iterator it = audioInfo.find(string(path));
         if (it != audioInfo.end())
         {
-            char TmpBuffer[BUF_SIZE];
             sprintf(buffer, "%llx|%s|%lx|%s\n", calledAt, &path[4], seekPosition, &it->second[4]);
             pQueueMutex.unlock(); //버퍼에 메세지를 쓰고나서 언록한다. 그러면 윗부분의 파이프에서 lock된다.
-            pQueueMutex.lock(); 
+            // 뮤택스 대기 중이던 파이프 스레드가 메세지 전송
+            pQueueMutex.lock();
             /*파이프에서 lock되고 이쪽의 뮤텍스는 다시 록 큐를 기다린다. 그레서 파이프가 언록된 직후에 다시 록된다.
               그레서 리피터(펄서) 같이 처리가 이루어진다. 이쪽이 다시 록되면 이쪽이 다시 메세지를 받아서 언록할때
               까지 파이프에서는 lock함수로 기다리게 된다.*/
@@ -217,13 +226,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
     else if (fdwReason == DLL_PROCESS_DETACH)
     {
         bCancelPipeThread = TRUE;
-
         WaitForSingleObject(hPipeThread, INFINITE);
-
-        DisconnectNamedPipe(hPipe);
-
         CloseHandle(hPipeThread);
-        CloseHandle(hPipe);
 
         pBinaryMutex.lock();
         {
