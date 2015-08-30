@@ -1,4 +1,5 @@
 #pragma warning (disable:4996)
+
 #define WIN32_LEAN_AND_MEAN
 #pragma comment (lib, "Shlwapi.lib")
 
@@ -99,9 +100,10 @@ DWORD WINAPI PipeThread(LPVOID lParam)
             STLMutex.lock();
             bool empty = MessageQueue.empty();
             STLMutex.unlock();
-            // 메세지 큐가 비었을 때 3초간 기다려도 신호가 없으면 다시 기다림
-            if (empty && WaitForSingleObject(hQueuePushed, 3000) != WAIT_OBJECT_0)
+            if (empty)
             {
+                // 메세지 큐가 비었을 때 3초간 기다려도 신호가 없으면 다시 기다림
+                WaitForSingleObject(hQueuePushed, 3000);
                 continue;
             }
 
