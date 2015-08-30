@@ -73,14 +73,15 @@ BOOL hook_by_code(LPCTSTR szDllName, LPCTSTR szFuncName, PROC pfnNew, PBYTE pOrg
     return TRUE;
 }
 
+mutex STLMutex;
+
 
 HANDLE hPipe;
 volatile bool bCancelPipeThread;
 volatile bool bPipeConnected;
 
-HANDLE hQueueObject;
-mutex STLMutex;
 queue<string> MessageQueue;
+HANDLE hQueuePushed;
 
 DWORD WINAPI PipeThread(LPVOID lParam)
 {
@@ -96,12 +97,11 @@ DWORD WINAPI PipeThread(LPVOID lParam)
             bPipeConnected = true;
 
             STLMutex.lock();
-            bool queueEmpty = MessageQueue.empty();
+            bool empty = MessageQueue.empty();
             STLMutex.unlock();
-            if (queueEmpty)
+            // 메세지 큐가 비었을 때 3초간 기다려도 신호가 없으면 다시 기다림
+            if (empty && WaitForSingleObject(hQueuePushed, 3000) != WAIT_OBJECT_0)
             {
-                // 기다리는 중 파이프 연결이 끊겼다면 이거.. 어쩌나...?
-                WaitForSingleObject(hQueueObject, 100);
                 continue;
             }
 
@@ -209,7 +209,7 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
             STLMutex.lock();
             MessageQueue.push(string(message));
             STLMutex.unlock();
-            SetEvent(hQueueObject);
+            SetEvent(hQueuePushed);
         }
     }
     return TRUE;
@@ -223,7 +223,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
     if (fdwReason == DLL_PROCESS_ATTACH)
     {
         hPipeThread = CreateThread(NULL, 0, PipeThread, NULL, 0, NULL);
-        hQueueObject = CreateEventA(NULL, TRUE, FALSE, NULL);
+        hQueuePushed = CreateEventA(NULL, TRUE, FALSE, NULL);
 
         HookMutex.lock();
         pReadFile = (tReadFile) GetProcAddress(GetModuleHandle("kernel32.dll"), "ReadFile");
@@ -239,6 +239,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
         bCancelPipeThread = true;
         DisconnectNamedPipe(hPipe);
         WaitForSingleObject(hPipeThread, INFINITE);
+        CloseHandle(hQueuePushed);
         CloseHandle(hPipeThread);
     }
     return TRUE;
