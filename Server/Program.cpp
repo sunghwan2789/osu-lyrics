@@ -121,6 +121,9 @@ DWORD WINAPI PipeThread(LPVOID lParam)
         }
         bPipeConnected = false;
         DisconnectNamedPipe(hPipe);
+        STLMutex.lock();
+        MessageQueue = {};
+        STLMutex.unlock();
     }
     // 클라이언트 연결 종료
     bPipeConnected = false;
