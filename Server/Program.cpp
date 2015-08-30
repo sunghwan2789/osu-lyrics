@@ -50,6 +50,7 @@ BOOL hook_by_code(LPCTSTR szDllName, LPCTSTR szFuncName, PROC pfnNew, PBYTE pOrg
     pfnOrg = (FARPROC) GetProcAddress(GetModuleHandle(szDllName), szFuncName);
     pByte = (PBYTE) pfnOrg;
 
+
     // 만약 이미 후킹되어 있다면 return FALSE
     if (pByte[0] == 0xE9)
         return FALSE;
@@ -59,6 +60,9 @@ BOOL hook_by_code(LPCTSTR szDllName, LPCTSTR szFuncName, PROC pfnNew, PBYTE pOrg
 
     // 기존코드 (5 byte) 백업
     memcpy(pOrgBytes, pfnOrg, 5);
+
+
+    
 
     // JMP 주소계산 (E9 XXXX)
     // => XXXX = pfnNew - pfnOrg - 5
@@ -117,13 +121,16 @@ DWORD WINAPI PipeThread(LPVOID lParam)
             }
         }
 		QueueMutex.lock();
-		while (MessageQueue.empty())
-		{
-			MessageQueue.pop();
-		}
-		QueueMutex.unlock();
         bPipeConnected = false;
         DisconnectNamedPipe(hPipe);
+
+        while (!MessageQueue.empty())
+        {
+         string *message = MessageQueue.front();
+         delete message;
+         MessageQueue.pop();
+        }
+        QueueMutex.unlock();
     }
     // 클라이언트 연결 종료
     bPipeConnected = false;
