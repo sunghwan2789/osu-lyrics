@@ -121,6 +121,9 @@ DWORD WINAPI PipeThread(LPVOID lParam)
         }
         bPipeConnected = false;
         DisconnectNamedPipe(hPipe);
+        STLMutex.lock();
+        MessageQueue = {};
+        STLMutex.unlock();
     }
     // 클라이언트 연결 종료
     bPipeConnected = false;
@@ -195,7 +198,9 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
         }
         free(buffer);
     }
-    else
+    // 파이프 연결이 끊겼으면 유저가 가사를 보고 싶지 않다는 것:
+    // osu!가 게임 플레이에만 집중하게 하자... 자원 낭비 금지
+    else if (bPipeConnected)
     {
         // [ audioPath, beatmapPath ]
         unordered_map<string, string>::iterator pair = AudioInfo.find(string(path));
