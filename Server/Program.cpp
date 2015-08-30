@@ -1,5 +1,6 @@
 #define WIN32_LEAN_AND_MEAN
 #pragma comment (lib, "Shlwapi.lib")
+#pragma warning (disable:4996)
 
 #include <Windows.h>
 #include <Shlwapi.h>
@@ -22,16 +23,16 @@ BOOL unhook_by_code(LPCTSTR szDllName, LPCTSTR szFuncName, PBYTE pOrgBytes)
     FARPROC pFunc;
     DWORD dwOldProtect;
 
-    // API ÁÖ¼Ò ±¸ÇÑ´Ù
+    // API ì£¼ì†Œ êµ¬í•œë‹¤
     pFunc = GetProcAddress(GetModuleHandle(szDllName), szFuncName);
 
-    // ¿ø·¡ ÄÚµå (5 byte)¸¦ µ¤¾î¾²±â À§ÇØ ¸Ş¸ğ¸®¿¡ WRITE ¼Ó¼º Ãß°¡
+    // ì›ë˜ ì½”ë“œ (5 byte)ë¥¼ ë®ì–´ì“°ê¸° ìœ„í•´ ë©”ëª¨ë¦¬ì— WRITE ì†ì„± ì¶”ê°€
     VirtualProtect((LPVOID) pFunc, 5, PAGE_EXECUTE_READWRITE, &dwOldProtect);
 
     // Unhook
     memcpy(pFunc, pOrgBytes, 5);
 
-    // ¸Ş¸ğ¸® ¼Ó¼º º¹¿ø
+    // ë©”ëª¨ë¦¬ ì†ì„± ë³µì›
     VirtualProtect((LPVOID) pFunc, 5, dwOldProtect, &dwOldProtect);
 
     return TRUE;
@@ -44,29 +45,29 @@ BOOL hook_by_code(LPCTSTR szDllName, LPCTSTR szFuncName, PROC pfnNew, PBYTE pOrg
     BYTE pBuf[5] = { 0xE9, 0, };
     PBYTE pByte;
 
-    // ÈÄÅ·´ë»ó API ÁÖ¼Ò¸¦ ±¸ÇÑ´Ù
+    // í›„í‚¹ëŒ€ìƒ API ì£¼ì†Œë¥¼ êµ¬í•œë‹¤
     pfnOrg = (FARPROC) GetProcAddress(GetModuleHandle(szDllName), szFuncName);
     pByte = (PBYTE) pfnOrg;
 
-    // ¸¸¾à ÀÌ¹Ì ÈÄÅ·µÇ¾î ÀÖ´Ù¸é return FALSE
+    // ë§Œì•½ ì´ë¯¸ í›„í‚¹ë˜ì–´ ìˆë‹¤ë©´ return FALSE
     if (pByte[0] == 0xE9)
         return FALSE;
 
-    // 5 byte ÆĞÄ¡¸¦ À§ÇÏ¿© ¸Ş¸ğ¸®¿¡ WRITE ¼Ó¼º Ãß°¡
+    // 5 byte íŒ¨ì¹˜ë¥¼ ìœ„í•˜ì—¬ ë©”ëª¨ë¦¬ì— WRITE ì†ì„± ì¶”ê°€
     VirtualProtect((LPVOID) pfnOrg, 5, PAGE_EXECUTE_READWRITE, &dwOldProtect);
 
-    // ±âÁ¸ÄÚµå (5 byte) ¹é¾÷
+    // ê¸°ì¡´ì½”ë“œ (5 byte) ë°±ì—…
     memcpy(pOrgBytes, pfnOrg, 5);
 
-    // JMP ÁÖ¼Ò°è»ê (E9 XXXX)
+    // JMP ì£¼ì†Œê³„ì‚° (E9 XXXX)
     // => XXXX = pfnNew - pfnOrg - 5
     dwAddress = (DWORD) pfnNew - (DWORD) pfnOrg - 5;
     memcpy(&pBuf[1], &dwAddress, 4);
 
-    // Hook - 5 byte ÆĞÄ¡(JMP XXXX)
+    // Hook - 5 byte íŒ¨ì¹˜(JMP XXXX)
     memcpy(pfnOrg, pBuf, 5);
 
-    // ¸Ş¸ğ¸® ¼Ó¼º º¹¿ø
+    // ë©”ëª¨ë¦¬ ì†ì„± ë³µì›
     VirtualProtect((LPVOID) pfnOrg, 5, dwOldProtect, &dwOldProtect);
 
     return TRUE;
@@ -81,7 +82,7 @@ DWORD WINAPI PipeManager(LPVOID lParam)
 {
     hPipe = CreateNamedPipe("\\\\.\\pipe\\osu!Lyrics", PIPE_ACCESS_OUTBOUND,
         PIPE_TYPE_MESSAGE | PIPE_WAIT, 1, BUF_SIZE * 5, 0, INFINITE, NULL);
-    // Å¬¶óÀÌ¾ğÆ®°¡ ¿¬°áÇÒ ¶§±îÁö ¹«ÇÑ ´ë±â
+    // í´ë¼ì´ì–¸íŠ¸ê°€ ì—°ê²°í•  ë•Œê¹Œì§€ ë¬´í•œ ëŒ€ê¸°
     while (!bCancelPipeThread)
     {
         if (ConnectNamedPipe(hPipe, NULL) || GetLastError() == ERROR_PIPE_CONNECTED)
@@ -99,11 +100,11 @@ DWORD WINAPI PipeManager(LPVOID lParam)
                 continue;
             }
         }
-        // ¿¬°á ²÷°åÀ¸¸é Å¥¸¦ ºñ¿ì°í ´Ù½Ã ¿¬°á ´ë±â
+        // ì—°ê²° ëŠê²¼ìœ¼ë©´ íë¥¼ ë¹„ìš°ê³  ë‹¤ì‹œ ì—°ê²° ëŒ€ê¸°
         DisconnectNamedPipe(hPipe);
         pipeQueue = {};
     }
-    // Å¬¶óÀÌ¾ğÆ® ¿¬°á Á¾·á
+    // í´ë¼ì´ì–¸íŠ¸ ì—°ê²° ì¢…ë£Œ
     DisconnectNamedPipe(hPipe);
     CloseHandle(hPipe);
     return 0;
@@ -117,7 +118,7 @@ CRITICAL_SECTION hMutex;
 
 unordered_map<string, string> audioInfo;
 
-// osu!¿¡¼­ ReadFileÀ» È£ÃâÇÏ¸é Á¤º¸¸¦ »©³»¼­ osu!Lyrics·Î º¸³¿
+// osu!ì—ì„œ ReadFileì„ í˜¸ì¶œí•˜ë©´ ì •ë³´ë¥¼ ë¹¼ë‚´ì„œ osu!Lyricsë¡œ ë³´ëƒ„
 BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped)
 {
     long long calledAt = CurrentTime();
@@ -132,7 +133,7 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
     LeaveCriticalSection(&hMutex);
     if (!result)
     {
-        // Åë»ó ReadFileÀÌ ½ÇÆĞÇÏ´Â °æ¿ì´Â osu ÇÁ·ÎÅäÄİ ÀĞÀ» ¶§...
+        // í†µìƒ ReadFileì´ ì‹¤íŒ¨í•˜ëŠ” ê²½ìš°ëŠ” osu í”„ë¡œí† ì½œ ì½ì„ ë•Œ...
         return FALSE;
     }
 
@@ -140,16 +141,16 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
     DWORD pathLength = GetFinalPathNameByHandle(hFile, path, MAX_PATH, VOLUME_NAME_DOS);
     //                  1: \\?\D:\Games\osu!\...
     DWORD seekPosition = SetFilePointer(hFile, 0, NULL, FILE_CURRENT) - *lpNumberOfBytesRead;
-    // Áö±İ ÀĞ´Â ÆÄÀÏÀÌ ºñÆ®¸Ê ÆÄÀÏÀÌ°í ¾ÕºÎºĞÀ» ÀĞ¾ú´Ù¸é:
-    // AudioFilenameÀº ¾ÕºÎºĞ¿¡ ÀÖÀ½ / ÆÄÀÏ ÇÚµé ¶Ç ¿­Áö ¸»°í ÀÏ ÇÑ ¹ø¸¸ ÇÏÀÚ!
+    // ì§€ê¸ˆ ì½ëŠ” íŒŒì¼ì´ ë¹„íŠ¸ë§µ íŒŒì¼ì´ê³  ì•ë¶€ë¶„ì„ ì½ì—ˆë‹¤ë©´:
+    // AudioFilenameì€ ì•ë¶€ë¶„ì— ìˆìŒ / íŒŒì¼ í•¸ë“¤ ë˜ ì—´ì§€ ë§ê³  ì¼ í•œ ë²ˆë§Œ í•˜ì!
     if (strnicmp(".osu", &path[pathLength - 4], 4) == 0 && seekPosition == 0)
     {
-        // strtokÀº ¼Ò½º¸¦ º¯ÇüÇÏ¹Ç·Î ÀÏ´Ü ¹é¾÷
+        // strtokì€ ì†ŒìŠ¤ë¥¼ ë³€í˜•í•˜ë¯€ë¡œ ì¼ë‹¨ ë°±ì—…
         char *buffer = strdup((char *) lpBuffer);
         char *line = strtok(buffer, "\n");
         while (line != NULL)
         {
-            // ºñÆ®¸ÊÀÇ À½¾Ç ÆÄÀÏ °æ·Î ¾ò±â
+            // ë¹„íŠ¸ë§µì˜ ìŒì•… íŒŒì¼ ê²½ë¡œ ì–»ê¸°
             if (strnicmp(line, "AudioFilename:", 14) == 0)
             {
                 char *beatmapDir = strdup(path);
@@ -164,7 +165,7 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
                 strncat(buffer, &line[i], strlen(line) - i - 1);
                 PathCombine(audioPath, beatmapDir, buffer);
 
-                // °Ë»öÇÒ ¶§ ´ë¼Ò¹®ÀÚ ±¸ºĞÇÏ¹Ç·Î Á¦´ë·Î µÈ ÆÄÀÏ °æ·Î ¾ò±â
+                // ê²€ìƒ‰í•  ë•Œ ëŒ€ì†Œë¬¸ì êµ¬ë¶„í•˜ë¯€ë¡œ ì œëŒ€ë¡œ ëœ íŒŒì¼ ê²½ë¡œ ì–»ê¸°
                 WIN32_FIND_DATA fdata;
                 FindClose(FindFirstFile(audioPath, &fdata));
                 PathRemoveFileSpec(audioPath);
