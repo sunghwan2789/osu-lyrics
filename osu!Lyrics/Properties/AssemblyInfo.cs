@@ -7,9 +7,12 @@ using System.Resources;
 // 이 특성 값을 변경하십시오.
 [assembly: AssemblyTitle("osu!Lyrics")]
 [assembly: AssemblyDescription("가사가 궁금해")]
-[assembly: AssemblyCompany("BloodCat")]
+[assembly: AssemblyConfiguration("")]
+[assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("osu!Lyrics")]
-[assembly: AssemblyCopyright("BloodCat 2014-2015")]
+[assembly: AssemblyCopyright("Copyright 2014 BloodCat")]
+[assembly: AssemblyTrademark("")]
+[assembly: AssemblyCulture("")]
 
 // ComVisible을 false로 설정하면 이 어셈블리의 형식이 COM 구성 요소에 
 // 표시되지 않습니다.  COM에서 이 어셈블리의 형식에 액세스하려면 
@@ -30,6 +33,5 @@ using System.Resources;
 // 지정되도록 할 수 있습니다.
 // [assembly: AssemblyVersion("1.0.*")]
 [assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.7.57")]
-[assembly: AssemblyInformationalVersion("1.7.57")]
+[assembly: AssemblyFileVersion("1.7.56")]
 [assembly: NeutralResourcesLanguageAttribute("ko-KR")]

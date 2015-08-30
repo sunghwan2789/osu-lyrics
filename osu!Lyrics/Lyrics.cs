@@ -133,7 +133,7 @@ namespace osu_Lyrics
 
         private void Lyrics_Load(object sender, EventArgs e)
         {
-            Notice(Osu.Listen(Osu_Signal) ? Settings._MutexName : "초기화 실패");
+            Notice("osu!Lyrics {0}", Osu.Listen(Osu_Signal) ? Application.ProductVersion : "초기화 실패");
             Osu.HookKeyboard(Osu_KeyDown);
         }
 

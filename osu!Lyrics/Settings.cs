@@ -32,7 +32,7 @@ namespace osu_Lyrics
 
         public static readonly string _MutexName = "osu!Lyrics." + Application.ProductVersion;
         public static readonly string _Path = Application.ExecutablePath + ".cfg";
-        public static readonly string _Server = Path.Combine(Path.GetTempPath(), "osu!Lyrics.dll");
+        public static readonly string _Server = Path.Combine(Path.GetTempPath(), _MutexName + ".dll");
         public static readonly string _BakExt = ".del";
 
         private static string Get(string section, string key)
