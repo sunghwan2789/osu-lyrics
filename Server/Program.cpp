@@ -97,10 +97,7 @@ DWORD WINAPI PipeThread(LPVOID lParam)
         {
             bPipeConnected = true;
 
-            QueueMutex.lock();
-            bool empty = MessageQueue.empty();
-            QueueMutex.unlock();
-            if (empty)
+            if (MessageQueue.empty())
             {
                 // 메세지 큐가 비었을 때 3초간 기다려도 신호가 없으면 다시 기다림
                 WaitForSingleObject(hQueuePushed, 3000);
@@ -119,6 +116,12 @@ DWORD WINAPI PipeThread(LPVOID lParam)
                 continue;
             }
         }
+		QueueMutex.lock();
+		while (MessageQueue.empty())
+		{
+			MessageQueue.pop();
+		}
+		QueueMutex.unlock();
         bPipeConnected = false;
         DisconnectNamedPipe(hPipe);
     }
