@@ -24,15 +24,18 @@ public:
         CloseHandle(hPushed);
     }
 
-    void push(const T data)
+    void push(T data)
     {
         T *element;
+
         element = new T;
-        memcpy(element, &data, sizeof(data));
+
+        *element = data;
 
         mutex.lock();
         queue.push(element);
         mutex.unlock();
+
         SetEvent(hPushed);
     }
 
@@ -45,7 +48,7 @@ public:
         queue.pop();
         mutex.unlock();
 
-        memcpy(&data, (void *) element, sizeof(element));
+        data = *element;
         
         delete element;
 
