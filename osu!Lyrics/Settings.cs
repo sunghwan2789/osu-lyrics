@@ -473,7 +473,7 @@ namespace osu_Lyrics
             }
         }
 
-        public new static bool ShowWhileOsuTop
+        public static bool ShowWhileOsuTop
         {
             get
             {
