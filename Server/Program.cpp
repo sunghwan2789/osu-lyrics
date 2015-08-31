@@ -7,7 +7,7 @@
 #include <Shlwapi.h>
 #include <unordered_map>
 #include <mutex>
-#include <queue>
+#include "concurrent_queue.h"
 using namespace std;
 
 #define BUF_SIZE MAX_PATH * 3
@@ -61,9 +61,6 @@ BOOL hook_by_code(LPCTSTR szDllName, LPCTSTR szFuncName, PROC pfnNew, PBYTE pOrg
     // 기존코드 (5 byte) 백업
     memcpy(pOrgBytes, pfnOrg, 5);
 
-
-    
-
     // JMP 주소계산 (E9 XXXX)
     // => XXXX = pfnNew - pfnOrg - 5
     dwAddress = (DWORD) pfnNew - (DWORD) pfnOrg - 5;
@@ -78,15 +75,12 @@ BOOL hook_by_code(LPCTSTR szDllName, LPCTSTR szFuncName, PROC pfnNew, PBYTE pOrg
     return TRUE;
 }
 
-mutex QueueMutex;
-
 
 HANDLE hPipe;
 volatile bool bCancelPipeThread;
 volatile bool bPipeConnected;
 
-queue<string*> MessageQueue;
-HANDLE hQueuePushed;
+concurrent_queue<string *> MessageQueue;
 
 DWORD WINAPI PipeThread(LPVOID lParam)
 {
@@ -104,33 +98,29 @@ DWORD WINAPI PipeThread(LPVOID lParam)
             if (MessageQueue.empty())
             {
                 // 메세지 큐가 비었을 때 3초간 기다려도 신호가 없으면 다시 기다림
-                WaitForSingleObject(hQueuePushed, 3000);
+                MessageQueue.wait_push(3000);
                 continue;
             }
 
-            QueueMutex.lock();
-            string *message = MessageQueue.front();
-            MessageQueue.pop();
-            QueueMutex.unlock();
-
-            OVERLAPPED overlapped = {};
-            if (WriteFileEx(hPipe, message->c_str(), message->length(), &overlapped, [](DWORD, DWORD, LPOVERLAPPED) {}))
+            DWORD wrote;
+            string *message = MessageQueue.pop();
+            BOOL result = WriteFile(hPipe, message->c_str(), message->length(), &wrote, NULL);
+            delete message;
+            if (result)
             {
-                delete message;
                 continue;
             }
         }
         bPipeConnected = false;
         DisconnectNamedPipe(hPipe);
 
-        QueueMutex.lock();
-        while (!MessageQueue.empty())
-        {
-            string *message = MessageQueue.front();
-            delete message;
-            MessageQueue.pop();
-        }
-        QueueMutex.unlock();
+        MessageQueue.clear();
+        //TODO: 검토 필요, 메모리 누수?
+        // while (!MessageQueue.empty())
+        // {
+        //     string *message = MessageQueue.pop();
+        //     delete message;
+        // }
     }
     // 클라이언트 연결 종료
     bPipeConnected = false;
@@ -142,8 +132,8 @@ DWORD WINAPI PipeThread(LPVOID lParam)
 
 typedef BOOL (WINAPI *tReadFile)(HANDLE, LPVOID, DWORD, LPDWORD, LPOVERLAPPED);
 tReadFile pReadFile;
-mutex HookMutex;
 BYTE pReadFileHook[5];
+mutex HookMutex;
 
 unordered_map<string, string> AudioInfo;
 
@@ -216,11 +206,8 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
         {
             char message[BUF_SIZE];
             sprintf(message, "%llx|%s|%lx|%s\n", calledAt, &path[4], seekPosition, &pair->second[4]);
-            QueueMutex.lock();
+            // 히프 영역에 메모리를 할당해서 osu!에 영향 안 주게...
             MessageQueue.push(new string(message));
-            QueueMutex.unlock();
-
-            SetEvent(hQueuePushed);
         }
     }
     return TRUE;
@@ -234,7 +221,6 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
     if (fdwReason == DLL_PROCESS_ATTACH)
     {
         hPipeThread = CreateThread(NULL, 0, PipeThread, NULL, 0, NULL);
-        hQueuePushed = CreateEventA(NULL, TRUE, FALSE, NULL);
 
         HookMutex.lock();
         pReadFile = (tReadFile) GetProcAddress(GetModuleHandle("kernel32.dll"), "ReadFile");
@@ -250,7 +236,6 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
         bCancelPipeThread = true;
         DisconnectNamedPipe(hPipe);
         WaitForSingleObject(hPipeThread, INFINITE);
-        CloseHandle(hQueuePushed);
         CloseHandle(hPipeThread);
     }
     return TRUE;

@@ -208,8 +208,6 @@ namespace osu_Lyrics
             return hThread != IntPtr.Zero;
         }
 
-        private readonly static ConcurrentQueue<string> DataQueue = new ConcurrentQueue<string>();
-
         public static bool Listen(Action<string[]> onSignal)
         {
             // dll의 fileVersion을 바탕으로 버전별로 겹치지 않는 경로에 압축 풀기:
@@ -222,7 +220,7 @@ namespace osu_Lyrics
                 return false;
             }
 
-            // Receive
+            // 백그라운드에서 서버로부터 데이터를 받아 전달
             Task.Run(() =>
             {
                 using (var pipe = new NamedPipeClientStream(".", "osu!Lyrics", PipeDirection.In, PipeOptions.None))
@@ -231,27 +229,7 @@ namespace osu_Lyrics
                     pipe.Connect();
                     while (pipe.IsConnected)
                     {
-                        // 파이프 통신을 할 때 버퍼가 다 차면
-                        // 비동기적으로 데이터를 보내는 프로그램도 멈추므로 빨리빨리 받기!
-                        DataQueue.Enqueue(sr.ReadLine());
-                    }
-                }
-            });
-            // Process
-            // 메인 프로그램이 종료될 때 같이 꺼진다고 믿고 무한 루프
-            Task.Run(() =>
-            {
-                while (true)
-                {
-                    string data;
-                    if (!DataQueue.TryDequeue(out data) && data == null)
-                    {
-                        Thread.Sleep(100);
-                        continue;
-                    }
-                    else
-                    {
-                        onSignal(data.Split('|'));
+                        onSignal(sr.ReadLine().Split('|'));
                     }
                 }
             });
