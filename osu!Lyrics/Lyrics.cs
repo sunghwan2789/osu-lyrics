@@ -307,6 +307,11 @@ namespace osu_Lyrics
 
         private async void Osu_Signal(string[] data)
         {
+            if (data.Length != 4)
+            {
+                // Invalid Data
+                return;
+            }
             // [ time, audioPath, audioPosition, beatmapPath ]
             // 재생 중인 곡이 바꼈다!
             if (data[1] != curAudio.Path)
