@@ -10,7 +10,7 @@ class concurrent_queue
 private:
     std::queue<T> queue;
     std::mutex mutex;
-    HANDLE hPushed = NULL;
+    HANDLE hPushed;
 
 public:
     concurrent_queue()

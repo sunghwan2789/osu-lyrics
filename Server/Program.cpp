@@ -80,6 +80,7 @@ HANDLE hPipe;
 volatile bool bCancelPipeThread;
 volatile bool bPipeConnected;
 
+// 히프 영역에 element를 할당해서 osu!에 영향 안 주게...
 concurrent_queue<string *> MessageQueue;
 
 DWORD WINAPI PipeThread(LPVOID lParam)
@@ -201,12 +202,10 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
     {
         // [ audioPath, beatmapPath ]
         unordered_map<string, string>::iterator pair = AudioInfo.find(string(path));
-        bool found = pair != AudioInfo.end();
-        if (found)
+        if (pair != AudioInfo.end())
         {
             char message[BUF_SIZE];
             sprintf(message, "%llx|%s|%lx|%s\n", calledAt, &path[4], seekPosition, &pair->second[4]);
-            // 히프 영역에 메모리를 할당해서 osu!에 영향 안 주게...
             MessageQueue.push(new string(message));
         }
     }
