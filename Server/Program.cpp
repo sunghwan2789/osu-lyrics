@@ -81,7 +81,7 @@ volatile bool bCancelPipeThread;
 volatile bool bPipeConnected;
 
 // 히프 영역에 element를 할당해서 osu!에 영향 안 주게...
-concurrent_queue<string *> MessageQueue;
+concurrent_queue<string> MessageQueue;
 
 DWORD WINAPI PipeThread(LPVOID lParam)
 {
@@ -104,9 +104,8 @@ DWORD WINAPI PipeThread(LPVOID lParam)
             }
 
             DWORD wrote;
-            string *message = MessageQueue.pop();
-            BOOL result = WriteFile(hPipe, message->c_str(), message->length(), &wrote, NULL);
-            delete message;
+            string message = MessageQueue.pop();
+            BOOL result = WriteFile(hPipe, message.c_str(), message.length(), &wrote, NULL);
             if (result)
             {
                 continue;
@@ -206,7 +205,7 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
         {
             char message[BUF_SIZE];
             sprintf(message, "%llx|%s|%lx|%s\n", calledAt, &path[4], seekPosition, &pair->second[4]);
-            MessageQueue.push(new string(message));
+            MessageQueue.push(string(message));
         }
     }
     return TRUE;
