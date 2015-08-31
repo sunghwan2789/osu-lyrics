@@ -50,7 +50,6 @@ BOOL hook_by_code(LPCTSTR szDllName, LPCTSTR szFuncName, PROC pfnNew, PBYTE pOrg
     pfnOrg = (FARPROC) GetProcAddress(GetModuleHandle(szDllName), szFuncName);
     pByte = (PBYTE) pfnOrg;
 
-
     // 만약 이미 후킹되어 있다면 return FALSE
     if (pByte[0] == 0xE9)
         return FALSE;
@@ -80,7 +79,6 @@ HANDLE hPipe;
 volatile bool bCancelPipeThread;
 volatile bool bPipeConnected;
 
-// 히프 영역에 element를 할당해서 osu!에 영향 안 주게...
 concurrent_queue<string> MessageQueue;
 
 DWORD WINAPI PipeThread(LPVOID lParam)
@@ -105,8 +103,7 @@ DWORD WINAPI PipeThread(LPVOID lParam)
 
             DWORD wrote;
             string message = MessageQueue.pop();
-            BOOL result = WriteFile(hPipe, message.c_str(), message.length(), &wrote, NULL);
-            if (result)
+            if (WriteFile(hPipe, message.c_str(), message.length(), &wrote, NULL))
             {
                 continue;
             }
@@ -115,12 +112,6 @@ DWORD WINAPI PipeThread(LPVOID lParam)
         DisconnectNamedPipe(hPipe);
 
         MessageQueue.clear();
-        //TODO: 검토 필요, 메모리 누수?
-        // while (!MessageQueue.empty())
-        // {
-        //     string *message = MessageQueue.pop();
-        //     delete message;
-        // }
     }
     // 클라이언트 연결 종료
     bPipeConnected = false;

@@ -305,12 +305,12 @@ namespace osu_Lyrics
             }
         }
 
-        private async void Osu_Signal(string[] data)
+        private async void Osu_Signal(string line)
         {
+            var data = line.Split('|');
             if (data.Length != 4)
             {
-                // Invalid Data
-                return;
+                throw new InvalidDataException();
             }
             // [ time, audioPath, audioPosition, beatmapPath ]
             // 재생 중인 곡이 바꼈다!

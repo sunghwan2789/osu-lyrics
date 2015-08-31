@@ -8,7 +8,7 @@ template <typename T>
 class concurrent_queue
 {
 private:
-    std::queue<T*> queue;
+    std::queue<T *> queue;
     std::mutex mutex;
     HANDLE hPushed;
 
@@ -20,35 +20,36 @@ public:
 
     ~concurrent_queue()
     {
+        clear();
         CloseHandle(hPushed);
     }
 
-    void push(const T elem)
+    void push(const T data)
     {
-        T *tmpData;
-        tmpData = new T;
-        memcpy(tmpData, &elem, sizeof(elem));
+        T *element;
+        element = new T;
+        memcpy(element, &data, sizeof(data));
 
         mutex.lock();
-        queue.push(tmpData);
+        queue.push(element);
         mutex.unlock();
         SetEvent(hPushed);
     }
 
     T pop()
     {
-        T front, *tmpData;
+        T data, *element;
 
         mutex.lock();
-        tmpData = queue.front();
+        element = queue.front();
         queue.pop();
         mutex.unlock();
 
-        memcpy(&front, (void*)tmpData, sizeof(tmpData));
+        memcpy(&data, (void *) element, sizeof(element));
+        
+        delete element;
 
-        delete tmpData;
-
-        return front;
+        return data;
     }
 
     bool empty()
@@ -63,19 +64,19 @@ public:
 
     void clear()
     {
-        std::queue<T*> toChange;
+        std::queue<T *> newQueue;
 
         mutex.lock();
-        toChange.swap(queue);
+        newQueue.swap(queue);
         mutex.unlock();
 
         while (!queue.empty())
         {
-            T *tmpData;
-            tmpData = queue.front();
+            T *element;
+            element = queue.front();
             queue.pop();
 
-            delete tmpData;
+            delete element;
         }
     }
 };
