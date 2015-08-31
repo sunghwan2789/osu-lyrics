@@ -228,7 +228,7 @@ namespace osu_Lyrics
                     try
                     {
                         _FontStyle = Convert.ToInt32(Get("DESIGN", "FontStyle"));
-                        if (_FontSize < 0)
+                        if (Enum.ToObject(typeof(FontStyle), _FontStyle) == null)
                         {
                             throw new OverflowException();
                         }

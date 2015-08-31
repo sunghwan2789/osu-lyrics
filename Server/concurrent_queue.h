@@ -24,7 +24,7 @@ public:
         CloseHandle(hPushed);
     }
 
-    void push(T &data)
+    void push(const T data)
     {
         // 데이터를 그대로 큐에 넣으면
         // 오스의 힙을 데이터가 차지해서 메모리 커럽션남
