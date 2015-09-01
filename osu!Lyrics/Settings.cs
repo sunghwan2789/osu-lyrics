@@ -65,6 +65,7 @@ namespace osu_Lyrics
         private static int _KeyToggle = -1;
         private static int _BlockSyncOnHide = -1;
         private static int _SuppressKey = -1;
+        private static int _ShowWhileOsuTop = -1;
 
         public static int LineCount
         {
@@ -472,6 +473,29 @@ namespace osu_Lyrics
             }
         }
 
+        public static bool ShowWhileOsuTop
+        {
+            get
+            {
+                if (_ShowWhileOsuTop < 0 || _ShowWhileOsuTop > 1)
+                {
+                    try
+                    {
+                        _ShowWhileOsuTop = Convert.ToInt32(Get("DESIGN", "ShowWhileOsuTop"));
+                        if (_ShowWhileOsuTop < 0 || _ShowWhileOsuTop > 1)
+                        {
+                            throw new OverflowException();
+                        }
+                    }
+                    catch
+                    {
+                        _ShowWhileOsuTop = 1;
+                    }
+                }
+                return _ShowWhileOsuTop == 1;
+            }
+        }
+
 
         private static StringFormat _StringFormat = null;
         private static SolidBrush _Brush = null;
@@ -561,6 +585,7 @@ namespace osu_Lyrics
             textBox3.Tag = KeyToggle;
             checkBox1.Checked = BlockSyncOnHide;
             checkBox2.Checked = SuppressKey;
+            checkBox3.Checked = ShowWhileOsuTop;
             Loaded = true;
         }
 
@@ -637,6 +662,7 @@ namespace osu_Lyrics
             _KeyToggle = (int) textBox3.Tag;
             _BlockSyncOnHide = checkBox1.Checked ? 1 : 0;
             _SuppressKey = checkBox2.Checked ? 1 : 0;
+            _ShowWhileOsuTop = checkBox3.Checked ? 1 : 0;
 
             UpdateScreen();
         }
@@ -648,7 +674,11 @@ namespace osu_Lyrics
             _Border = null;
             _DrawingOrigin = Point.Empty;
 
-            Lyrics.Constructor.Invoke(new MethodInvoker(Lyrics.Constructor.Refresh));
+            Lyrics.Constructor.Invoke(new MethodInvoker(() =>
+            {
+                Lyrics.Constructor.Visible = true;
+                Lyrics.Constructor.Refresh();
+            }));
         }
 
         private void Settings_FormClosing(object sender, FormClosingEventArgs e)
@@ -675,6 +705,7 @@ namespace osu_Lyrics
                 Set("PROGRAM", "KeyToggle", _KeyToggle.ToString());
                 Set("PROGRAM", "BlockSyncOnHide", _BlockSyncOnHide.ToString());
                 Set("PROGRAM", "SuppressKey", _SuppressKey.ToString());
+                Set("DESIGN", "ShowWhileOsuTop", _ShowWhileOsuTop.ToString());
             }
             else
             {
@@ -696,6 +727,7 @@ namespace osu_Lyrics
                 _KeyToggle = -1;
                 _BlockSyncOnHide = -1;
                 _SuppressKey = -1;
+                _ShowWhileOsuTop = -1;
 
                 UpdateScreen();
             }

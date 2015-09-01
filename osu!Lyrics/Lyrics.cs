@@ -164,7 +164,7 @@ namespace osu_Lyrics
                     }
                     Visible = true;
                 }
-                else
+                else if (Settings.ShowWhileOsuTop)
                 {
                     Visible = false;
                 }

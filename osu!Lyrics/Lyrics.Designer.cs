@@ -37,7 +37,7 @@
             this.trayMenu.SuspendLayout();
             this.SuspendLayout();
             // 
-            // tray
+            // trayIcon
             // 
             this.trayIcon.ContextMenuStrip = this.trayMenu;
             this.trayIcon.Icon = global::osu_Lyrics.Properties.Resources.Icon;

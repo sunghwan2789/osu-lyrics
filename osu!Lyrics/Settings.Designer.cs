@@ -69,6 +69,7 @@
             this.label17 = new System.Windows.Forms.Label();
             this.checkBox1 = new System.Windows.Forms.CheckBox();
             this.checkBox2 = new System.Windows.Forms.CheckBox();
+            this.checkBox3 = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.trackBar1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown2)).BeginInit();
@@ -324,7 +325,6 @@
             this.panel1.Controls.Add(this.button4);
             this.panel1.Controls.Add(this.button5);
             this.panel1.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.panel1.Location = new System.Drawing.Point(0, 198);
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(379, 50);
             this.panel1.TabIndex = 11;
@@ -470,12 +470,13 @@
             this.label18.Size = new System.Drawing.Size(11, 12);
             this.label18.TabIndex = 40;
             this.label18.Text = "?";
-            this.toolTip1.SetToolTip(this.label18, "핫키로 조절한 싱크 타이밍은 곡이 바뀔 때마다 초기화됨\r\nEscape 키로 핫키 취소\r\n\r\n싱크 느리게 & 싱크 빠르게: 싱크 0.5초만큼 조절\r\n토글: 가사 숨김/보임\r\n\r\n핫키 전송 막기 기능은 핫키가 제구실하면 작동함");
+            this.toolTip1.SetToolTip(this.label18, "핫키로 조절한 싱크 타이밍은 곡이 바뀔 때마다 초기화됨\r\nEscape 키로 핫키 취소\r\n\r\n싱크 느리게 & 싱크 빠르게: 싱크 0.5초만큼 조절\r" +
+        "\n토글: 가사 숨김/보임\r\n\r\n핫키 전송 막기 기능은 핫키가 제구실하면 작동함");
             // 
             // label17
             // 
             this.label17.ForeColor = System.Drawing.SystemColors.GrayText;
-            this.label17.Location = new System.Drawing.Point(232, 174);
+            this.label17.Location = new System.Drawing.Point(232, 198);
             this.label17.Name = "label17";
             this.label17.Size = new System.Drawing.Size(135, 12);
             this.label17.TabIndex = 39;
@@ -502,12 +503,25 @@
             this.checkBox2.Text = "핫키 전송 막기";
             this.checkBox2.UseVisualStyleBackColor = true;
             // 
+            // checkBox3
+            // 
+            this.checkBox3.AutoSize = true;
+            this.checkBox3.Checked = true;
+            this.checkBox3.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.checkBox3.Location = new System.Drawing.Point(14, 197);
+            this.checkBox3.Name = "checkBox3";
+            this.checkBox3.Size = new System.Drawing.Size(253, 16);
+            this.checkBox3.TabIndex = 43;
+            this.checkBox3.Text = "osu! 윈도우가 활성 상태일 때만 가사 보기";
+            this.checkBox3.UseVisualStyleBackColor = true;
+            // 
             // Settings
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.Window;
-            this.ClientSize = new System.Drawing.Size(379, 248);
+            this.ClientSize = new System.Drawing.Size(379, 271);
+            this.Controls.Add(this.checkBox3);
             this.Controls.Add(this.checkBox2);
             this.Controls.Add(this.checkBox1);
             this.Controls.Add(this.label18);
@@ -604,5 +618,6 @@
         private System.Windows.Forms.Label label18;
         private System.Windows.Forms.CheckBox checkBox1;
         private System.Windows.Forms.CheckBox checkBox2;
+        private System.Windows.Forms.CheckBox checkBox3;
     }
 }
