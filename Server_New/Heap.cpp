@@ -38,11 +38,11 @@ LPVOID Heap::AllocHeapEx(const size_t szHeap, const DWORD dwProtect)
             DWORD dwNextObject = NULL;
 
             dwFrontObject = (DWORD)(*it)->Object() + (DWORD)(*it)->GetSize();
-            dwNextObject = (DWORD)(*it)->Object();
+            dwNextObject = (DWORD)(*it++)->Object();
 
             if (dwNextObject - dwFrontObject >= szHeap)
             {
-                return VirtualAlloc(LPVOID(dwNextObject), szHeap, MEM_COMMIT, dwProtect);
+                return VirtualAlloc(LPVOID(dwFrontObject), szHeap, MEM_COMMIT, dwProtect);
             }
         }
 
