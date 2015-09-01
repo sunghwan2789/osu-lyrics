@@ -143,6 +143,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Core.cpp" />
+    <ClCompile Include="HkPostQuitMessage.cpp" />
+    <ClCompile Include="HkReadFile.cpp" />
     <ClCompile Include="Hook.cpp" />
     <ClCompile Include="Heap.cpp" />
     <ClCompile Include="Pipe.cpp" />
@@ -152,6 +154,8 @@
   <ItemGroup>
     <ClInclude Include="Base.h" />
     <ClInclude Include="Core.h" />
+    <ClInclude Include="HkPostQuitMessage.h" />
+    <ClInclude Include="HkReadFile.h" />
     <ClInclude Include="Hook.h" />
     <ClInclude Include="Heap.h" />
     <ClInclude Include="Pipe.h" />

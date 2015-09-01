@@ -4,10 +4,9 @@ const BYTE szBinaryBlock = 5;
 
 void HookBase::Init(Heap *pSharedHeap)
 {
-    pMutex = new std::mutex;
     HeapObject hbTmpObject = nullptr;
 
-    pSharedHeap->AllocHeap(szBinaryBlock, hbTmpObject);
+    pSharedHeap->AllocHeap(szBinaryBlock, PAGE_EXECUTE_READWRITE, hbTmpObject);
 
     this->pFuncRef = hbTmpObject;
 }
@@ -16,6 +15,12 @@ void HookBase::Release()
 {
     this->UnHook();
     
-    delete pMutex;
     this->pBaseHeap->ReleaseHeap(pFuncRef);
+}
+
+template <typename _hook_type>
+void CreateHookObject(LPHOOK_BASE &Object)
+{
+    Object = new _hook_type;
+    return;
 }

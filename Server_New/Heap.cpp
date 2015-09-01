@@ -1,6 +1,7 @@
 #include "Core.h"
 
-
+#define _HEAP
+#ifdef _HEAP
 void Heap::AllocPage()
 {
     SYSTEM_INFO sys_info;
@@ -71,7 +72,7 @@ bool Heap::AllocHeap(const size_t szHeap, const DWORD dwProtect, HeapObject &hbO
 
     if (pObject != nullptr)
     {
-        tmpObject = new __HeapObject(pObject, dwProtect, this);
+        tmpObject = new __HeapObject(pObject, szHeap, dwProtect, this);
         hbObject = tmpObject;
 
         return true;
@@ -152,3 +153,28 @@ void Heap::Release()
 
     VirtualFree(this->pHeap, 0, MEM_RELEASE);
 }
+#endif
+
+#define _HEAP_OBJECT
+#ifdef _HEAP_OBJECT
+__HeapObject::__HeapObject(LPVOID object, size_t size, DWORD protect, Heap *pHeap)
+{
+    this->pObject = object;
+    this->szHeap = size;
+    this->dwProtect = protect;
+    this->pBaseHeap = pHeap;
+}
+
+size_t __HeapObject::GetSize() { return this->szHeap; }
+DWORD __HeapObject::GetProtection() { return this->dwProtect; }
+DWORD __HeapObject::SetProtection(DWORD dwProtect)
+{
+    DWORD dwOldProtect;
+    VirtualProtect(this->Object, this->szHeap, dwProtect, &dwOldProtect);
+    this->dwProtect = dwProtect;
+
+    return dwOldProtect;
+}
+
+LPVOID __HeapObject::Object() { return this->Object; }
+#endif

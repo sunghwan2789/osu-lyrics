@@ -8,6 +8,9 @@
 #include "Base.h"
 #include "Hook.h"
 
+#include "HkReadFile.h"
+#include "HkPostQuitMessage.h"
+
 class Core : public Base
 {
 private:

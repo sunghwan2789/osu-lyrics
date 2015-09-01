@@ -1,12 +1,10 @@
 #pragma once
 
-class HookBase : public Base
+typedef class HookBase : public Base
 {
 private:
     DWORD dwOrignalByte;
     DWORD dwNewNyte;
-
-    std::mutex *pMutex;
 
     Heap *pBaseHeap;
     HeapObject pFuncRef;
@@ -17,4 +15,7 @@ public:
 
     void Init(Heap *pSharedHeap);
     void Release();
-};
+}*LPHOOK_BASE;
+
+template <typename _hook_type>
+void CreateHookObject(LPHOOK_BASE &Object);

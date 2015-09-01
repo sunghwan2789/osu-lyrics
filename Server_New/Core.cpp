@@ -2,7 +2,8 @@
 
 void Core::Init()
 {
-
+    CreateHookObject<HkReadFile>(pHkReadFile);
+    CreateHookObject<HkPostQuitMessage>(pHkPostQuitMessage);
 }
 
 void Core::Release()

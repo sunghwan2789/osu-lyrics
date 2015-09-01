@@ -5,14 +5,15 @@ typedef class __HeapObject
 private:
     LPVOID pObject;
     DWORD dwProtect;
+    size_t szHeap;
 
     Heap *pBaseHeap;
 public:
-    __HeapObject(const LPVOID pHeap, const DWORD protect, const Heap *pHeap );
+    __HeapObject(LPVOID object, size_t size, DWORD protect, Heap *pHeap);
     size_t GetSize();
 
-    void SetProtection(DWORD &dwProtect);
-    void GetProtection(DWORD &dwProtect);
+    DWORD SetProtection(DWORD dwProtect);
+    DWORD GetProtection();
     LPVOID Object();
 }*HeapObject;
 
