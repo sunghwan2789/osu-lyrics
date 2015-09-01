@@ -13,11 +13,17 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Source Files\winapi">
+    <Filter Include="Header Files\Hooking">
+      <UniqueIdentifier>{adbdb4a6-2ded-4574-a158-5c8a1bc52038}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\WinAPI">
+      <UniqueIdentifier>{1626fc33-290e-4600-8bad-9e5342be5df4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\WinAPI">
       <UniqueIdentifier>{4cb67c1c-0d60-493b-9040-66ed89d1ae16}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\winapi">
-      <UniqueIdentifier>{1626fc33-290e-4600-8bad-9e5342be5df4}</UniqueIdentifier>
+    <Filter Include="Source Files\Hooking">
+      <UniqueIdentifier>{88925aa9-26a0-4757-ae99-4e25c7622a17}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -25,7 +31,19 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="winapi.cpp">
-      <Filter>Source Files\winapi</Filter>
+      <Filter>Source Files\WinAPI</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Hook.cpp">
+      <Filter>Source Files\Hooking</Filter>
+    </ClCompile>
+    <ClCompile Include="Pipe.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Heap.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -36,7 +54,16 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="winapi.h">
-      <Filter>Header Files\winapi</Filter>
+      <Filter>Header Files\WinAPI</Filter>
+    </ClInclude>
+    <ClInclude Include="Hook.h">
+      <Filter>Header Files\Hooking</Filter>
+    </ClInclude>
+    <ClInclude Include="Pipe.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Heap.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
