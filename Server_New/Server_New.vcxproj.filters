@@ -45,10 +45,10 @@
     <ClCompile Include="Heap.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="HkPostQuitMessage.cpp">
+    <ClCompile Include="HkReadFile.cpp">
       <Filter>Source Files\Hooking</Filter>
     </ClCompile>
-    <ClCompile Include="HkReadFile.cpp">
+    <ClCompile Include="hkPostQuitMessage.cpp">
       <Filter>Source Files\Hooking</Filter>
     </ClCompile>
   </ItemGroup>
@@ -70,12 +70,6 @@
     </ClInclude>
     <ClInclude Include="Heap.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="HkReadFile.h">
-      <Filter>Header Files\Hooking</Filter>
-    </ClInclude>
-    <ClInclude Include="HkPostQuitMessage.h">
-      <Filter>Header Files\Hooking</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

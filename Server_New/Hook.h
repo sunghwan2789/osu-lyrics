@@ -3,6 +3,9 @@
 const BYTE szOpcode = 5;
 const BYTE asmJmp = 0xE9;
 
+BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped);
+VOID WINAPI hkPostQuitMessage(int iMessage);
+
 typedef class __ExcuteableObject : public __HeapObject
 {
 public:
@@ -10,21 +13,27 @@ public:
     _pointer_func_type Run();
 }*ExcuteableObject;
 
-typedef class HookBase : public Base
+template<typename _pointer_function>
+class HookBase : public Base
 {
 protected:
     DWORD dwFuncRefAddr;
+    BYTE OrignalOpcode[szOpcode];
 
     Heap *pBaseHeap;
+
+    _pointer_function lFunction;
     ExcuteableObject pFuncRef;
 
 public:
-    virtual void Hook() = 0;
-    virtual void UnHook() = 0;
+    void SetFunction(_pointer_function Func);
+
+    void Hook(char moduleName[], char funcName[]);
+    void UnHook();
 
     void Init(Heap *pSharedHeap);
     void Release();
-}*LPHOOK_BASE;
+};
 
-template <typename _hook_type>
-void CreateHookObject(LPHOOK_BASE &Object);
+template <typename _func_type>
+void CreateHookObject(HookBase<_func_type> *&Object, _func_type toCall, Heap *pSharedHeap);

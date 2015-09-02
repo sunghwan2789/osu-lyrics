@@ -7,9 +7,8 @@ protected:
     DWORD dwProtect;
     size_t szHeap;
 
-    Heap *pBaseHeap;
 public:
-    __HeapObject(LPVOID object, size_t size, DWORD protect, Heap *pHeap);
+    __HeapObject(LPVOID object, size_t size, DWORD protect);
     size_t GetSize();
 
     DWORD SetProtection(DWORD dwProtect);
@@ -17,7 +16,7 @@ public:
     LPVOID Object();
 }*HeapObject;
 
-class Heap : Base
+class Heap : public Base
 {
 private:
     LPVOID pHeap;

@@ -2,12 +2,13 @@
 
 void Core::Init()
 {
-    CreateHookObject<HkReadFile>(pHkReadFile);
-    CreateHookObject<HkPostQuitMessage>(pHkPostQuitMessage);
+
+    CreateHookObject(ReadFileHook, &hkReadFile, this->pHeap);
+    CreateHookObject(PostQuitMessageHook, &hkPostQuitMessage, this->pHeap);
 }
 
 void Core::Release()
 {
-    ReleaseBaseObject(pHkReadFile);
-    ReleaseBaseObject(pHkPostQuitMessage);
+    ReleaseBaseObject(ReadFileHook);
+    ReleaseBaseObject(PostQuitMessageHook);
 }
