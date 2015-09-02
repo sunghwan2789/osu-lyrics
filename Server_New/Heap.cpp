@@ -1,5 +1,11 @@
 #include "Core.h"
 
+template<typename _pointer_func_type>
+_pointer_func_type __ExcuteableObject::Run()
+{
+    return (_pointer_func_type)this->Object();
+}
+
 #define _HEAP
 #ifdef _HEAP
 void Heap::AllocPage()
@@ -81,7 +87,8 @@ bool Heap::AllocHeap(const size_t szHeap, const DWORD dwProtect, HeapObject &hbO
     return false;
 }
 
-void Heap::ReleaseHeap(HeapObject &hbObject)
+template<typename _type_object>
+void Heap::ReleaseHeap(_type_object &hbObject)
 {
     std::list<HeapObject>::iterator it;
 
@@ -94,12 +101,14 @@ void Heap::ReleaseHeap(HeapObject &hbObject)
     }
 
     VirtualFree(hbObject->Object(), hbObject->GetSize(), MEM_DECOMMIT);
+
     hbObject = nullptr;
 
     return;
 }
 
-void Heap::CollectHeap(HeapObject &hbObject)
+template<typename _type_object>
+void Heap::CollectHeap(_type_object &hbObject)
 {
     std::list<HeapObject>::iterator it;
 
@@ -114,6 +123,7 @@ void Heap::CollectHeap(HeapObject &hbObject)
     pCollectedHeap.push_back(hbObject);
 
     hbObject = nullptr;
+
     return;
 }
 

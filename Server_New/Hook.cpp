@@ -8,14 +8,14 @@ void HookBase::Init(Heap *pSharedHeap)
 
     pSharedHeap->AllocHeap(szBinaryBlock, PAGE_EXECUTE_READWRITE, hbTmpObject);
 
-    this->pFuncRef = hbTmpObject;
+    this->pFuncRef = (ExcuteableObject)hbTmpObject;
 }
 
 void HookBase::Release()
 {
     this->UnHook();
     
-    this->pBaseHeap->ReleaseHeap(pFuncRef);
+    this->pBaseHeap->ReleaseHeap<ExcuteableObject>(pFuncRef);
 }
 
 template <typename _hook_type>

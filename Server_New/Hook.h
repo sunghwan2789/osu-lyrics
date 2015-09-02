@@ -1,13 +1,22 @@
 #pragma once
 
+const BYTE szOpcode = 5;
+const BYTE asmJmp = 0xE9;
+
+typedef class __ExcuteableObject : public __HeapObject
+{
+public:
+    template<typename _pointer_func_type>
+    _pointer_func_type Run();
+}*ExcuteableObject;
+
 typedef class HookBase : public Base
 {
-private:
-    DWORD dwOrignalByte;
-    DWORD dwNewNyte;
+protected:
+    DWORD dwFuncRefAddr;
 
     Heap *pBaseHeap;
-    HeapObject pFuncRef;
+    ExcuteableObject pFuncRef;
 
 public:
     virtual void Hook() = 0;
