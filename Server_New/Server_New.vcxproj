@@ -143,10 +143,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Core.cpp" />
+    <ClCompile Include="Heap.cpp" />
     <ClCompile Include="hkPostQuitMessage.cpp" />
     <ClCompile Include="HkReadFile.cpp" />
-    <ClCompile Include="Hook.cpp" />
-    <ClCompile Include="Heap.cpp" />
     <ClCompile Include="Pipe.cpp" />
     <ClCompile Include="Utils.cpp" />
     <ClCompile Include="winapi.cpp" />
@@ -157,7 +156,11 @@
     <ClInclude Include="Hook.h" />
     <ClInclude Include="Heap.h" />
     <ClInclude Include="Pipe.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="winapi.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Server_New.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

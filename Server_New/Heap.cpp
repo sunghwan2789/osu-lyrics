@@ -1,11 +1,5 @@
 #include "Core.h"
 
-template<typename _pointer_func_type>
-_pointer_func_type __ExcuteableObject::Run()
-{
-    return (_pointer_func_type)this->Object();
-}
-
 #define _HEAP
 #ifdef _HEAP
 void Heap::AllocPage()
@@ -89,42 +83,40 @@ bool Heap::AllocHeap(const size_t szHeap, const DWORD dwProtect, HeapObject &hbO
     return false;
 }
 
-template<typename _type_object>
-void Heap::ReleaseHeap(_type_object &hbObject)
+void Heap::ReleaseHeap(HeapObject *hbObject)
 {
     std::list<HeapObject>::iterator it;
 
     for (it = this->pAllocatedHeap.begin(); it != pAllocatedHeap.end(); ++it)
     {
-        if ((*it) == hbObject) {
+        if ((*it) == *hbObject) {
             this->pAllocatedHeap.erase(it);
             break;
         }
     }
 
-    VirtualFree(hbObject->Object(), hbObject->GetSize(), MEM_DECOMMIT);
+    VirtualFree((*hbObject)->Object(), (*hbObject)->GetSize(), MEM_DECOMMIT);
 
-    hbObject = nullptr;
+    *hbObject = nullptr;
 
     return;
 }
 
-template<typename _type_object>
-void Heap::CollectHeap(_type_object &hbObject)
+void Heap::CollectHeap(HeapObject *hbObject)
 {
     std::list<HeapObject>::iterator it;
 
     for (it = this->pAllocatedHeap.begin(); it != pAllocatedHeap.end(); ++it)
     {
-        if ((*it) == hbObject) {
+        if ((*it) == *hbObject) {
             this->pAllocatedHeap.erase(it);
             break;
         }
     }
 
-    pCollectedHeap.push_back(hbObject);
+    pCollectedHeap.push_back(*hbObject);
 
-    hbObject = nullptr;
+    *hbObject = nullptr;
 
     return;
 }

@@ -23,7 +23,7 @@
       <UniqueIdentifier>{4cb67c1c-0d60-493b-9040-66ed89d1ae16}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\Hooking">
-      <UniqueIdentifier>{88925aa9-26a0-4757-ae99-4e25c7622a17}</UniqueIdentifier>
+      <UniqueIdentifier>{e08eab3d-c7bb-4dba-ae4f-70d700fe0d07}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -36,19 +36,16 @@
     <ClCompile Include="Utils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Hook.cpp">
-      <Filter>Source Files\Hooking</Filter>
-    </ClCompile>
     <ClCompile Include="Pipe.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Heap.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="HkReadFile.cpp">
+    <ClCompile Include="hkPostQuitMessage.cpp">
       <Filter>Source Files\Hooking</Filter>
     </ClCompile>
-    <ClCompile Include="hkPostQuitMessage.cpp">
+    <ClCompile Include="HkReadFile.cpp">
       <Filter>Source Files\Hooking</Filter>
     </ClCompile>
   </ItemGroup>
@@ -71,5 +68,13 @@
     <ClInclude Include="Heap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Server_New.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

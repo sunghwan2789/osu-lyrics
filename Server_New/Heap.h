@@ -35,8 +35,6 @@ public:
     void Init();
 
     bool AllocHeap(size_t szHeap, DWORD dwProtect, HeapObject &hbObject);
-    template<typename _type_object>
-    void ReleaseHeap(_type_object &hbObject);
-    template<typename _type_object>
-    void CollectHeap(_type_object &hbObject);
+    void ReleaseHeap(HeapObject *hbObject);
+    void CollectHeap(HeapObject *hbObject);
 };

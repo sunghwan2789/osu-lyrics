@@ -3,8 +3,8 @@
 void Core::Init()
 {
 
-    CreateHookObject(ReadFileHook, &hkReadFile, this->pHeap);
-    CreateHookObject(PostQuitMessageHook, &hkPostQuitMessage, this->pHeap);
+    CreateHookObject<tReadFile*>(&ReadFileHook, &hkReadFile, pHeap);
+    CreateHookObject<tPostQuitMessage*>(&PostQuitMessageHook, &hkPostQuitMessage, pHeap);
 }
 
 void Core::Release()
