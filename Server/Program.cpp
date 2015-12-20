@@ -1,5 +1,3 @@
-#pragma warning (disable:4996)
-
 #define WIN32_LEAN_AND_MEAN
 #pragma comment (lib, "Shlwapi.lib")
 
@@ -7,7 +5,8 @@
 #include <Shlwapi.h>
 #include <unordered_map>
 #include <mutex>
-#include "concurrent_queue.h"
+#include "ConcurrentQueue.h"
+#include "Hooker.h"
 using namespace std;
 
 #define BUF_SIZE MAX_PATH * 3
@@ -19,71 +18,16 @@ long long CurrentTime()
     return t;
 }
 
-BOOL unhook_by_code(LPCTSTR szDllName, LPCTSTR szFuncName, PBYTE pOrgBytes)
-{
-    FARPROC pFunc;
-    DWORD dwOldProtect;
-
-    // API 주소 구한다
-    pFunc = GetProcAddress(GetModuleHandle(szDllName), szFuncName);
-
-    // 원래 코드 (5 byte)를 덮어쓰기 위해 메모리에 WRITE 속성 추가
-    VirtualProtect((LPVOID) pFunc, 5, PAGE_EXECUTE_READWRITE, &dwOldProtect);
-
-    // Unhook
-    memcpy(pFunc, pOrgBytes, 5);
-
-    // 메모리 속성 복원
-    VirtualProtect((LPVOID) pFunc, 5, dwOldProtect, &dwOldProtect);
-
-    return TRUE;
-}
-
-BOOL hook_by_code(LPCTSTR szDllName, LPCTSTR szFuncName, PROC pfnNew, PBYTE pOrgBytes)
-{
-    FARPROC pfnOrg;
-    DWORD dwOldProtect, dwAddress;
-    BYTE pBuf[5] = { 0xE9, 0, };
-    PBYTE pByte;
-
-    // 후킹대상 API 주소를 구한다
-    pfnOrg = (FARPROC) GetProcAddress(GetModuleHandle(szDllName), szFuncName);
-    pByte = (PBYTE) pfnOrg;
-
-    // 만약 이미 후킹되어 있다면 return FALSE
-    if (pByte[0] == 0xE9)
-        return FALSE;
-
-    // 5 byte 패치를 위하여 메모리에 WRITE 속성 추가
-    VirtualProtect((LPVOID) pfnOrg, 5, PAGE_EXECUTE_READWRITE, &dwOldProtect);
-
-    // 기존코드 (5 byte) 백업
-    memcpy(pOrgBytes, pfnOrg, 5);
-
-    // JMP 주소계산 (E9 XXXX)
-    // => XXXX = pfnNew - pfnOrg - 5
-    dwAddress = (DWORD) pfnNew - (DWORD) pfnOrg - 5;
-    memcpy(&pBuf[1], &dwAddress, 4);
-
-    // Hook - 5 byte 패치(JMP XXXX)
-    memcpy(pfnOrg, pBuf, 5);
-
-    // 메모리 속성 복원
-    VirtualProtect((LPVOID) pfnOrg, 5, dwOldProtect, &dwOldProtect);
-
-    return TRUE;
-}
-
 
 HANDLE hPipe;
 volatile bool bCancelPipeThread;
 volatile bool bPipeConnected;
 
-concurrent_queue<string> MessageQueue;
+ConcurrentQueue<string> MessageQueue;
 
 DWORD WINAPI PipeThread(LPVOID lParam)
 {
-    hPipe = CreateNamedPipeA("\\\\.\\pipe\\osu!Lyrics", PIPE_ACCESS_OUTBOUND,
+    hPipe = CreateNamedPipe("\\\\.\\pipe\\osu!Lyrics", PIPE_ACCESS_OUTBOUND,
         PIPE_TYPE_MESSAGE | PIPE_WAIT, 1, BUF_SIZE, 0, INFINITE, NULL);
     // 스레드 종료 요청이 들어올 때까지 클라이언트 접속 무한 대기
     while (!bCancelPipeThread)
@@ -94,15 +38,15 @@ DWORD WINAPI PipeThread(LPVOID lParam)
         {
             bPipeConnected = true;
 
-            if (MessageQueue.empty())
+            if (MessageQueue.Empty())
             {
                 // 메세지 큐가 비었을 때 3초간 기다려도 신호가 없으면 다시 기다림
-                MessageQueue.wait_push(3000);
+                MessageQueue.WaitPush(3000);
                 continue;
             }
 
             DWORD wrote;
-            string message = MessageQueue.pop();
+            string message = MessageQueue.Pop();
             if (WriteFile(hPipe, message.c_str(), message.length(), &wrote, NULL))
             {
                 continue;
@@ -111,7 +55,7 @@ DWORD WINAPI PipeThread(LPVOID lParam)
         bPipeConnected = false;
         DisconnectNamedPipe(hPipe);
 
-        MessageQueue.clear();
+        MessageQueue.Clear();
     }
     // 클라이언트 연결 종료
     bPipeConnected = false;
@@ -121,11 +65,7 @@ DWORD WINAPI PipeThread(LPVOID lParam)
 }
 
 
-typedef BOOL (WINAPI *tReadFile)(HANDLE, LPVOID, DWORD, LPDWORD, LPOVERLAPPED);
-tReadFile pReadFile;
-BYTE pReadFileHook[5];
-mutex HookMutex;
-
+Hooker<tReadFile> hkrReadFile("kernel32.dll", "ReadFile");
 unordered_map<string, string> AudioInfo;
 
 // osu!에서 ReadFile을 호출하면 정보를 빼내서 osu!Lyrics로 보냄
@@ -133,11 +73,11 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
 {
     long long calledAt = CurrentTime();
 
-    HookMutex.lock();
-    unhook_by_code("kernel32.dll", "ReadFile", pReadFileHook);
-    BOOL result = pReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
-    hook_by_code("kernel32.dll", "ReadFile", (PROC) hkReadFile, pReadFileHook);
-    HookMutex.unlock();
+    hkrReadFile.EnterCS();
+    hkrReadFile.Unhook();
+    BOOL result = hkrReadFile.pFunction(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
+    hkrReadFile.Hook();
+    hkrReadFile.LeaveCS();
     if (!result)
     {
         return FALSE;
@@ -196,7 +136,7 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
         {
             char message[BUF_SIZE];
             sprintf(message, "%llx|%s|%lx|%s\n", calledAt, &path[4], seekPosition, &pair->second[4]);
-            MessageQueue.push(string(message));
+            MessageQueue.Push(string(message));
         }
     }
     return TRUE;
@@ -211,16 +151,14 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
     {
         hPipeThread = CreateThread(NULL, 0, PipeThread, NULL, 0, NULL);
 
-        HookMutex.lock();
-        pReadFile = (tReadFile) GetProcAddress(GetModuleHandle("kernel32.dll"), "ReadFile");
-        hook_by_code("kernel32.dll", "ReadFile", (PROC) hkReadFile, pReadFileHook);
-        HookMutex.unlock();
+        hkrReadFile.Set(hkReadFile);
+        hkrReadFile.Hook();
     }
     else if (fdwReason == DLL_PROCESS_DETACH)
     {
-        HookMutex.lock();
-        unhook_by_code("kernel32.dll", "ReadFile", pReadFileHook);
-        HookMutex.unlock();
+        // hkrReadFile.EnterCS();
+        hkrReadFile.Unhook();
+        // hkrReadFile.LeaveCS();
 
         bCancelPipeThread = true;
         DisconnectNamedPipe(hPipe);

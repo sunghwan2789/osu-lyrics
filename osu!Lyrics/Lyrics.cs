@@ -351,8 +351,8 @@ namespace osu_Lyrics
                 lyricsCache = newLyrics;
             }
             curTime = DateTimeOffset.Now.Subtract(
-                DateTimeOffset.FromFileTime(Convert.ToInt64(data[0], 16))).TotalSeconds +
-                curAudio.Info.Time(Convert.ToUInt32(data[2], 16));
+                DateTimeOffset.FromFileTime(Convert.ToInt64(data[0], 16))
+            ).TotalSeconds + curAudio.Info.Time(Convert.ToUInt32(data[2], 16));
         }
 
 
