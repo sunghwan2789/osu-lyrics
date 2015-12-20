@@ -310,7 +310,7 @@ namespace osu_Lyrics
             var data = line.Split('|');
             if (data.Length != 4)
             {
-                throw new InvalidDataException();
+                return;
             }
             // [ time, audioPath, audioPosition, beatmapPath ]
             // 재생 중인 곡이 바꼈다!

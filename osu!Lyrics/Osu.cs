@@ -227,13 +227,9 @@ namespace osu_Lyrics
                 using (var sr = new StreamReader(pipe))
                 {
                     pipe.Connect();
-                    while (pipe.IsConnected)
+                    while (pipe.IsConnected && !sr.EndOfStream)
                     {
-                        try
-                        {
-                            onSignal(sr.ReadLine());
-                        }
-                        catch {}
+                        onSignal(sr.ReadLine());
                     }
                 }
             });
