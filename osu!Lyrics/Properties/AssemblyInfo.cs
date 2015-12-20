@@ -30,6 +30,6 @@ using System.Resources;
 // 지정되도록 할 수 있습니다.
 // [assembly: AssemblyVersion("1.0.*")]
 [assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.8.58")]
-[assembly: AssemblyInformationalVersion("1.8.58")]
+[assembly: AssemblyFileVersion("1.8.59")]
+[assembly: AssemblyInformationalVersion("1.8.59")]
 [assembly: NeutralResourcesLanguageAttribute("ko-KR")]

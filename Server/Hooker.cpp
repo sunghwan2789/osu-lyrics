@@ -2,12 +2,13 @@
 #include <Windows.h>
 #include <cstring>
 
-template<typename F> Hooker<F>::Hooker(const char *moduleName, const char *funcName)
+template<typename F> Hooker<F>::Hooker(const char *moduleName, const char *functionName, F hkFunction = nullptr)
 {
     InitializeCriticalSection(&this->hMutex);
     this->Hooked = false;
 
-    this->pFunction = (F) GetProcAddress(GetModuleHandle(moduleName), funcName);
+    this->pFunction = (F) GetProcAddress(GetModuleHandle(moduleName), functionName);
+    this->hkFunction = hkFunction;
 }
 
 template<typename F> Hooker<F>::~Hooker()
@@ -26,7 +27,7 @@ template<typename F> void Hooker<F>::Set(F hkFunction)
 
 template<typename F> void Hooker<F>::Hook()
 {
-    if (this->Hooked)
+    if (this->Hooked && this->hkFunction)
     {
         return;
     }
@@ -74,3 +75,6 @@ template<typename F> void Hooker<F>::LeaveCS()
 
 // explicit instantiation
 template class Hooker<tReadFile>;
+template class Hooker<tBASS_ChannelPlay>;
+template class Hooker<tBASS_ChannelSetPosition>;
+template class Hooker<tBASS_ChannelSetAttribute>;

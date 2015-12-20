@@ -272,10 +272,15 @@ namespace osu_Lyrics
 
         private double _curTimeChanged;
         private double _curTime;
+        private double _playbackRate;
 
         private double curTime
         {
-            get { return _curTime + Now() - _curTimeChanged - curAudio.Sync; }
+            get
+            {
+                var elapsedTime = (Now() - _curTimeChanged) *_playbackRate;
+                return _curTime + elapsedTime - curAudio.Sync;
+            }
             set
             {
                 if (value < _curTime)
@@ -308,15 +313,15 @@ namespace osu_Lyrics
         private async void Osu_Signal(string line)
         {
             var data = line.Split('|');
-            if (data.Length != 4)
+            if (data.Length != 5)
             {
                 return;
             }
-            // [ time, audioPath, audioPosition, beatmapPath ]
+            // [ time, audioPath, audioCurrentTime, audioPlaybackRate, beatmapPath ]
             // 재생 중인 곡이 바꼈다!
             if (data[1] != curAudio.Path)
             {
-                curAudio = new Audio(data[1], data[3]);
+                curAudio = new Audio(data[1], data[4]);
                 lyricsCache = new List<Lyric>
                 {
                     new Lyric(0, "가사 받는 중...")
@@ -352,7 +357,8 @@ namespace osu_Lyrics
             }
             curTime = DateTimeOffset.Now.Subtract(
                 DateTimeOffset.FromFileTime(Convert.ToInt64(data[0], 16))
-            ).TotalSeconds + curAudio.Info.Time(Convert.ToUInt32(data[2], 16));
+            ).TotalSeconds + Convert.ToDouble(data[2]);
+            _playbackRate = 1 + Convert.ToDouble(data[3]) / 100;
         }
 
 

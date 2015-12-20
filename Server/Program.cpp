@@ -4,14 +4,18 @@
 #include <Windows.h>
 #include <Shlwapi.h>
 #include <unordered_map>
-#include <mutex>
+#include <cstring>
+#include <string>
+#include <utility>
+#include "bass.h"
 #include "ConcurrentQueue.h"
 #include "Hooker.h"
 using namespace std;
 
 #define BUF_SIZE MAX_PATH * 3
+#define OSU_BASS_ATTRIB_MUSIC_SPEED 0x10000
 
-long long CurrentTime()
+inline long long CurrentTime()
 {
     long long t;
     GetSystemTimeAsFileTime((LPFILETIME) &t);
@@ -19,12 +23,12 @@ long long CurrentTime()
 }
 
 
+ConcurrentQueue<string> MessageQueue;
+
+HANDLE hPipeThread;
 HANDLE hPipe;
 volatile bool bCancelPipeThread;
 volatile bool bPipeConnected;
-
-ConcurrentQueue<string> MessageQueue;
-
 DWORD WINAPI PipeThread(LPVOID lParam)
 {
     hPipe = CreateNamedPipe("\\\\.\\pipe\\osu!Lyrics", PIPE_ACCESS_OUTBOUND,
@@ -65,17 +69,17 @@ DWORD WINAPI PipeThread(LPVOID lParam)
 }
 
 
-Hooker<tReadFile> hkrReadFile("kernel32.dll", "ReadFile");
+pair<string, string> Playing;
 unordered_map<string, string> AudioInfo;
 
-// osu!에서 ReadFile을 호출하면 정보를 빼내서 osu!Lyrics로 보냄
+Hooker<tReadFile> hkrReadFile("kernel32.dll", "ReadFile", hkReadFile);
 BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped)
 {
-    long long calledAt = CurrentTime();
+    BOOL result;
 
     hkrReadFile.EnterCS();
     hkrReadFile.Unhook();
-    BOOL result = hkrReadFile.pFunction(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
+    result = hkrReadFile.pFunction(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
     hkrReadFile.Hook();
     hkrReadFile.LeaveCS();
     if (!result)
@@ -93,57 +97,148 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
     {
         // strtok은 소스를 변형하므로 일단 백업
         char *buffer = strdup((char *) lpBuffer);
-        char *line = strtok(buffer, "\n");
-        while (line != NULL)
+        for (char *line = strtok(buffer, "\n"); line != NULL; line = strtok(NULL, "\n"))
         {
             // 비트맵의 음악 파일 경로 얻기
-            if (strnicmp(line, "AudioFilename:", 14) == 0)
+            if (strnicmp(line, "AudioFilename:", 14) != 0)
             {
-                char *beatmapDir = strdup(path);
-                PathRemoveFileSpec(beatmapDir);
-
-                char audioPath[MAX_PATH];
-
-                // get value & trim
-                int i = 14;
-                for (; line[i] == ' '; i++);
-                buffer[0] = '\0';
-                strncat(buffer, &line[i], strlen(line) - i - 1);
-                PathCombine(audioPath, beatmapDir, buffer);
-
-                // 검색할 때 대소문자 구분하므로 제대로 된 파일 경로 얻기
-                WIN32_FIND_DATA fdata;
-                FindClose(FindFirstFile(audioPath, &fdata));
-                PathRemoveFileSpec(audioPath);
-                PathCombine(audioPath, audioPath, fdata.cFileName);
-
-                AudioInfo.insert(make_pair(string(audioPath), string(path)));
-
-                free(beatmapDir);
-                break;
+                continue;
             }
-            line = strtok(NULL, "\n");
+
+            char *beatmapDir = strdup(path);
+            PathRemoveFileSpec(beatmapDir);
+
+            char audioPath[MAX_PATH];
+
+            // get value & trim
+            int i = 14;
+            for (; line[i] == ' '; i++);
+            buffer[0] = NULL;
+            strncat(buffer, &line[i], strlen(line) - i - 1);
+            PathCombine(audioPath, beatmapDir, buffer);
+
+            // 검색할 때 대소문자 구분하므로 제대로 된 파일 경로 얻기
+            WIN32_FIND_DATA fdata;
+            FindClose(FindFirstFile(audioPath, &fdata));
+            PathRemoveFileSpec(audioPath);
+            PathCombine(audioPath, audioPath, fdata.cFileName);
+
+            AudioInfo.emplace(audioPath, path);
+
+            free(beatmapDir);
+            break;
         }
         free(buffer);
     }
-    // 파이프 연결이 끊겼으면 유저가 가사를 보고 싶지 않다는 것:
-    // osu!가 게임 플레이에만 집중하게 하자... 자원 낭비 금지
-    else if (bPipeConnected)
+    else
     {
         // [ audioPath, beatmapPath ]
-        unordered_map<string, string>::iterator pair = AudioInfo.find(string(path));
+        unordered_map<string, string>::iterator pair = AudioInfo.find(path);
         if (pair != AudioInfo.end())
         {
-            char message[BUF_SIZE];
-            sprintf(message, "%llx|%s|%lx|%s\n", calledAt, &path[4], seekPosition, &pair->second[4]);
-            MessageQueue.Push(string(message));
+            Playing = *pair;
         }
     }
+
     return TRUE;
 }
 
 
-HANDLE hPipeThread;
+Hooker<tBASS_ChannelPlay> hkrPlay("bass.dll", "BASS_ChannelPlay", hkBASS_ChannelPlay);
+BOOL BASSDEF(hkBASS_ChannelPlay)(DWORD handle, BOOL restart)
+{
+    BOOL result;
+
+    hkrPlay.EnterCS();
+    hkrPlay.Unhook();
+    result = hkrPlay.pFunction(handle, restart);
+    hkrPlay.Hook();
+    hkrPlay.LeaveCS();
+    if (!result)
+    {
+        return FALSE;
+    }
+
+    BASS_CHANNELINFO info;
+    BASS_ChannelGetInfo(handle, &info);
+    if (!(info.ctype & BASS_CTYPE_STREAM))
+    {
+        return TRUE;
+    }
+
+    char message[BUF_SIZE];
+    long long calledAt = CurrentTime();
+    double currentTime = BASS_ChannelBytes2Seconds(handle, BASS_ChannelGetPosition(handle, BASS_POS_BYTE));
+    float playbackRate; BASS_ChannelGetAttribute(handle, OSU_BASS_ATTRIB_MUSIC_SPEED, &playbackRate);
+    sprintf(message, "%llx|%s|%lf|%f|%s\n", calledAt, &Playing.first[4], currentTime, playbackRate, &Playing.second[4]);
+    MessageQueue.Push(message);
+
+    return TRUE;
+}
+
+Hooker<tBASS_ChannelSetPosition> hkrSetPos("bass.dll", "BASS_ChannelSetPosition", hkBASS_ChannelSetPosition);
+BOOL BASSDEF(hkBASS_ChannelSetPosition)(DWORD handle, QWORD pos, DWORD mode)
+{
+    BOOL result;
+
+    hkrSetPos.EnterCS();
+    hkrSetPos.Unhook();
+    result = hkrSetPos.pFunction(handle, pos, mode);
+    hkrSetPos.Hook();
+    hkrSetPos.LeaveCS();
+    if (!result)
+    {
+        return FALSE;
+    }
+
+    BASS_CHANNELINFO info;
+    BASS_ChannelGetInfo(handle, &info);
+    if (!(info.ctype & BASS_CTYPE_STREAM))
+    {
+        return TRUE;
+    }
+
+    char message[BUF_SIZE];
+    long long calledAt = CurrentTime();
+    double currentTime = BASS_ChannelBytes2Seconds(handle, pos);
+    float playbackRate; BASS_ChannelGetAttribute(handle, OSU_BASS_ATTRIB_MUSIC_SPEED, &playbackRate);
+    sprintf(message, "%llx|%s|%lf|%f|%s\n", calledAt, &Playing.first[4], currentTime, playbackRate, &Playing.second[4]);
+    MessageQueue.Push(message);
+
+    return TRUE;
+}
+
+Hooker<tBASS_ChannelSetAttribute> hkrSetAttr("bass.dll", "BASS_ChannelSetAttribute", hkBASS_ChannelSetAttribute);
+BOOL BASSDEF(hkBASS_ChannelSetAttribute)(DWORD handle, DWORD attrib, float value)
+{
+    BOOL result;
+
+    hkrSetAttr.EnterCS();
+    hkrSetAttr.Unhook();
+    result = hkrSetAttr.pFunction(handle, attrib, value);
+    hkrSetAttr.Hook();
+    hkrSetAttr.LeaveCS();
+    if (!result)
+    {
+        return FALSE;
+    }
+
+    BASS_CHANNELINFO info;
+    BASS_ChannelGetInfo(handle, &info);
+    if (!(info.ctype & BASS_CTYPE_STREAM) || attrib != OSU_BASS_ATTRIB_MUSIC_SPEED)
+    {
+        return TRUE;
+    }
+
+    char message[BUF_SIZE];
+    long long calledAt = CurrentTime();
+    double currentTime = BASS_ChannelBytes2Seconds(handle, BASS_ChannelGetPosition(handle, BASS_POS_BYTE));
+    sprintf(message, "%llx|%s|%lf|%f|%s\n", calledAt, &Playing.first[4], currentTime, value, &Playing.second[4]);
+    MessageQueue.Push(message);
+
+    return TRUE;
+}
+
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
@@ -151,14 +246,27 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
     {
         hPipeThread = CreateThread(NULL, 0, PipeThread, NULL, 0, NULL);
 
-        hkrReadFile.Set(hkReadFile);
+        hkrPlay.Hook();
+        hkrSetAttr.Hook();
+        hkrSetPos.Hook();
+
         hkrReadFile.Hook();
     }
     else if (fdwReason == DLL_PROCESS_DETACH)
     {
-        // hkrReadFile.EnterCS();
+        hkrReadFile.EnterCS();
         hkrReadFile.Unhook();
-        // hkrReadFile.LeaveCS();
+        hkrReadFile.LeaveCS();
+
+        hkrSetAttr.EnterCS();
+        hkrSetAttr.Unhook();
+        hkrSetAttr.LeaveCS();
+        hkrSetPos.EnterCS();
+        hkrSetPos.Unhook();
+        hkrSetPos.LeaveCS();
+        hkrPlay.EnterCS();
+        hkrPlay.Unhook();
+        hkrPlay.LeaveCS();
 
         bCancelPipeThread = true;
         DisconnectNamedPipe(hPipe);
