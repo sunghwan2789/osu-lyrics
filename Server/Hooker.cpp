@@ -1,6 +1,6 @@
-#include "Hooker.h"
 #include <Windows.h>
 #include <cstring>
+#include "Hooker.h"
 
 template<typename F> Hooker<F>::Hooker(const char *moduleName, const char *functionName, F hkFunction = nullptr)
 {
@@ -78,3 +78,4 @@ template class Hooker<tReadFile>;
 template class Hooker<tBASS_ChannelPlay>;
 template class Hooker<tBASS_ChannelSetPosition>;
 template class Hooker<tBASS_ChannelSetAttribute>;
+template class Hooker<tBASS_ChannelPause>;

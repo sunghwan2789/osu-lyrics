@@ -91,6 +91,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bass.h" />
+    <ClInclude Include="bass_fx.h" />
     <ClInclude Include="ConcurrentQueue.h" />
     <ClInclude Include="Hooker.h" />
     <ClInclude Include="resource.h" />
@@ -100,6 +101,7 @@
   </ItemGroup>
   <ItemGroup>
     <Library Include="bass.lib" />
+    <Library Include="bass_fx.lib" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

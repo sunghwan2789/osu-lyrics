@@ -2,17 +2,14 @@
 
 namespace osu_Lyrics
 {
-    internal class Ogg : AudioInfo
+    internal class Ogg : AudioHash
     {
         public Ogg(Stream s)
         {
-            s.Seek(48, SeekOrigin.Begin);
-
-            // identification header
-            var buff = new byte[4096];
-            BitRate = Program.Int(buff, 0, s.Read(buff, 0, 4));
+            s.Seek(52, SeekOrigin.Begin);
 
             // setup header
+            var buff = new byte[4096];
             int read;
             do
             {
@@ -23,7 +20,6 @@ namespace osu_Lyrics
                     {
                         RawPosition = s.Position - read + i;
                         read = 0;
-                        break;
                     }
                 }
                 s.Seek(-12, SeekOrigin.Current);

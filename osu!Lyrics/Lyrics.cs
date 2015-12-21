@@ -321,18 +321,19 @@ namespace osu_Lyrics
             // 재생 중인 곡이 바꼈다!
             if (data[1] != curAudio.Path)
             {
-                curAudio = new Audio(data[1], data[4]);
                 lyricsCache = new List<Lyric>
                 {
                     new Lyric(0, "가사 받는 중...")
                 };
 
+                curAudio = new Audio(data[1]);
+
                 // 파일 해시로 가사 검색
                 var newLyrics = await GetLyrics(new Dictionary<string, string>
                 {
-                    { "[HASH]", curAudio.Info.Hash }
+                    { "[HASH]", curAudio.Hash }
                 });
-                if (newLyrics == null)
+                if (newLyrics == null && curAudio.Beatmap != null)
                 {
                     // 음악 정보로 가사 검색
                     newLyrics = await GetLyrics(new Dictionary<string, string>

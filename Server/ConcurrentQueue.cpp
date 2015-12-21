@@ -1,7 +1,7 @@
-#include "ConcurrentQueue.h"
 #include <Windows.h>
 #include <queue>
 #include <string>
+#include "ConcurrentQueue.h"
 
 template<typename T> ConcurrentQueue<T>::ConcurrentQueue()
 {

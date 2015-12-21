@@ -8,12 +8,12 @@
 #include <string>
 #include <utility>
 #include "bass.h"
+#include "bass_fx.h"
 #include "ConcurrentQueue.h"
 #include "Hooker.h"
 using namespace std;
 
 #define BUF_SIZE MAX_PATH * 3
-#define OSU_BASS_ATTRIB_MUSIC_SPEED 0x10000
 
 inline long long CurrentTime()
 {
@@ -136,7 +136,7 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
         unordered_map<string, string>::iterator pair = AudioInfo.find(path);
         if (pair != AudioInfo.end())
         {
-            Playing = *pair;
+            Playing = { pair->first.substr(4), pair->second.substr(4) };
         }
     }
 
@@ -161,18 +161,12 @@ BOOL BASSDEF(hkBASS_ChannelPlay)(DWORD handle, BOOL restart)
 
     BASS_CHANNELINFO info;
     BASS_ChannelGetInfo(handle, &info);
-    if (!(info.ctype & BASS_CTYPE_STREAM))
+    if (info.ctype & BASS_CTYPE_STREAM)
     {
-        return TRUE;
+        double currentTime = BASS_ChannelBytes2Seconds(handle, BASS_ChannelGetPosition(handle, BASS_POS_BYTE));
+        float tempo; BASS_ChannelGetAttribute(handle, BASS_ATTRIB_TEMPO, &tempo);
+        hkBASS_Control(currentTime, tempo);
     }
-
-    char message[BUF_SIZE];
-    long long calledAt = CurrentTime();
-    double currentTime = BASS_ChannelBytes2Seconds(handle, BASS_ChannelGetPosition(handle, BASS_POS_BYTE));
-    float playbackRate; BASS_ChannelGetAttribute(handle, OSU_BASS_ATTRIB_MUSIC_SPEED, &playbackRate);
-    sprintf(message, "%llx|%s|%lf|%f|%s\n", calledAt, &Playing.first[4], currentTime, playbackRate, &Playing.second[4]);
-    MessageQueue.Push(message);
-
     return TRUE;
 }
 
@@ -193,18 +187,19 @@ BOOL BASSDEF(hkBASS_ChannelSetPosition)(DWORD handle, QWORD pos, DWORD mode)
 
     BASS_CHANNELINFO info;
     BASS_ChannelGetInfo(handle, &info);
-    if (!(info.ctype & BASS_CTYPE_STREAM))
+    if (info.ctype & BASS_CTYPE_STREAM)
     {
-        return TRUE;
+        double currentTime = BASS_ChannelBytes2Seconds(handle, pos);
+        float tempo; BASS_ChannelGetAttribute(handle, BASS_ATTRIB_TEMPO, &tempo);
+        // 주의!! pos가 일정 이하일 때,
+        // 재생하면 BASS_ChannelPlay대신 이 함수가 호출되고,
+        // BASS_ChannelIsActive 값은 BASS_ACTIVE_PAUSED임.
+        if (BASS_ChannelIsActive(handle) == BASS_ACTIVE_PAUSED)
+        {
+            tempo = -100;
+        }
+        hkBASS_Control(currentTime, tempo);
     }
-
-    char message[BUF_SIZE];
-    long long calledAt = CurrentTime();
-    double currentTime = BASS_ChannelBytes2Seconds(handle, pos);
-    float playbackRate; BASS_ChannelGetAttribute(handle, OSU_BASS_ATTRIB_MUSIC_SPEED, &playbackRate);
-    sprintf(message, "%llx|%s|%lf|%f|%s\n", calledAt, &Playing.first[4], currentTime, playbackRate, &Playing.second[4]);
-    MessageQueue.Push(message);
-
     return TRUE;
 }
 
@@ -225,18 +220,49 @@ BOOL BASSDEF(hkBASS_ChannelSetAttribute)(DWORD handle, DWORD attrib, float value
 
     BASS_CHANNELINFO info;
     BASS_ChannelGetInfo(handle, &info);
-    if (!(info.ctype & BASS_CTYPE_STREAM) || attrib != OSU_BASS_ATTRIB_MUSIC_SPEED)
+    if ((info.ctype & BASS_CTYPE_STREAM) && attrib == BASS_ATTRIB_TEMPO)
     {
-        return TRUE;
+        double currentTime = BASS_ChannelBytes2Seconds(handle, BASS_ChannelGetPosition(handle, BASS_POS_BYTE));
+        hkBASS_Control(currentTime, value);
+    }
+    return TRUE;
+}
+
+Hooker<tBASS_ChannelPause> hkrPause("bass.dll", "BASS_ChannelPause", hkBASS_ChannelPause);
+BOOL BASSDEF(hkBASS_ChannelPause)(DWORD handle)
+{
+    BOOL result;
+
+    hkrPause.EnterCS();
+    hkrPause.Unhook();
+    result = hkrPause.pFunction(handle);
+    hkrPause.Hook();
+    hkrPause.LeaveCS();
+    if (!result)
+    {
+        return FALSE;
+    }
+
+    BASS_CHANNELINFO info;
+    BASS_ChannelGetInfo(handle, &info);
+    if (info.ctype & BASS_CTYPE_STREAM)
+    {
+        double currentTime = BASS_ChannelBytes2Seconds(handle, BASS_ChannelGetPosition(handle, BASS_POS_BYTE));
+        hkBASS_Control(currentTime, -100);
+    }
+    return TRUE;
+}
+
+void hkBASS_Control(double currentTime, float tempo)
+{
+    if (!bPipeConnected)
+    {
+        return;
     }
 
     char message[BUF_SIZE];
-    long long calledAt = CurrentTime();
-    double currentTime = BASS_ChannelBytes2Seconds(handle, BASS_ChannelGetPosition(handle, BASS_POS_BYTE));
-    sprintf(message, "%llx|%s|%lf|%f|%s\n", calledAt, &Playing.first[4], currentTime, value, &Playing.second[4]);
+    sprintf(message, "%llx|%s|%lf|%f|%s\n", CurrentTime(), Playing.first.c_str(), currentTime, tempo, Playing.second.c_str());
     MessageQueue.Push(message);
-
-    return TRUE;
 }
 
 
@@ -249,6 +275,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
         hkrPlay.Hook();
         hkrSetAttr.Hook();
         hkrSetPos.Hook();
+        hkrPause.Hook();
 
         hkrReadFile.Hook();
     }
@@ -258,6 +285,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
         hkrReadFile.Unhook();
         hkrReadFile.LeaveCS();
 
+        hkrPause.EnterCS();
+        hkrPause.Unhook();
+        hkrPause.LeaveCS();
         hkrSetAttr.EnterCS();
         hkrSetAttr.Unhook();
         hkrSetAttr.LeaveCS();

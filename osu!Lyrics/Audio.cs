@@ -2,21 +2,30 @@
 {
     internal class Audio
     {
-        public string Path { get; private set; }
+        public readonly string Path;
+        public readonly string Hash;
+        public readonly Beatmap Beatmap;
 
-        public AudioInfo Info { get; private set; }
+        public double Sync;
 
-        public double Sync { get; set; }
-
-        public Beatmap Beatmap { get; set; }
-
-        public Audio() {}
-
-        public Audio(string path, string beatmapPath)
+        public Audio()
         {
-            Path = path;
-            Info = AudioInfo.Parse(Path);
-            Beatmap = new Beatmap(beatmapPath);
+            this.Sync = 0;
+        }
+
+        public Audio(string path) : this()
+        {
+            this.Path = path;
+            try
+            {
+                this.Hash = AudioHash.Load(path);
+            }
+            catch {}
+            try
+            {
+                this.Beatmap = Beatmap.Load(path);
+            }
+            catch {}
         }
     }
 }

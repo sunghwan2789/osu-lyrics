@@ -48,7 +48,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Audio.cs" />
-    <Compile Include="AudioInfo.cs" />
+    <Compile Include="AudioHash.cs" />
     <Compile Include="Beatmap.cs" />
     <Compile Include="Lyric.cs" />
     <Compile Include="Lyrics.cs">
@@ -57,8 +57,8 @@
     <Compile Include="Lyrics.Designer.cs">
       <DependentUpon>Lyrics.cs</DependentUpon>
     </Compile>
-    <Compile Include="AudioInfo.Mpeg.cs" />
-    <Compile Include="AudioInfo.Ogg.cs" />
+    <Compile Include="AudioHash.Mpeg.cs" />
+    <Compile Include="AudioHash.Ogg.cs" />
     <Compile Include="Osu.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

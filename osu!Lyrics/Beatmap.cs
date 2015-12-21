@@ -4,42 +4,30 @@ namespace osu_Lyrics
 {
     internal class Beatmap
     {
-        public string Artist
-        {
-            get; private set;
-        }
+        public readonly string Artist;
+        public readonly string ArtistUnicode;
+        public readonly string Title;
+        public readonly string TitleUnicode;
 
-        public string ArtistUnicode
-        {
-            get; private set;
-        }
+        public Beatmap() {}
 
-        public string Title
+        public Beatmap(string osu)
         {
-            get; private set;
-        }
-
-        public string TitleUnicode
-        {
-            get; private set;
-        }
-
-        public Beatmap(string path)
-        {
-            var stream = File.ReadLines(path);
             var currentSection = "";
-            foreach (var line in stream)
+            foreach (var line in osu.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
             {
                 // 주석
                 if (line.StartsWith("//"))
                 {
                     continue;
                 }
+
                 if (line.StartsWith("["))
                 {
                     currentSection = line.Substring(1, line.IndexOf("]") - 1);
                     continue;
                 }
+
                 if (currentSection == "Metadata")
                 {
                     var pair = line.Split(new[] { ':' }, 2);
@@ -56,6 +44,11 @@ namespace osu_Lyrics
                     }
                 }
             }
+        }
+
+        public static Beatmap Load(string path)
+        {
+            return new Beatmap(File.ReadAllText(path));
         }
     }
 }

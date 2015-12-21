@@ -37,3 +37,6 @@ typedef BOOL (BASSDEF(*tBASS_ChannelSetPosition))(DWORD, QWORD, DWORD);
 BOOL BASSDEF(hkBASS_ChannelSetPosition)(DWORD, QWORD, DWORD);
 typedef BOOL (BASSDEF(*tBASS_ChannelSetAttribute))(DWORD, DWORD, float);
 BOOL BASSDEF(hkBASS_ChannelSetAttribute)(DWORD, DWORD, float);
+typedef BOOL (BASSDEF(*tBASS_ChannelPause))(DWORD);
+BOOL BASSDEF(hkBASS_ChannelPause)(DWORD);
+inline void hkBASS_Control(double, float);
