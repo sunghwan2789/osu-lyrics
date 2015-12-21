@@ -4,10 +4,10 @@ namespace osu_Lyrics
 {
     internal class Beatmap
     {
-        public readonly string Artist;
-        public readonly string ArtistUnicode;
-        public readonly string Title;
-        public readonly string TitleUnicode;
+        public string Artist { get; private set; }
+        public string ArtistUnicode { get; private set; }
+        public string Title { get; private set; }
+        public string TitleUnicode { get; private set; }
 
         public Beatmap() {}
 

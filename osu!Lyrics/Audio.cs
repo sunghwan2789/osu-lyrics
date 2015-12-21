@@ -13,7 +13,7 @@
             this.Sync = 0;
         }
 
-        public Audio(string path) : this()
+        public Audio(string path, string beatmapPath) : this()
         {
             this.Path = path;
             try
@@ -23,7 +23,7 @@
             catch {}
             try
             {
-                this.Beatmap = Beatmap.Load(path);
+                this.Beatmap = Beatmap.Load(beatmapPath);
             }
             catch {}
         }

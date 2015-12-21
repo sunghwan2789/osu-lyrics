@@ -326,7 +326,7 @@ namespace osu_Lyrics
                     new Lyric(0, "가사 받는 중...")
                 };
 
-                curAudio = new Audio(data[1]);
+                curAudio = new Audio(data[1], data[4]);
 
                 // 파일 해시로 가사 검색
                 var newLyrics = await GetLyrics(new Dictionary<string, string>
