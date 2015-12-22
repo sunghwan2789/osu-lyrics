@@ -1,5 +1,3 @@
-#define WIN32_LEAN_AND_MEAN
-
 #include <Windows.h>
 #include <string>
 #include "ConcurrentQueue.h"
@@ -16,21 +14,13 @@ DWORD WINAPI PipeThread(LPVOID lParam)
 {
     hPipe = CreateNamedPipe("\\\\.\\pipe\\osu!Lyrics", PIPE_ACCESS_OUTBOUND,
         PIPE_TYPE_MESSAGE | PIPE_WAIT, 1, BUF_SIZE, 0, INFINITE, NULL);
-    std::string message;
     // 스레드 종료 요청이 들어올 때까지 클라이언트 접속 무한 대기
     while (!bCancelPipeThread)
     {
         // ConnectNamedPipe는 클라이언트와 연결될 때까지 무한 대기함:
         // 취소는 DisconnectNamedPipe로 가능
-        BOOL initialized = ConnectNamedPipe(hPipe, NULL);
-        if (initialized || GetLastError() == ERROR_PIPE_CONNECTED)
+        if (ConnectNamedPipe(hPipe, NULL) || GetLastError() == ERROR_PIPE_CONNECTED)
         {
-            if (initialized)
-            {
-                // 프로그램 다시 시작할 때 이전 메시지 바로 전송
-                MessageQueue.Push(message);
-            }
-
             bPipeConnected = true;
 
             if (MessageQueue.Empty())
@@ -41,7 +31,7 @@ DWORD WINAPI PipeThread(LPVOID lParam)
             }
 
             DWORD wrote;
-            message = MessageQueue.Pop();
+            std::string message = MessageQueue.Pop();
             if (WriteFile(hPipe, message.c_str(), message.length(), &wrote, NULL))
             {
                 continue;
