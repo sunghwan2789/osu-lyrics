@@ -22,10 +22,10 @@ namespace osu_Lyrics
         private bool Loaded;
 
         [DllImport("kernel32.dll")]
-        private static extern int GetPrivateProfileString(string lpAppName, string lpKeyName, string lpDefault, StringBuilder lpReturnedString, int nSize, string lpFileName);
+        private static extern uint GetPrivateProfileString(string lpAppName, string lpKeyName, string lpDefault, StringBuilder lpReturnedString, uint nSize, string lpFileName);
 
         [DllImport("kernel32.dll")]
-        private static extern int WritePrivateProfileString(string lpAppName, string lpKeyName, string lpString, string lpFileName);
+        private static extern bool WritePrivateProfileString(string lpAppName, string lpKeyName, string lpString, string lpFileName);
 
         [DllImport("user32.dll")]
         private static extern short GetAsyncKeyState(Keys vKey);
@@ -38,7 +38,7 @@ namespace osu_Lyrics
         private static string Get(string section, string key)
         {
             var temp = new StringBuilder(255);
-            GetPrivateProfileString(section, key, "", temp, temp.Capacity, _Path);
+            GetPrivateProfileString(section, key, "", temp, (uint) temp.Capacity, _Path);
             return temp.ToString();
         }
 

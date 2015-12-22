@@ -30,7 +30,7 @@ namespace osu_Lyrics
         private static extern IntPtr SelectObject(IntPtr hdc, IntPtr hgdiobj);
 
         [DllImport("user32.dll")]
-        private static extern bool UpdateLayeredWindow(IntPtr hwnd, IntPtr hdcDst, ref Point pptDst, ref Size psize, IntPtr hdcSrc, ref Point pprSrc, int crKey, ref BLENDFUNCTION pblend, int dwFlags);
+        private static extern bool UpdateLayeredWindow(IntPtr hwnd, IntPtr hdcDst, ref Point pptDst, ref Size psize, IntPtr hdcSrc, ref Point pprSrc, int crKey, ref BLENDFUNCTION pblend, uint dwFlags);
 
         private struct BLENDFUNCTION
         {
@@ -78,7 +78,7 @@ namespace osu_Lyrics
         {
             const byte AC_SRC_OVER = 0;
             const byte AC_SRC_ALPHA = 1;
-            const int ULW_ALPHA = 2;
+            const uint ULW_ALPHA = 2;
 
             var hDC = GetDC(IntPtr.Zero);
             var hMemDC = CreateCompatibleDC(hDC);

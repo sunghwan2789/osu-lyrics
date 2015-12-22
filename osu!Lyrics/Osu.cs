@@ -96,7 +96,7 @@ namespace osu_Lyrics
         //private static extern IntPtr GetForegroundWindow();
 
         [DllImport("user32.dll")]
-        private static extern IntPtr SetWindowsHookEx(int idHook, HOOKPROC lpfn, IntPtr hMod, int dwThreadId);
+        private static extern IntPtr SetWindowsHookEx(int idHook, HOOKPROC lpfn, IntPtr hMod, uint dwThreadId);
 
         [DllImport("user32.dll")]
         private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
@@ -155,7 +155,7 @@ namespace osu_Lyrics
         #region Listen(Action<string[]> onSignal)
 
         [DllImport("kernel32.dll")]
-        private static extern IntPtr OpenProcess(int dwDesiredAccess, bool bInheritHandle, int dwProcessId);
+        private static extern IntPtr OpenProcess(uint dwDesiredAccess, bool bInheritHandle, uint dwProcessId);
 
         [DllImport("kernel32.dll")]
         private static extern IntPtr GetModuleHandle(string lpModuleName);
@@ -164,43 +164,50 @@ namespace osu_Lyrics
         private static extern IntPtr GetProcAddress(IntPtr hModule, string lpProcName);
 
         [DllImport("kernel32.dll")]
-        private static extern IntPtr VirtualAllocEx(IntPtr hProcess, IntPtr lpAddress, int dwSize, int flAllocationType, int flProtect);
+        private static extern IntPtr VirtualAllocEx(IntPtr hProcess, IntPtr lpAddress, UIntPtr dwSize, uint flAllocationType, uint flProtect);
 
         [DllImport("kernel32.dll")]
-        private static extern IntPtr VirtualFreeEx(IntPtr hProcess, IntPtr lpAddress, int dwSize, int dwFreeType);
+        private static extern bool VirtualFreeEx(IntPtr hProcess, IntPtr lpAddress, UIntPtr dwSize, uint dwFreeType);
 
         [DllImport("kernel32.dll")]
-        private static extern bool WriteProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, string lpBuffer, int nSize, IntPtr lpNumberOfBytesWritten);
+        private static extern bool WriteProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, IntPtr lpBuffer, UIntPtr nSize, UIntPtr lpNumberOfBytesWritten);
 
         [DllImport("kernel32.dll")]
-        private static extern IntPtr CreateRemoteThread(IntPtr hProcess, IntPtr lpThreadAttributes, int dwStackSize, IntPtr lpStartAddress, IntPtr lpParameter, int dwCreationFlags, IntPtr lpThreadId);
+        private static extern IntPtr CreateRemoteThread(IntPtr hProcess, IntPtr lpThreadAttributes, UIntPtr dwStackSize, IntPtr lpStartAddress, IntPtr lpParameter, uint dwCreationFlags, UIntPtr lpThreadId);
 
         [DllImport("kernel32.dll")]
-        private static extern IntPtr WaitForSingleObject(IntPtr hHandle, int dwMilliseconds);
+        private static extern uint WaitForSingleObject(IntPtr hHandle, uint dwMilliseconds);
+
+        [DllImport("kernel32.dll")]
+        private static extern UIntPtr GlobalSize(IntPtr hMem);
 
         [DllImport("kernel32.dll")]
         private static extern bool CloseHandle(IntPtr hObject);
         
         private static bool InjectDLL(string dllPath)
         {
-            const int PROCESS_ALL_ACCESS = 0x1F0FFF;
-            const int MEM_RESERVE = 0x2000;
-            const int MEM_COMMIT = 0x1000;
-            const int PAGE_READWRITE = 0x04;
-            const int INFINITE = unchecked((int) 0xFFFFFFFF);
-            const int MEM_RELEASE = 0x8000;
+            const uint PROCESS_ALL_ACCESS = 0x1F0FFF;
+            const uint MEM_RESERVE = 0x2000;
+            const uint MEM_COMMIT = 0x1000;
+            const uint PAGE_READWRITE = 0x04;
+            const uint INFINITE = 0xFFFFFFFF;
+            const uint MEM_RELEASE = 0x8000;
             
-            var hProcess = OpenProcess(PROCESS_ALL_ACCESS, true, Process.Id);
+            var hProcess = OpenProcess(PROCESS_ALL_ACCESS, false, (uint) Process.Id);
 
-            var pLoadLibrary = GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA");
-            var pDllPath = VirtualAllocEx(hProcess, IntPtr.Zero, dllPath.Length + 1, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-            WriteProcessMemory(hProcess, pDllPath, dllPath, dllPath.Length + 1, IntPtr.Zero);
+            var pThreadProc = GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA");
 
-            var hThread = CreateRemoteThread(hProcess, IntPtr.Zero, 0, pLoadLibrary, pDllPath, 0, IntPtr.Zero);
+            var bFileName = Marshal.StringToHGlobalAnsi(dllPath);
+            var szFileName = GlobalSize(bFileName);
+            var pParameter = VirtualAllocEx(hProcess, IntPtr.Zero, szFileName, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+            WriteProcessMemory(hProcess, pParameter, bFileName, szFileName, UIntPtr.Zero);
+            Marshal.FreeHGlobal(bFileName);
+
+            var hThread = CreateRemoteThread(hProcess, IntPtr.Zero, UIntPtr.Zero, pThreadProc, pParameter, 0, UIntPtr.Zero);
             WaitForSingleObject(hThread, INFINITE);
             CloseHandle(hThread);
 
-            VirtualFreeEx(hProcess, pDllPath, 0, MEM_RELEASE);
+            VirtualFreeEx(hProcess, pParameter, UIntPtr.Zero, MEM_RELEASE);
 
             CloseHandle(hProcess);
 
@@ -240,7 +247,7 @@ namespace osu_Lyrics
         #region WindowInfo()
 
         [DllImport("user32.dll")]
-        private static extern bool ClientToScreen(IntPtr hWnd, out Point lpPoint);
+        private static extern bool ClientToScreen(IntPtr hWnd, ref Point lpPoint);
 
         [DllImport("user32.dll")]
         private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
@@ -261,8 +268,8 @@ namespace osu_Lyrics
 
         public static WNDINFO WindowInfo()
         {
-            Point location;
-            ClientToScreen(Process.MainWindowHandle, out location);
+            var location = Point.Empty;
+            ClientToScreen(Process.MainWindowHandle, ref location);
 
             RECT rect;
             GetWindowRect(Process.MainWindowHandle, out rect);
