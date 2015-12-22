@@ -1,6 +1,5 @@
 #include <Windows.h>
 #include <queue>
-#include <string>
 #include "ConcurrentQueue.h"
 
 template<typename T> ConcurrentQueue<T>::ConcurrentQueue()
@@ -82,4 +81,5 @@ template<typename T> bool ConcurrentQueue<T>::WaitPush(DWORD ms)
 }
 
 // explicit instantiation
+#include <string>
 template class ConcurrentQueue<std::string>;

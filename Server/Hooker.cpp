@@ -8,7 +8,7 @@ template<typename F> Hooker<F>::Hooker(const char *moduleName, const char *funct
     this->Hooked = false;
 
     this->pFunction = (F) GetProcAddress(GetModuleHandle(moduleName), functionName);
-    this->hkFunction = hkFunction;
+    this->Set(hkFunction);
 }
 
 template<typename F> Hooker<F>::~Hooker()
@@ -74,6 +74,7 @@ template<typename F> void Hooker<F>::LeaveCS()
 }
 
 // explicit instantiation
+#include "Observer.h"
 template class Hooker<tReadFile>;
 template class Hooker<tBASS_ChannelPlay>;
 template class Hooker<tBASS_ChannelSetPosition>;

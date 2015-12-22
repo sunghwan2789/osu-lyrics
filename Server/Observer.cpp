@@ -1,76 +1,20 @@
-#define WIN32_LEAN_AND_MEAN
 #pragma comment (lib, "Shlwapi.lib")
 
 #include <Windows.h>
-#include <Shlwapi.h>
+#include <utility>
+#include <string>
+#include <cstdio>
 #include <unordered_map>
 #include <cstring>
-#include <string>
-#include <utility>
+#include <Shlwapi.h>
 #include "bass.h"
 #include "bass_fx.h"
-#include "ConcurrentQueue.h"
 #include "Hooker.h"
-using namespace std;
+#include "Server.h"
+#include "Observer.h"
 
-#define BUF_SIZE MAX_PATH * 3
-
-inline long long CurrentTime()
-{
-    long long t;
-    GetSystemTimeAsFileTime((LPFILETIME) &t);
-    return t;
-}
-
-
-ConcurrentQueue<string> MessageQueue;
-
-HANDLE hPipeThread;
-HANDLE hPipe;
-volatile bool bCancelPipeThread;
-volatile bool bPipeConnected;
-DWORD WINAPI PipeThread(LPVOID lParam)
-{
-    hPipe = CreateNamedPipe("\\\\.\\pipe\\osu!Lyrics", PIPE_ACCESS_OUTBOUND,
-        PIPE_TYPE_MESSAGE | PIPE_WAIT, 1, BUF_SIZE, 0, INFINITE, NULL);
-    // 스레드 종료 요청이 들어올 때까지 클라이언트 접속 무한 대기
-    while (!bCancelPipeThread)
-    {
-        // ConnectNamedPipe는 클라이언트와 연결될 때까지 무한 대기함:
-        // 취소는 DisconnectNamedPipe로 가능
-        if (ConnectNamedPipe(hPipe, NULL) || GetLastError() == ERROR_PIPE_CONNECTED)
-        {
-            bPipeConnected = true;
-
-            if (MessageQueue.Empty())
-            {
-                // 메세지 큐가 비었을 때 3초간 기다려도 신호가 없으면 다시 기다림
-                MessageQueue.WaitPush(3000);
-                continue;
-            }
-
-            DWORD wrote;
-            string message = MessageQueue.Pop();
-            if (WriteFile(hPipe, message.c_str(), message.length(), &wrote, NULL))
-            {
-                continue;
-            }
-        }
-        bPipeConnected = false;
-        DisconnectNamedPipe(hPipe);
-
-        MessageQueue.Clear();
-    }
-    // 클라이언트 연결 종료
-    bPipeConnected = false;
-    DisconnectNamedPipe(hPipe);
-    CloseHandle(hPipe);
-    return 0;
-}
-
-
-pair<string, string> Playing;
-unordered_map<string, string> AudioInfo;
+std::unordered_map<std::string, std::string> AudioInfo;
+std::pair<std::string, std::string> Playing;
 
 Hooker<tReadFile> hkrReadFile("kernel32.dll", "ReadFile", hkReadFile);
 BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped)
@@ -123,7 +67,9 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
             PathRemoveFileSpec(audioPath);
             PathCombine(audioPath, audioPath, fdata.cFileName);
 
+            hkrReadFile.EnterCS();
             AudioInfo.emplace(audioPath, path);
+            hkrReadFile.LeaveCS();
 
             free(beatmapDir);
             break;
@@ -133,16 +79,24 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
     else
     {
         // [ audioPath, beatmapPath ]
-        unordered_map<string, string>::iterator pair = AudioInfo.find(path);
+        hkrReadFile.EnterCS();
+        auto pair = AudioInfo.find(path);
         if (pair != AudioInfo.end())
         {
             Playing = { pair->first.substr(4), pair->second.substr(4) };
         }
+        hkrReadFile.LeaveCS();
     }
-
     return TRUE;
 }
 
+
+inline long long Now()
+{
+    long long t;
+    GetSystemTimeAsFileTime((LPFILETIME) &t);
+    return t;
+}
 
 Hooker<tBASS_ChannelPlay> hkrPlay("bass.dll", "BASS_ChannelPlay", hkBASS_ChannelPlay);
 BOOL BASSDEF(hkBASS_ChannelPlay)(DWORD handle, BOOL restart)
@@ -165,7 +119,7 @@ BOOL BASSDEF(hkBASS_ChannelPlay)(DWORD handle, BOOL restart)
     {
         double currentTime = BASS_ChannelBytes2Seconds(handle, BASS_ChannelGetPosition(handle, BASS_POS_BYTE));
         float tempo; BASS_ChannelGetAttribute(handle, BASS_ATTRIB_TEMPO, &tempo);
-        hkBASS_Control(currentTime, tempo);
+        cbBASS_Control(Now(), currentTime, tempo);
     }
     return TRUE;
 }
@@ -198,7 +152,7 @@ BOOL BASSDEF(hkBASS_ChannelSetPosition)(DWORD handle, QWORD pos, DWORD mode)
         {
             tempo = -100;
         }
-        hkBASS_Control(currentTime, tempo);
+        cbBASS_Control(Now(), currentTime, tempo);
     }
     return TRUE;
 }
@@ -223,7 +177,7 @@ BOOL BASSDEF(hkBASS_ChannelSetAttribute)(DWORD handle, DWORD attrib, float value
     if ((info.ctype & BASS_CTYPE_STREAM) && attrib == BASS_ATTRIB_TEMPO)
     {
         double currentTime = BASS_ChannelBytes2Seconds(handle, BASS_ChannelGetPosition(handle, BASS_POS_BYTE));
-        hkBASS_Control(currentTime, value);
+        cbBASS_Control(Now(), currentTime, value);
     }
     return TRUE;
 }
@@ -248,60 +202,48 @@ BOOL BASSDEF(hkBASS_ChannelPause)(DWORD handle)
     if (info.ctype & BASS_CTYPE_STREAM)
     {
         double currentTime = BASS_ChannelBytes2Seconds(handle, BASS_ChannelGetPosition(handle, BASS_POS_BYTE));
-        hkBASS_Control(currentTime, -100);
+        cbBASS_Control(Now(), currentTime, -100);
     }
     return TRUE;
 }
 
-void hkBASS_Control(double currentTime, float tempo)
-{
-    if (!bPipeConnected)
-    {
-        return;
-    }
 
+inline void cbBASS_Control(long long calledAt, double currentTime, float tempo)
+{
     char message[BUF_SIZE];
-    sprintf(message, "%llx|%s|%lf|%f|%s\n", CurrentTime(), Playing.first.c_str(), currentTime, tempo, Playing.second.c_str());
-    MessageQueue.Push(message);
+    hkrReadFile.EnterCS();
+    sprintf(message, "%llx|%s|%lf|%f|%s\n", calledAt, Playing.first.c_str(), currentTime, tempo, Playing.second.c_str());
+    hkrReadFile.LeaveCS();
+    PushMessage(message);
 }
 
 
-BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
+void RunObserver()
 {
-    if (fdwReason == DLL_PROCESS_ATTACH)
-    {
-        hPipeThread = CreateThread(NULL, 0, PipeThread, NULL, 0, NULL);
+    hkrPlay.Hook();
+    hkrSetAttr.Hook();
+    hkrSetPos.Hook();
+    hkrPause.Hook();
 
-        hkrPlay.Hook();
-        hkrSetAttr.Hook();
-        hkrSetPos.Hook();
-        hkrPause.Hook();
+    hkrReadFile.Hook();
+}
 
-        hkrReadFile.Hook();
-    }
-    else if (fdwReason == DLL_PROCESS_DETACH)
-    {
-        hkrReadFile.EnterCS();
-        hkrReadFile.Unhook();
-        hkrReadFile.LeaveCS();
+void StopObserver()
+{
+    hkrReadFile.EnterCS();
+    hkrReadFile.Unhook();
+    hkrReadFile.LeaveCS();
 
-        hkrPause.EnterCS();
-        hkrPause.Unhook();
-        hkrPause.LeaveCS();
-        hkrSetAttr.EnterCS();
-        hkrSetAttr.Unhook();
-        hkrSetAttr.LeaveCS();
-        hkrSetPos.EnterCS();
-        hkrSetPos.Unhook();
-        hkrSetPos.LeaveCS();
-        hkrPlay.EnterCS();
-        hkrPlay.Unhook();
-        hkrPlay.LeaveCS();
-
-        bCancelPipeThread = true;
-        DisconnectNamedPipe(hPipe);
-        WaitForSingleObject(hPipeThread, INFINITE);
-        CloseHandle(hPipeThread);
-    }
-    return TRUE;
+    hkrPause.EnterCS();
+    hkrPause.Unhook();
+    hkrPause.LeaveCS();
+    hkrSetAttr.EnterCS();
+    hkrSetAttr.Unhook();
+    hkrSetAttr.LeaveCS();
+    hkrSetPos.EnterCS();
+    hkrSetPos.Unhook();
+    hkrSetPos.LeaveCS();
+    hkrPlay.EnterCS();
+    hkrPlay.Unhook();
+    hkrPlay.LeaveCS();
 }

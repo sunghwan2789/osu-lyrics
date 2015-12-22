@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Windows.h>
-#include "bass.h"
 
 const BYTE szOpcode = 1 + sizeof(DWORD);
 const BYTE asmJmp = 0xE9;
@@ -28,15 +27,3 @@ public:
     void EnterCS();
     void LeaveCS();
 };
-
-typedef BOOL (WINAPI *tReadFile)(HANDLE, LPVOID, DWORD, LPDWORD, LPOVERLAPPED);
-BOOL WINAPI hkReadFile(HANDLE, LPVOID, DWORD, LPDWORD, LPOVERLAPPED);
-typedef BOOL (BASSDEF(*tBASS_ChannelPlay))(DWORD, BOOL);
-BOOL BASSDEF(hkBASS_ChannelPlay)(DWORD, BOOL);
-typedef BOOL (BASSDEF(*tBASS_ChannelSetPosition))(DWORD, QWORD, DWORD);
-BOOL BASSDEF(hkBASS_ChannelSetPosition)(DWORD, QWORD, DWORD);
-typedef BOOL (BASSDEF(*tBASS_ChannelSetAttribute))(DWORD, DWORD, float);
-BOOL BASSDEF(hkBASS_ChannelSetAttribute)(DWORD, DWORD, float);
-typedef BOOL (BASSDEF(*tBASS_ChannelPause))(DWORD);
-BOOL BASSDEF(hkBASS_ChannelPause)(DWORD);
-inline void hkBASS_Control(double, float);
