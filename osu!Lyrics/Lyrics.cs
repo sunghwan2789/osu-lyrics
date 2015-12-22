@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using osu_Lyrics.Properties;
+using System.Threading;
 
 namespace osu_Lyrics
 {
@@ -226,7 +227,7 @@ namespace osu_Lyrics
         /// </summary>
         /// <param name="data">[HASH]: ... | [ARTIST]: ..., [TITLE]: ...</param>
         /// <returns>List&lt;string&gt;</returns>
-        private static async Task<List<Lyric>> GetLyrics(IDictionary<string, string> data)
+        private static async Task<List<Lyric>> GetLyricsAsync(IDictionary<string, string> data)
         {
             try
             {
@@ -310,7 +311,7 @@ namespace osu_Lyrics
             }
         }
 
-        private async void Osu_Signal(string line)
+        private void Osu_Signal(string line)
         {
             var data = line.Split('|');
             if (data.Length != 5)
@@ -321,27 +322,50 @@ namespace osu_Lyrics
             // 재생 중인 곡이 바꼈다!
             if (data[1] != curAudio.Path)
             {
-                lyricsCache = new List<Lyric>
-                {
-                    new Lyric(0, "가사 받는 중...")
-                };
-
                 curAudio = new Audio(data[1], data[4]);
+                UpdateLyrics();
+            }
+            curTime = DateTimeOffset.Now.Subtract(
+                DateTimeOffset.FromFileTime(Convert.ToInt64(data[0], 16))
+            ).TotalSeconds + Convert.ToDouble(data[2]);
+            _playbackRate = 1 + Convert.ToDouble(data[3]) / 100;
+        }
 
+        private CancellationTokenSource cts;
+
+        private void UpdateLyrics()
+        {
+            if (cts != null)
+            {
+                cts.Cancel();
+                return;
+            }
+
+            lyricsCache = new List<Lyric>
+            {
+                new Lyric(0, "가사 받는 중...")
+            };
+            cts = new CancellationTokenSource();
+            Task.Run(async () =>
+            {
+                cts.Token.ThrowIfCancellationRequested();
                 // 파일 해시로 가사 검색
-                var newLyrics = await GetLyrics(new Dictionary<string, string>
+                var newLyrics = await GetLyricsAsync(new Dictionary<string, string>
                 {
                     { "[HASH]", curAudio.Hash }
                 });
+
                 if (newLyrics == null && curAudio.Beatmap != null)
                 {
+                    cts.Token.ThrowIfCancellationRequested();
                     // 음악 정보로 가사 검색
-                    newLyrics = await GetLyrics(new Dictionary<string, string>
+                    newLyrics = await GetLyricsAsync(new Dictionary<string, string>
                     {
                         { "[TITLE]", curAudio.Beatmap.TitleUnicode ?? curAudio.Beatmap.Title },
                         { "[ARTIST]", curAudio.Beatmap.ArtistUnicode ?? curAudio.Beatmap.Artist }
                     });
                 }
+
                 if (newLyrics != null)
                 {
                     newLyrics.Insert(0, new Lyric());
@@ -354,12 +378,19 @@ namespace osu_Lyrics
                     };
                 }
 
-                lyricsCache = newLyrics;
-            }
-            curTime = DateTimeOffset.Now.Subtract(
-                DateTimeOffset.FromFileTime(Convert.ToInt64(data[0], 16))
-            ).TotalSeconds + Convert.ToDouble(data[2]);
-            _playbackRate = 1 + Convert.ToDouble(data[3]) / 100;
+                cts.Token.ThrowIfCancellationRequested();
+                Invoke(new MethodInvoker(() =>
+                {
+                    lyricsCache = newLyrics;
+                }));
+            }, cts.Token).ContinueWith(result => Invoke(new MethodInvoker(() =>
+            {
+                cts = null;
+                if (result.IsCanceled)
+                {
+                    UpdateLyrics();
+                }
+            })));
         }
 
 
