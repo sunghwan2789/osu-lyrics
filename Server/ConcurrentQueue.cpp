@@ -5,7 +5,7 @@
 template<typename T> ConcurrentQueue<T>::ConcurrentQueue()
 {
     InitializeCriticalSection(&this->hMutex);
-    this->hPushed = CreateEventA(NULL, TRUE, FALSE, NULL);
+    this->hPushed = CreateEvent(NULL, TRUE, FALSE, NULL);
 }
 
 template<typename T> ConcurrentQueue<T>::~ConcurrentQueue()
@@ -77,7 +77,12 @@ template<typename T> bool ConcurrentQueue<T>::Empty()
 
 template<typename T> bool ConcurrentQueue<T>::WaitPush(DWORD ms)
 {
-    return WaitForSingleObject(this->hPushed, ms) == WAIT_OBJECT_0;
+    if (WaitForSingleObject(this->hPushed, ms) == WAIT_OBJECT_0)
+    {
+        ResetEvent(this->hPushed);
+        return true;
+    }
+    return false;
 }
 
 // explicit instantiation
