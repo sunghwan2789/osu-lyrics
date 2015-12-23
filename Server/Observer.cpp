@@ -4,7 +4,7 @@
 #include <utility>
 #include <string>
 #include <cstdio>
-#include <unordered_map>
+#include <concurrent_unordered_map.h>
 #include <cstring>
 #include <Shlwapi.h>
 #include "bass.h"
@@ -13,7 +13,7 @@
 #include "Server.h"
 #include "Observer.h"
 
-std::unordered_map<std::string, std::string> AudioInfo;
+concurrency::concurrent_unordered_map<std::string, std::string> AudioInfo;
 std::pair<std::string, std::string> Playing;
 
 Hooker<tReadFile> hkrReadFile("kernel32.dll", "ReadFile", hkReadFile);
@@ -67,9 +67,7 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
             PathRemoveFileSpec(audioPath);
             PathCombine(audioPath, audioPath, fdata.cFileName);
 
-            hkrReadFile.EnterCS();
-            AudioInfo.emplace(audioPath, path);
-            hkrReadFile.LeaveCS();
+            AudioInfo.insert({ audioPath, path });
 
             free(beatmapDir);
             break;
@@ -79,13 +77,13 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
     else
     {
         // [ audioPath, beatmapPath ]
-        hkrReadFile.EnterCS();
-        auto pair = AudioInfo.find(path);
-        if (pair != AudioInfo.end())
+        concurrency::concurrent_unordered_map<std::string, std::string>::iterator info;
+        if ((info = AudioInfo.find(path)) != AudioInfo.end())
         {
-            Playing = { pair->first.substr(4), pair->second.substr(4) };
+            hkrReadFile.EnterCS();
+            Playing = { info->first.substr(4), info->second.substr(4) };
+            hkrReadFile.LeaveCS();
         }
-        hkrReadFile.LeaveCS();
     }
     return TRUE;
 }

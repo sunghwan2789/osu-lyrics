@@ -85,7 +85,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="ConcurrentQueue.cpp" />
     <ClCompile Include="Hooker.cpp" />
     <ClCompile Include="Observer.cpp" />
     <ClCompile Include="Server.cpp" />
@@ -93,7 +92,6 @@
   <ItemGroup>
     <ClInclude Include="bass.h" />
     <ClInclude Include="bass_fx.h" />
-    <ClInclude Include="ConcurrentQueue.h" />
     <ClInclude Include="Hooker.h" />
     <ClInclude Include="Observer.h" />
     <ClInclude Include="resource.h" />
