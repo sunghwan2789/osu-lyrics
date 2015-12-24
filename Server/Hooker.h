@@ -5,7 +5,8 @@
 const BYTE szOpcode = 1 + sizeof(DWORD);
 const BYTE asmJmp = 0xE9;
 
-template<typename F> class Hooker
+template<typename F>
+class Hooker
 {
 private:
     BYTE OriginalOpcode[szOpcode];

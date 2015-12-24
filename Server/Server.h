@@ -5,4 +5,4 @@
 
 #define BUF_SIZE MAX_PATH * 3
 
-void PushMessage(const std::string &);
+void PushMessage(std::string &&);

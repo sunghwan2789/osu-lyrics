@@ -13,7 +13,7 @@ BOOL BASSDEF(hkBASS_ChannelPlay)(DWORD, BOOL);
 BOOL BASSDEF(hkBASS_ChannelSetPosition)(DWORD, QWORD, DWORD);
 BOOL BASSDEF(hkBASS_ChannelSetAttribute)(DWORD, DWORD, float);
 BOOL BASSDEF(hkBASS_ChannelPause)(DWORD);
-inline void cbBASS_Control(long long, double, float);
+void cbBASS_Control(long long, double, float);
 
 void RunObserver();
 void StopObserver();

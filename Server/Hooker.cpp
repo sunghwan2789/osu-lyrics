@@ -2,7 +2,8 @@
 #include <cstring>
 #include "Hooker.h"
 
-template<typename F> Hooker<F>::Hooker(const char *moduleName, const char *functionName, F hkFunction = nullptr)
+template<typename F>
+Hooker<F>::Hooker(const char *moduleName, const char *functionName, F hkFunction = nullptr)
 {
     InitializeCriticalSection(&this->hMutex);
     this->Hooked = false;
@@ -11,7 +12,8 @@ template<typename F> Hooker<F>::Hooker(const char *moduleName, const char *funct
     this->Set(hkFunction);
 }
 
-template<typename F> Hooker<F>::~Hooker()
+template<typename F>
+Hooker<F>::~Hooker()
 {
     this->EnterCS();
     this->Unhook();
@@ -20,12 +22,14 @@ template<typename F> Hooker<F>::~Hooker()
     DeleteCriticalSection(&this->hMutex);
 }
 
-template<typename F> void Hooker<F>::Set(F hkFunction)
+template<typename F>
+void Hooker<F>::Set(F hkFunction)
 {
     this->hkFunction = hkFunction;
 }
 
-template<typename F> void Hooker<F>::Hook()
+template<typename F>
+void Hooker<F>::Hook()
 {
     if (this->Hooked && this->hkFunction)
     {
@@ -47,7 +51,8 @@ template<typename F> void Hooker<F>::Hook()
     VirtualProtect(this->pFunction, szOpcode, dwOldProtect, nullptr);
 }
 
-template<typename F> void Hooker<F>::Unhook()
+template<typename F>
+void Hooker<F>::Unhook()
 {
     if (!this->Hooked)
     {
@@ -63,12 +68,14 @@ template<typename F> void Hooker<F>::Unhook()
     VirtualProtect(this->pFunction, szOpcode, dwOldProtect, nullptr);
 }
 
-template<typename F> void Hooker<F>::EnterCS()
+template<typename F>
+inline void Hooker<F>::EnterCS()
 {
     EnterCriticalSection(&this->hMutex);
 }
 
-template<typename F> void Hooker<F>::LeaveCS()
+template<typename F>
+inline void Hooker<F>::LeaveCS()
 {
     LeaveCriticalSection(&this->hMutex);
 }
