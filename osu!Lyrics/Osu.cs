@@ -195,13 +195,13 @@ namespace osu_Lyrics
             
             var hProcess = OpenProcess(PROCESS_ALL_ACCESS, false, (uint) Process.Id);
 
-            var pThreadProc = GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA");
-
             var bFileName = Marshal.StringToHGlobalAnsi(dllPath);
             var szFileName = GlobalSize(bFileName);
             var pParameter = VirtualAllocEx(hProcess, IntPtr.Zero, szFileName, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
             WriteProcessMemory(hProcess, pParameter, bFileName, szFileName, UIntPtr.Zero);
             Marshal.FreeHGlobal(bFileName);
+
+            var pThreadProc = GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA");
 
             var hThread = CreateRemoteThread(hProcess, IntPtr.Zero, UIntPtr.Zero, pThreadProc, pParameter, 0, UIntPtr.Zero);
             WaitForSingleObject(hThread, INFINITE);
