@@ -49,7 +49,7 @@ DWORD WINAPI ServerThread(LPVOID lParam)
     return 0;
 }
 
-inline void PushMessage(std::string &&message)
+void PushMessage(std::string &&message)
 {
     if (!bPipeConnected)
     {

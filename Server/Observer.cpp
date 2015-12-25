@@ -15,18 +15,12 @@
 
 concurrency::concurrent_unordered_map<std::string, std::string> AudioInfo;
 std::pair<std::string, std::string> Playing;
+CRITICAL_SECTION hMutex;
 
 Hooker<tReadFile> hkrReadFile("kernel32.dll", "ReadFile", hkReadFile);
 BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped)
 {
-    BOOL result;
-
-    hkrReadFile.EnterCS();
-    hkrReadFile.Unhook();
-    result = hkrReadFile.pFunction(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
-    hkrReadFile.Hook();
-    hkrReadFile.LeaveCS();
-    if (!result)
+    if (!hkrReadFile.pOriginalFunction(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped))
     {
         return FALSE;
     }
@@ -80,9 +74,9 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
         concurrency::concurrent_unordered_map<std::string, std::string>::iterator info;
         if ((info = AudioInfo.find(path)) != AudioInfo.end())
         {
-            hkrReadFile.EnterCS();
+            EnterCriticalSection(&hMutex);
             Playing = { info->first.substr(4), info->second.substr(4) };
-            hkrReadFile.LeaveCS();
+            LeaveCriticalSection(&hMutex);
         }
     }
     return TRUE;
@@ -99,14 +93,7 @@ inline long long Now()
 Hooker<tBASS_ChannelPlay> hkrPlay("bass.dll", "BASS_ChannelPlay", hkBASS_ChannelPlay);
 BOOL BASSDEF(hkBASS_ChannelPlay)(DWORD handle, BOOL restart)
 {
-    BOOL result;
-
-    hkrPlay.EnterCS();
-    hkrPlay.Unhook();
-    result = hkrPlay.pFunction(handle, restart);
-    hkrPlay.Hook();
-    hkrPlay.LeaveCS();
-    if (!result)
+    if (!hkrPlay.pOriginalFunction(handle, restart))
     {
         return FALSE;
     }
@@ -125,14 +112,7 @@ BOOL BASSDEF(hkBASS_ChannelPlay)(DWORD handle, BOOL restart)
 Hooker<tBASS_ChannelSetPosition> hkrSetPos("bass.dll", "BASS_ChannelSetPosition", hkBASS_ChannelSetPosition);
 BOOL BASSDEF(hkBASS_ChannelSetPosition)(DWORD handle, QWORD pos, DWORD mode)
 {
-    BOOL result;
-
-    hkrSetPos.EnterCS();
-    hkrSetPos.Unhook();
-    result = hkrSetPos.pFunction(handle, pos, mode);
-    hkrSetPos.Hook();
-    hkrSetPos.LeaveCS();
-    if (!result)
+    if (!hkrSetPos.pOriginalFunction(handle, pos, mode))
     {
         return FALSE;
     }
@@ -158,14 +138,7 @@ BOOL BASSDEF(hkBASS_ChannelSetPosition)(DWORD handle, QWORD pos, DWORD mode)
 Hooker<tBASS_ChannelSetAttribute> hkrSetAttr("bass.dll", "BASS_ChannelSetAttribute", hkBASS_ChannelSetAttribute);
 BOOL BASSDEF(hkBASS_ChannelSetAttribute)(DWORD handle, DWORD attrib, float value)
 {
-    BOOL result;
-
-    hkrSetAttr.EnterCS();
-    hkrSetAttr.Unhook();
-    result = hkrSetAttr.pFunction(handle, attrib, value);
-    hkrSetAttr.Hook();
-    hkrSetAttr.LeaveCS();
-    if (!result)
+    if (!hkrSetAttr.pOriginalFunction(handle, attrib, value))
     {
         return FALSE;
     }
@@ -183,14 +156,7 @@ BOOL BASSDEF(hkBASS_ChannelSetAttribute)(DWORD handle, DWORD attrib, float value
 Hooker<tBASS_ChannelPause> hkrPause("bass.dll", "BASS_ChannelPause", hkBASS_ChannelPause);
 BOOL BASSDEF(hkBASS_ChannelPause)(DWORD handle)
 {
-    BOOL result;
-
-    hkrPause.EnterCS();
-    hkrPause.Unhook();
-    result = hkrPause.pFunction(handle);
-    hkrPause.Hook();
-    hkrPause.LeaveCS();
-    if (!result)
+    if (!hkrPause.pOriginalFunction(handle))
     {
         return FALSE;
     }
@@ -209,39 +175,31 @@ BOOL BASSDEF(hkBASS_ChannelPause)(DWORD handle)
 inline void cbBASS_Control(long long calledAt, double currentTime, float tempo)
 {
     char message[BUF_SIZE];
-    hkrReadFile.EnterCS();
+    EnterCriticalSection(&hMutex);
     sprintf(message, "%llx|%s|%lf|%f|%s\n", calledAt, Playing.first.c_str(), currentTime, tempo, Playing.second.c_str());
-    hkrReadFile.LeaveCS();
+    LeaveCriticalSection(&hMutex);
     PushMessage(message);
 }
 
 
 void RunObserver()
 {
+    InitializeCriticalSection(&hMutex);
+    hkrReadFile.Hook();
+
     hkrPlay.Hook();
     hkrSetAttr.Hook();
     hkrSetPos.Hook();
     hkrPause.Hook();
-
-    hkrReadFile.Hook();
 }
 
 void StopObserver()
 {
-    hkrReadFile.EnterCS();
-    hkrReadFile.Unhook();
-    hkrReadFile.LeaveCS();
-
-    hkrPause.EnterCS();
     hkrPause.Unhook();
-    hkrPause.LeaveCS();
-    hkrSetAttr.EnterCS();
     hkrSetAttr.Unhook();
-    hkrSetAttr.LeaveCS();
-    hkrSetPos.EnterCS();
     hkrSetPos.Unhook();
-    hkrSetPos.LeaveCS();
-    hkrPlay.EnterCS();
     hkrPlay.Unhook();
-    hkrPlay.LeaveCS();
+
+    hkrReadFile.Unhook();
+    DeleteCriticalSection(&hMutex);
 }

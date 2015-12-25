@@ -1,21 +1,14 @@
 #pragma once
 
-#include <Windows.h>
-
-const BYTE szOpcode = 1 + sizeof(DWORD);
-const BYTE asmJmp = 0xE9;
-
 template<typename F>
 class Hooker
 {
 private:
-    BYTE OriginalOpcode[szOpcode];
-    CRITICAL_SECTION hMutex;
-    F hkFunction;
-    bool Hooked;
+    F pHookFunction;
+    bool bHooked;
 
 public:
-    F pFunction;
+    F pOriginalFunction;
 
     Hooker(const char *, const char *, F = nullptr);
     ~Hooker();
@@ -24,7 +17,4 @@ public:
 
     void Hook();
     void Unhook();
-
-    void EnterCS();
-    void LeaveCS();
 };
