@@ -3,47 +3,53 @@
 #include "mhook-lib/mhook.h"
 #include "Hooker.h"
 
-template<typename F>
-Hooker<F>::Hooker(const char *moduleName, const char *functionName, F hkFunction = nullptr)
+template<typename functype>
+Hooker<functype>::Hooker(const char *moduleName, const char *functionName, LPVOID hkFunction)
 {
     this->bHooked = false;
 
-    this->pOriginalFunction = (F) GetProcAddress(GetModuleHandle(moduleName), functionName);
+    this->pHookFunc = GetProcAddress(GetModuleHandle(moduleName), functionName);
     this->Set(hkFunction);
 }
 
-template<typename F>
-Hooker<F>::~Hooker()
+template<typename functype>
+Hooker<functype>::~Hooker()
 {
     this->Unhook();
 }
 
-template<typename F>
-void Hooker<F>::Set(F hkFunction)
+template<typename functype>
+functype *Hooker<functype>::Get()
 {
-    this->pHookFunction = hkFunction;
+	return (functype*)this->pOriginFunc;
 }
 
-template<typename F>
-void Hooker<F>::Hook()
+template<typename functype>
+void Hooker<functype>::Set(LPVOID hkFunction)
 {
-    if (this->bHooked && this->pHookFunction)
+    this->pHookFunc = hkFunction;
+}
+
+template<typename functype>
+void Hooker<functype>::Hook()
+{
+    if (this->bHooked && this->pHookFunc)
     {
         return;
     }
 
-    this->bHooked = !!Mhook_SetHook((PVOID *) &this->pOriginalFunction, this->pHookFunction);
+    this->bHooked = !!Mhook_SetHook((LPVOID *) &this->pOriginFunc, this->pHookFunc);
 }
 
-template<typename F>
-void Hooker<F>::Unhook()
+template<typename functype>
+void Hooker<functype>::Unhook()
 {
     if (!this->bHooked)
     {
         return;
     }
 
-    this->bHooked = !Mhook_Unhook((PVOID *) &this->pHookFunction);
+    this->bHooked = !Mhook_Unhook((LPVOID *) &this->pHookFunc);
 }
 
 // explicit instantiation

@@ -20,7 +20,7 @@ CRITICAL_SECTION hMutex;
 Hooker<tReadFile> hkrReadFile("kernel32.dll", "ReadFile", hkReadFile);
 BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped)
 {
-    if (!hkrReadFile.pOriginalFunction(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped))
+    if (!hkrReadFile.Get()(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped))
     {
         return FALSE;
     }
@@ -93,7 +93,7 @@ inline long long Now()
 Hooker<tBASS_ChannelPlay> hkrPlay("bass.dll", "BASS_ChannelPlay", hkBASS_ChannelPlay);
 BOOL BASSDEF(hkBASS_ChannelPlay)(DWORD handle, BOOL restart)
 {
-    if (!hkrPlay.pOriginalFunction(handle, restart))
+    if (!hkrPlay.Get()(handle, restart))
     {
         return FALSE;
     }
@@ -112,7 +112,7 @@ BOOL BASSDEF(hkBASS_ChannelPlay)(DWORD handle, BOOL restart)
 Hooker<tBASS_ChannelSetPosition> hkrSetPos("bass.dll", "BASS_ChannelSetPosition", hkBASS_ChannelSetPosition);
 BOOL BASSDEF(hkBASS_ChannelSetPosition)(DWORD handle, QWORD pos, DWORD mode)
 {
-    if (!hkrSetPos.pOriginalFunction(handle, pos, mode))
+    if (!hkrSetPos.Get()(handle, pos, mode))
     {
         return FALSE;
     }
@@ -138,7 +138,7 @@ BOOL BASSDEF(hkBASS_ChannelSetPosition)(DWORD handle, QWORD pos, DWORD mode)
 Hooker<tBASS_ChannelSetAttribute> hkrSetAttr("bass.dll", "BASS_ChannelSetAttribute", hkBASS_ChannelSetAttribute);
 BOOL BASSDEF(hkBASS_ChannelSetAttribute)(DWORD handle, DWORD attrib, float value)
 {
-    if (!hkrSetAttr.pOriginalFunction(handle, attrib, value))
+    if (!hkrSetAttr.Get()(handle, attrib, value))
     {
         return FALSE;
     }
@@ -156,7 +156,7 @@ BOOL BASSDEF(hkBASS_ChannelSetAttribute)(DWORD handle, DWORD attrib, float value
 Hooker<tBASS_ChannelPause> hkrPause("bass.dll", "BASS_ChannelPause", hkBASS_ChannelPause);
 BOOL BASSDEF(hkBASS_ChannelPause)(DWORD handle)
 {
-    if (!hkrPause.pOriginalFunction(handle))
+    if (!hkrPause.Get()(handle))
     {
         return FALSE;
     }
@@ -195,6 +195,7 @@ void RunObserver()
 
 void StopObserver()
 {
+	EnterCriticalSection(&hMutex);
     hkrPause.Unhook();
     hkrSetAttr.Unhook();
     hkrSetPos.Unhook();

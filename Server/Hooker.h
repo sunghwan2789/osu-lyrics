@@ -1,19 +1,21 @@
 #pragma once
 
-template<typename F>
+template<typename functype>
 class Hooker
 {
 private:
-    F pHookFunction;
+    LPVOID pHookFunc;
+	LPVOID pOriginFunc;
     bool bHooked;
 
 public:
-    F pOriginalFunction;
 
-    Hooker(const char *, const char *, F = nullptr);
+    Hooker(const char *, const char *, LPVOID);
+
     ~Hooker();
 
-    void Set(F);
+	functype *Get();
+    void Set(LPVOID);
 
     void Hook();
     void Unhook();
