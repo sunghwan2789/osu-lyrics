@@ -202,5 +202,6 @@ void StopObserver()
     hkrPlay.Unhook();
 
     hkrReadFile.Unhook();
+	LeaveCriticalSection(&hMutex);
     DeleteCriticalSection(&hMutex);
 }

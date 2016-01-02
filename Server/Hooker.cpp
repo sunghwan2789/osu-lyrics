@@ -4,18 +4,12 @@
 #include "Hooker.h"
 
 template<typename functype>
-Hooker<functype>::Hooker(const char *moduleName, const char *functionName, LPVOID hkFunction)
+Hooker<functype>::Hooker(const char *moduleName, const char *functionName, LPVOID hkFunction = nullptr)
 {
     this->bHooked = false;
 
-    this->pHookFunc = GetProcAddress(GetModuleHandle(moduleName), functionName);
+    this->pOriginFunc = GetProcAddress(GetModuleHandle(moduleName), functionName);
     this->Set(hkFunction);
-}
-
-template<typename functype>
-Hooker<functype>::~Hooker()
-{
-    this->Unhook();
 }
 
 template<typename functype>
@@ -33,12 +27,12 @@ void Hooker<functype>::Set(LPVOID hkFunction)
 template<typename functype>
 void Hooker<functype>::Hook()
 {
-    if (this->bHooked && this->pHookFunc)
+    if (bHooked || !pHookFunc)
     {
         return;
     }
 
-    this->bHooked = !!Mhook_SetHook((LPVOID *) &this->pOriginFunc, this->pHookFunc);
+    this->bHooked = !!Mhook_SetHook(&(this->pOriginFunc), this->pHookFunc);
 }
 
 template<typename functype>
@@ -49,7 +43,7 @@ void Hooker<functype>::Unhook()
         return;
     }
 
-    this->bHooked = !Mhook_Unhook((LPVOID *) &this->pHookFunc);
+    this->bHooked = !Mhook_Unhook(&(this->pHookFunc));
 }
 
 // explicit instantiation

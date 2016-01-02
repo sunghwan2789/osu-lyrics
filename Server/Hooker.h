@@ -10,9 +10,7 @@ private:
 
 public:
 
-    Hooker(const char *, const char *, LPVOID);
-
-    ~Hooker();
+    Hooker(const char *, const char *, LPVOID = nullptr);
 
 	functype *Get();
     void Set(LPVOID);
