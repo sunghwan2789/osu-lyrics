@@ -47,8 +47,6 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
                 continue;
             }
 
-            TCHAR *szAudioFilePath = _tcsdup(szFilePath);
-
             // AudioFilename °ª ¾ò±â
             TCHAR szAudioFileName[MAX_PATH];
 #ifdef UNICODE
@@ -57,6 +55,9 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
             strncpy(szAudioFileName, &line[14], MAX_PATH);
 #endif
             StrTrim(szAudioFileName, _T(" \r"));
+
+            TCHAR szAudioFilePath[MAX_PATH];
+            _tcscpy(szAudioFilePath, szFilePath);
             PathRemoveFileSpec(szAudioFilePath);
             PathCombine(szAudioFilePath, szAudioFilePath, szAudioFileName);
 
@@ -74,8 +75,6 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
 #endif
 
             AudioInfo.insert({ szAudioFilePath, szFilePath });
-
-            free(szAudioFilePath);
             break;
         }
         free(buffer);

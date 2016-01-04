@@ -211,7 +211,7 @@ namespace osu_Lyrics
             VirtualFreeEx(hProcess, pParameter, UIntPtr.Zero, MEM_RELEASE);
 
             CloseHandle(hProcess);
-            
+
             return hThread != IntPtr.Zero;
         }
 
