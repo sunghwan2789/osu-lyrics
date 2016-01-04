@@ -17,7 +17,7 @@ volatile bool bPipeConnected;
 DWORD WINAPI ServerThread(LPVOID lParam)
 {
     hPipe = CreateNamedPipe(_T("\\\\.\\pipe\\osu!Lyrics"), PIPE_ACCESS_OUTBOUND,
-        PIPE_TYPE_MESSAGE | PIPE_WAIT, 1, nBufferSize, 0, INFINITE, NULL);
+        PIPE_TYPE_MESSAGE | PIPE_WAIT, 1, nBufferSize * sizeof(tstring::value_type), 0, INFINITE, NULL);
     tstring message;
     DWORD nNumberOfBytesWritten;
     // 스레드 종료 요청이 들어올 때까지 클라이언트 접속 무한 대기
