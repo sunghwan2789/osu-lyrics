@@ -1,10 +1,13 @@
-#include <Windows.h>
-#include <string>
-#include <concurrent_queue.h>
-#include "Observer.h"
 #include "Server.h"
 
-concurrency::concurrent_queue<std::string> MessageQueue;
+#include <tchar.h>
+#include <string>
+#include <concurrent_queue.h>
+
+#include <Windows.h>
+#include "Observer.h"
+
+concurrency::concurrent_queue<tstring> MessageQueue;
 HANDLE hPushEvent;
 
 HANDLE hServerThread;
@@ -13,10 +16,10 @@ volatile bool bCancelServerThread;
 volatile bool bPipeConnected;
 DWORD WINAPI ServerThread(LPVOID lParam)
 {
-    hPipe = CreateNamedPipe("\\\\.\\pipe\\osu!Lyrics", PIPE_ACCESS_OUTBOUND,
-        PIPE_TYPE_MESSAGE | PIPE_WAIT, 1, BUF_SIZE, 0, INFINITE, NULL);
-    std::string message;
-    DWORD wrote;
+    hPipe = CreateNamedPipe(_T("\\\\.\\pipe\\osu!Lyrics"), PIPE_ACCESS_OUTBOUND,
+        PIPE_TYPE_MESSAGE | PIPE_WAIT, 1, nBufferSize, 0, INFINITE, NULL);
+    tstring message;
+    DWORD nNumberOfBytesWritten;
     // 스레드 종료 요청이 들어올 때까지 클라이언트 접속 무한 대기
     while (!bCancelServerThread)
     {
@@ -34,7 +37,7 @@ DWORD WINAPI ServerThread(LPVOID lParam)
                 continue;
             }
 
-            if (WriteFile(hPipe, message.c_str(), message.length(), &wrote, NULL))
+            if (WriteFile(hPipe, message.c_str(), message.length() * sizeof(tstring::value_type), &nNumberOfBytesWritten, NULL))
             {
                 continue;
             }
@@ -49,7 +52,7 @@ DWORD WINAPI ServerThread(LPVOID lParam)
     return 0;
 }
 
-void PushMessage(std::string &&message)
+void PushMessage(tstring &&message)
 {
     if (!bPipeConnected)
     {

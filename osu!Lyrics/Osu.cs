@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using Microsoft.Win32;
 using System.Linq;
+using System.Text;
 
 namespace osu_Lyrics
 {
@@ -195,13 +196,13 @@ namespace osu_Lyrics
             
             var hProcess = OpenProcess(PROCESS_ALL_ACCESS, false, (uint) Process.Id);
 
-            var bFileName = Marshal.StringToHGlobalAnsi(dllPath);
-            var szFileName = GlobalSize(bFileName);
-            var pParameter = VirtualAllocEx(hProcess, IntPtr.Zero, szFileName, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-            WriteProcessMemory(hProcess, pParameter, bFileName, szFileName, UIntPtr.Zero);
-            Marshal.FreeHGlobal(bFileName);
+            var szFileName = Marshal.StringToHGlobalUni(dllPath);
+            var nFileNameLength = GlobalSize(szFileName);
+            var pParameter = VirtualAllocEx(hProcess, IntPtr.Zero, nFileNameLength, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+            WriteProcessMemory(hProcess, pParameter, szFileName, nFileNameLength, UIntPtr.Zero);
+            Marshal.FreeHGlobal(szFileName);
 
-            var pThreadProc = GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA");
+            var pThreadProc = GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryW");
 
             var hThread = CreateRemoteThread(hProcess, IntPtr.Zero, UIntPtr.Zero, pThreadProc, pParameter, 0, UIntPtr.Zero);
             WaitForSingleObject(hThread, INFINITE);
@@ -210,7 +211,7 @@ namespace osu_Lyrics
             VirtualFreeEx(hProcess, pParameter, UIntPtr.Zero, MEM_RELEASE);
 
             CloseHandle(hProcess);
-
+            
             return hThread != IntPtr.Zero;
         }
 
@@ -230,7 +231,7 @@ namespace osu_Lyrics
             Task.Run(() =>
             {
                 using (var pipe = new NamedPipeClientStream(".", "osu!Lyrics", PipeDirection.In, PipeOptions.None))
-                using (var sr = new StreamReader(pipe))
+                using (var sr = new StreamReader(pipe, Encoding.Unicode))
                 {
                     pipe.Connect();
                     while (pipe.IsConnected && !sr.EndOfStream)

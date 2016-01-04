@@ -1,8 +1,12 @@
 #pragma once
 
-#include <Windows.h>
+#include <tchar.h>
 #include <string>
 
-#define BUF_SIZE MAX_PATH * 3
+#include <Windows.h>
 
-void PushMessage(std::string &&);
+typedef std::basic_string<TCHAR> tstring;
+
+const DWORD nBufferSize = MAX_PATH * 3;
+
+void PushMessage(tstring &&);

@@ -1,69 +1,81 @@
-#pragma comment (lib, "Shlwapi.lib")
+#pragma comment(lib, "Shlwapi.lib")
+
+#include "Observer.h"
+
+#include <cstdio>
+#include <cstdlib>
+#include <tchar.h>
+#include <string>
+#include <utility>
+#include <functional>
+#include <concurrent_unordered_map.h>
 
 #include <Windows.h>
-#include <utility>
-#include <string>
-#include <cstdio>
-#include <concurrent_unordered_map.h>
-#include <cstring>
 #include <Shlwapi.h>
 #include "bass.h"
 #include "bass_fx.h"
 #include "Hooker.h"
 #include "Server.h"
-#include "Observer.h"
 
-concurrency::concurrent_unordered_map<std::string, std::string> AudioInfo;
-std::pair<std::string, std::string> Playing;
+concurrency::concurrent_unordered_map<tstring, tstring> AudioInfo;
+std::pair<tstring, tstring> Playing;
 CRITICAL_SECTION hMutex;
 
-Hooker<tReadFile> hkrReadFile("kernel32.dll", "ReadFile", hkReadFile);
+Hooker<tReadFile> hkrReadFile(_T("kernel32.dll"), "ReadFile", hkReadFile);
 BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped)
 {
-    if (!hkrReadFile.Get()(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped))
+    if (!hkrReadFile.GetFunction()(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped))
     {
         return FALSE;
     }
 
-    char path[MAX_PATH];
-    DWORD pathLength = GetFinalPathNameByHandle(hFile, path, MAX_PATH, VOLUME_NAME_DOS);
+    TCHAR szFilePath[MAX_PATH];
+    DWORD nFilePathLength = GetFinalPathNameByHandle(hFile, szFilePath, MAX_PATH, VOLUME_NAME_DOS);
     //                  1: \\?\D:\Games\osu!\...
-    DWORD seekPosition = SetFilePointer(hFile, 0, NULL, FILE_CURRENT) - *lpNumberOfBytesRead;
-    // 지금 읽는 파일이 비트맵 파일이고 앞부분을 읽었다면:
+    DWORD dwFilePosition = SetFilePointer(hFile, 0, NULL, FILE_CURRENT) - *lpNumberOfBytesRead;
+    // 지금 읽는 파일이 비트맵 파일이고 앞부분을 읽었다면 음악 파일 경로 얻기:
     // AudioFilename은 앞부분에 있음 / 파일 핸들 또 열지 말고 일 한 번만 하자!
-    if (strnicmp(".osu", &path[pathLength - 4], 4) == 0 && seekPosition == 0)
+    if (_tcsnicmp(_T(".osu"), &szFilePath[nFilePathLength - 4], 4) == 0 && dwFilePosition == 0)
     {
         // strtok은 소스를 변형하므로 일단 백업
-        char *buffer = strdup((char *) lpBuffer);
+        // .osu 파일은 UTF-8(Multibyte) 인코딩
+        char *buffer = strdup(reinterpret_cast<char *>(lpBuffer));
         for (char *line = strtok(buffer, "\n"); line != NULL; line = strtok(NULL, "\n"))
         {
-            // 비트맵의 음악 파일 경로 얻기
             if (strnicmp(line, "AudioFilename:", 14) != 0)
             {
                 continue;
             }
 
-            char *beatmapDir = strdup(path);
-            PathRemoveFileSpec(beatmapDir);
+            TCHAR *szAudioFilePath = _tcsdup(szFilePath);
 
-            char audioPath[MAX_PATH];
+            // AudioFilename 값 얻기
+            TCHAR szAudioFileName[MAX_PATH];
+#ifdef UNICODE
+            mbstowcs(szAudioFileName, &line[14], MAX_PATH);
+#else
+            strncpy(szAudioFileName, &line[14], MAX_PATH);
+#endif
+            StrTrim(szAudioFileName, _T(" \r"));
+            PathRemoveFileSpec(szAudioFilePath);
+            PathCombine(szAudioFilePath, szAudioFilePath, szAudioFileName);
 
-            // get value & trim
-            int i = 14;
-            for (; line[i] == ' '; i++);
-            buffer[0] = NULL;
-            strncat(buffer, &line[i], strlen(line) - i - 1);
-            PathCombine(audioPath, beatmapDir, buffer);
-
-            // 검색할 때 대소문자 구분하므로 제대로 된 파일 경로 얻기
+            // 검색할 때 대소문자 구분하므로 정확한 파일 경로 얻기
             WIN32_FIND_DATA fdata;
-            FindClose(FindFirstFile(audioPath, &fdata));
-            PathRemoveFileSpec(audioPath);
-            PathCombine(audioPath, audioPath, fdata.cFileName);
+            FindClose(FindFirstFile(szAudioFilePath, &fdata));
+            PathRemoveFileSpec(szAudioFilePath);
+            PathCombine(szAudioFilePath, szAudioFilePath, fdata.cFileName);
+#ifdef UNICODE
+            // PathCombineW가 \\?\를 제거한다;;
+            TCHAR *szAudioFilePathStripped = _tcsdup(szAudioFilePath);
+            _tcscpy(szAudioFilePath, _T("\\\\?\\"));
+            _tcscat(szAudioFilePath, szAudioFilePathStripped);
+            free(szAudioFilePathStripped);
+#endif
 
-            AudioInfo.insert({ audioPath, path });
+            AudioInfo.insert({ szAudioFilePath, szFilePath });
 
-            free(beatmapDir);
+            free(szAudioFilePath);
             break;
         }
         free(buffer);
@@ -71,8 +83,8 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
     else
     {
         // [ audioPath, beatmapPath ]
-        concurrency::concurrent_unordered_map<std::string, std::string>::iterator info;
-        if ((info = AudioInfo.find(path)) != AudioInfo.end())
+        concurrency::concurrent_unordered_map<tstring, tstring>::iterator info;
+        if ((info = AudioInfo.find(szFilePath)) != AudioInfo.end())
         {
             EnterCriticalSection(&hMutex);
             Playing = { info->first.substr(4), info->second.substr(4) };
@@ -86,14 +98,14 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
 inline long long Now()
 {
     long long t;
-    GetSystemTimeAsFileTime((LPFILETIME) &t);
+    GetSystemTimeAsFileTime(reinterpret_cast<LPFILETIME>(&t));
     return t;
 }
 
-Hooker<tBASS_ChannelPlay> hkrPlay("bass.dll", "BASS_ChannelPlay", hkBASS_ChannelPlay);
+Hooker<tBASS_ChannelPlay> hkrPlay(_T("bass.dll"), "BASS_ChannelPlay", hkBASS_ChannelPlay);
 BOOL BASSDEF(hkBASS_ChannelPlay)(DWORD handle, BOOL restart)
 {
-    if (!hkrPlay.Get()(handle, restart))
+    if (!hkrPlay.GetFunction()(handle, restart))
     {
         return FALSE;
     }
@@ -109,10 +121,10 @@ BOOL BASSDEF(hkBASS_ChannelPlay)(DWORD handle, BOOL restart)
     return TRUE;
 }
 
-Hooker<tBASS_ChannelSetPosition> hkrSetPos("bass.dll", "BASS_ChannelSetPosition", hkBASS_ChannelSetPosition);
+Hooker<tBASS_ChannelSetPosition> hkrSetPos(_T("bass.dll"), "BASS_ChannelSetPosition", hkBASS_ChannelSetPosition);
 BOOL BASSDEF(hkBASS_ChannelSetPosition)(DWORD handle, QWORD pos, DWORD mode)
 {
-    if (!hkrSetPos.Get()(handle, pos, mode))
+    if (!hkrSetPos.GetFunction()(handle, pos, mode))
     {
         return FALSE;
     }
@@ -135,10 +147,10 @@ BOOL BASSDEF(hkBASS_ChannelSetPosition)(DWORD handle, QWORD pos, DWORD mode)
     return TRUE;
 }
 
-Hooker<tBASS_ChannelSetAttribute> hkrSetAttr("bass.dll", "BASS_ChannelSetAttribute", hkBASS_ChannelSetAttribute);
+Hooker<tBASS_ChannelSetAttribute> hkrSetAttr(_T("bass.dll"), "BASS_ChannelSetAttribute", hkBASS_ChannelSetAttribute);
 BOOL BASSDEF(hkBASS_ChannelSetAttribute)(DWORD handle, DWORD attrib, float value)
 {
-    if (!hkrSetAttr.Get()(handle, attrib, value))
+    if (!hkrSetAttr.GetFunction()(handle, attrib, value))
     {
         return FALSE;
     }
@@ -153,10 +165,10 @@ BOOL BASSDEF(hkBASS_ChannelSetAttribute)(DWORD handle, DWORD attrib, float value
     return TRUE;
 }
 
-Hooker<tBASS_ChannelPause> hkrPause("bass.dll", "BASS_ChannelPause", hkBASS_ChannelPause);
+Hooker<tBASS_ChannelPause> hkrPause(_T("bass.dll"), "BASS_ChannelPause", hkBASS_ChannelPause);
 BOOL BASSDEF(hkBASS_ChannelPause)(DWORD handle)
 {
-    if (!hkrPause.Get()(handle))
+    if (!hkrPause.GetFunction()(handle))
     {
         return FALSE;
     }
@@ -174,10 +186,12 @@ BOOL BASSDEF(hkBASS_ChannelPause)(DWORD handle)
 
 inline void cbBASS_Control(long long calledAt, double currentTime, float tempo)
 {
-    char message[BUF_SIZE];
+    TCHAR message[nBufferSize];
+    tstring audioPath, beatmapPath;
     EnterCriticalSection(&hMutex);
-    sprintf(message, "%llx|%s|%lf|%f|%s\n", calledAt, Playing.first.c_str(), currentTime, tempo, Playing.second.c_str());
+    std::tie(audioPath, beatmapPath) = Playing;
     LeaveCriticalSection(&hMutex);
+    _stprintf(message, _T("%llx|%s|%lf|%f|%s\n"), calledAt, audioPath.c_str(), currentTime, tempo, beatmapPath.c_str());
     PushMessage(message);
 }
 
@@ -195,13 +209,11 @@ void RunObserver()
 
 void StopObserver()
 {
-	EnterCriticalSection(&hMutex);
     hkrPause.Unhook();
     hkrSetAttr.Unhook();
     hkrSetPos.Unhook();
     hkrPlay.Unhook();
 
     hkrReadFile.Unhook();
-	LeaveCriticalSection(&hMutex);
     DeleteCriticalSection(&hMutex);
 }

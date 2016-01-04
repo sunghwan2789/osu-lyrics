@@ -1,20 +1,24 @@
 #pragma once
 
-template<typename functype>
+#include <tchar.h>
+
+#include <Windows.h>
+
+template<typename T>
 class Hooker
 {
-private:
-    LPVOID pHookFunc;
-	LPVOID pOriginFunc;
-    bool bHooked;
-
 public:
+    Hooker(const TCHAR *, const char *, T *);
+    ~Hooker();
 
-    Hooker(const char *, const char *, LPVOID = nullptr);
-
-	functype *Get();
-    void Set(LPVOID);
+    T *GetFunction();
+    void SetHookFunction(T *);
 
     void Hook();
     void Unhook();
+
+private:
+    T *pFunction;
+    T *pHookFunction;
+    bool hooked;
 };

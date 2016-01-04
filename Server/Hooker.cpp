@@ -1,49 +1,57 @@
-#include <Windows.h>
-#include <cstring>
-#include "mhook-lib/mhook.h"
 #include "Hooker.h"
 
-template<typename functype>
-Hooker<functype>::Hooker(const char *moduleName, const char *functionName, LPVOID hkFunction = nullptr)
-{
-    this->bHooked = false;
+#include <tchar.h>
 
-    this->pOriginFunc = GetProcAddress(GetModuleHandle(moduleName), functionName);
-    this->Set(hkFunction);
+#include <Windows.h>
+#include "mhook-lib/mhook.h"
+
+template<typename T>
+Hooker<T>::Hooker(const TCHAR *szModuleName, const char *szFunctionName, T *pHookFunction = nullptr)
+{
+    this->hooked = false;
+
+    this->pFunction = reinterpret_cast<T *>(GetProcAddress(GetModuleHandle(szModuleName), szFunctionName));
+    this->SetHookFunction(pHookFunction);
 }
 
-template<typename functype>
-functype *Hooker<functype>::Get()
+template<typename T>
+Hooker<T>::~Hooker()
 {
-	return (functype*)this->pOriginFunc;
+    this->Unhook();
 }
 
-template<typename functype>
-void Hooker<functype>::Set(LPVOID hkFunction)
+template<typename T>
+T *Hooker<T>::GetFunction()
 {
-    this->pHookFunc = hkFunction;
+    return this->pFunction;
 }
 
-template<typename functype>
-void Hooker<functype>::Hook()
+template<typename T>
+void Hooker<T>::SetHookFunction(T *pHookFunction)
 {
-    if (bHooked || !pHookFunc)
+    this->pHookFunction = pHookFunction;
+}
+
+template<typename T>
+void Hooker<T>::Hook()
+{
+    if (this->hooked || this->pHookFunction == nullptr)
     {
         return;
     }
 
-    this->bHooked = !!Mhook_SetHook(&(this->pOriginFunc), this->pHookFunc);
+    this->hooked = static_cast<bool>(Mhook_SetHook(reinterpret_cast<PVOID *>(&this->pFunction), reinterpret_cast<PVOID>(this->pHookFunction)));
 }
 
-template<typename functype>
-void Hooker<functype>::Unhook()
+template<typename T>
+void Hooker<T>::Unhook()
 {
-    if (!this->bHooked)
+    if (!this->hooked)
     {
         return;
     }
 
-    this->bHooked = !Mhook_Unhook(&(this->pHookFunc));
+    this->hooked = !static_cast<bool>(Mhook_Unhook(reinterpret_cast<PVOID *>(&this->pHookFunction)));
 }
 
 // explicit instantiation
