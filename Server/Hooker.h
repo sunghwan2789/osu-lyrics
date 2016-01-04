@@ -2,8 +2,6 @@
 
 #include <tchar.h>
 
-#include <Windows.h>
-
 template<typename T>
 class Hooker
 {
@@ -22,3 +20,5 @@ private:
     T *pHookFunction;
     bool hooked;
 };
+
+#include "Hooker.hpp"

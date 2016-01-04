@@ -88,7 +88,6 @@
     <ClCompile Include="disasm-lib\disasm.c" />
     <ClCompile Include="disasm-lib\disasm_x86.c" />
     <ClCompile Include="disasm-lib\misc.c" />
-    <ClCompile Include="Hooker.cpp" />
     <ClCompile Include="mhook-lib\mhook.cpp" />
     <ClCompile Include="Observer.cpp" />
     <ClCompile Include="Server.cpp" />
@@ -102,6 +101,7 @@
     <ClInclude Include="disasm-lib\disasm_x86_tables.h" />
     <ClInclude Include="disasm-lib\misc.h" />
     <ClInclude Include="Hooker.h" />
+    <ClInclude Include="Hooker.hpp" />
     <ClInclude Include="mhook-lib\mhook.h" />
     <ClInclude Include="Observer.h" />
     <ClInclude Include="resource.h" />

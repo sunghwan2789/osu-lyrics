@@ -1,5 +1,3 @@
-#include "Hooker.h"
-
 #include <tchar.h>
 
 #include <Windows.h>
@@ -53,11 +51,3 @@ void Hooker<T>::Unhook()
 
     this->hooked = !static_cast<bool>(Mhook_Unhook(reinterpret_cast<PVOID *>(&this->pHookFunction)));
 }
-
-// explicit instantiation
-#include "Observer.h"
-template class Hooker<tReadFile>;
-template class Hooker<tBASS_ChannelPlay>;
-template class Hooker<tBASS_ChannelSetPosition>;
-template class Hooker<tBASS_ChannelSetAttribute>;
-template class Hooker<tBASS_ChannelPause>;
