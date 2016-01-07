@@ -1,88 +1,88 @@
 #include "Server.h"
 
-#include <tchar.h>
-#include <string>
-#include <concurrent_queue.h>
-
-#include <Windows.h>
 #include "Observer.h"
 
-concurrency::concurrent_queue<tstring> MessageQueue;
-HANDLE hPushEvent;
+std::shared_ptr<Server> Server::instance;
+std::once_flag Server::once_flag;
 
-HANDLE hServerThread;
-HANDLE hPipe;
-volatile bool bCancelServerThread;
-volatile bool bPipeConnected;
-DWORD WINAPI ServerThread(LPVOID lParam)
+DWORD WINAPI Server::Thread(LPVOID lParam)
 {
-    hPipe = CreateNamedPipe(_T("\\\\.\\pipe\\osu!Lyrics"), PIPE_ACCESS_OUTBOUND,
-        PIPE_TYPE_MESSAGE | PIPE_WAIT, 1, nBufferSize * sizeof(tstring::value_type), 0, INFINITE, NULL);
+    Server *self = Server::GetInstance();
+    self->hPipe = CreateNamedPipe(_T("\\\\.\\pipe\\osu!Lyrics"), PIPE_ACCESS_OUTBOUND,
+        PIPE_TYPE_MESSAGE | PIPE_WAIT, 1, Server::nBufferSize, 0, INFINITE, NULL);
     tstring message;
     DWORD nNumberOfBytesWritten;
     // 스레드 종료 요청이 들어올 때까지 클라이언트 접속 무한 대기
-    while (!bCancelServerThread)
+    while (!self->cancelThread)
     {
         // ConnectNamedPipe는 클라이언트와 연결될 때까지 무한 대기함:
         // 취소는 DisconnectNamedPipe로 가능
-        if (ConnectNamedPipe(hPipe, NULL) || GetLastError() == ERROR_PIPE_CONNECTED)
+        if (ConnectNamedPipe(self->hPipe, NULL) || GetLastError() == ERROR_PIPE_CONNECTED)
         {
-            bPipeConnected = true;
+            self->pipeConnected = true;
 
             // 메시지 큐가 비었을 때 최대 3초간 기다리고 다시 시도:
             // 클라이언트 접속을 대기해야 하기 때문에 INTINITE 지양
-            if (!MessageQueue.try_pop(message))
+            if (!self->messageQueue.try_pop(message))
             {
-                WaitForSingleObject(hPushEvent, 3000);
+                WaitForSingleObject(self->hPushEvent, 3000);
                 continue;
             }
 
-            if (WriteFile(hPipe, message.c_str(), message.length() * sizeof(tstring::value_type), &nNumberOfBytesWritten, NULL))
+            if (WriteFile(self->hPipe, message.c_str(), message.length() * sizeof(tstring::value_type), &nNumberOfBytesWritten, NULL))
             {
                 continue;
             }
         }
-        bPipeConnected = false;
-        DisconnectNamedPipe(hPipe);
+        self->pipeConnected = false;
+        DisconnectNamedPipe(self->hPipe);
     }
     // 클라이언트 연결 종료
-    bPipeConnected = false;
-    DisconnectNamedPipe(hPipe);
-    CloseHandle(hPipe);
+    self->pipeConnected = false;
+    DisconnectNamedPipe(self->hPipe);
+    CloseHandle(self->hPipe);
     return 0;
 }
 
-void PushMessage(tstring &&message)
+void Server::PushMessage(tstring&& message)
 {
-    if (!bPipeConnected)
+    if (!this->pipeConnected)
     {
         return;
     }
 
-    MessageQueue.push(message);
-    SetEvent(hPushEvent);
+    this->messageQueue.push(message);
+    SetEvent(this->hPushEvent);
+}
+
+void Server::Run()
+{
+    this->hPushEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+
+    this->hThread = CreateThread(NULL, 0, Server::Thread, NULL, 0, NULL);
+}
+
+void Server::Stop()
+{
+    this->cancelThread = true;
+    DisconnectNamedPipe(this->hPipe);
+    WaitForSingleObject(this->hThread, INFINITE);
+    CloseHandle(this->hThread);
+
+    CloseHandle(this->hPushEvent);
 }
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
     if (fdwReason == DLL_PROCESS_ATTACH)
     {
-        hPushEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-
-        hServerThread = CreateThread(NULL, 0, ServerThread, NULL, 0, NULL);
-
-        RunObserver();
+        Server::GetInstance()->Run();
+        Observer::GetInstance()->Run();
     }
     else if (fdwReason == DLL_PROCESS_DETACH)
     {
-        StopObserver();
-
-        bCancelServerThread = true;
-        DisconnectNamedPipe(hPipe);
-        WaitForSingleObject(hServerThread, INFINITE);
-        CloseHandle(hServerThread);
-
-        CloseHandle(hPushEvent);
+        Observer::GetInstance()->Stop();
+        Server::GetInstance()->Stop();
     }
     return TRUE;
 }

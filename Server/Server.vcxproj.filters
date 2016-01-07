@@ -3,21 +3,6 @@
   <ItemGroup>
     <ClCompile Include="Observer.cpp" />
     <ClCompile Include="Server.cpp" />
-    <ClCompile Include="disasm-lib\cpu.c">
-      <Filter>Libraries\mhook</Filter>
-    </ClCompile>
-    <ClCompile Include="disasm-lib\disasm.c">
-      <Filter>Libraries\mhook</Filter>
-    </ClCompile>
-    <ClCompile Include="disasm-lib\disasm_x86.c">
-      <Filter>Libraries\mhook</Filter>
-    </ClCompile>
-    <ClCompile Include="disasm-lib\misc.c">
-      <Filter>Libraries\mhook</Filter>
-    </ClCompile>
-    <ClCompile Include="mhook-lib\mhook.cpp">
-      <Filter>Libraries\mhook</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Hooker.h" />
@@ -25,29 +10,14 @@
     <ClInclude Include="Observer.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Server.h" />
-    <ClInclude Include="disasm-lib\cpu.h">
-      <Filter>Libraries\mhook</Filter>
-    </ClInclude>
-    <ClInclude Include="disasm-lib\disasm.h">
-      <Filter>Libraries\mhook</Filter>
-    </ClInclude>
-    <ClInclude Include="disasm-lib\disasm_x86.h">
-      <Filter>Libraries\mhook</Filter>
-    </ClInclude>
-    <ClInclude Include="disasm-lib\disasm_x86_tables.h">
-      <Filter>Libraries\mhook</Filter>
-    </ClInclude>
-    <ClInclude Include="disasm-lib\misc.h">
-      <Filter>Libraries\mhook</Filter>
-    </ClInclude>
-    <ClInclude Include="mhook-lib\mhook.h">
-      <Filter>Libraries\mhook</Filter>
-    </ClInclude>
     <ClInclude Include="bass.h">
       <Filter>Libraries\BASS</Filter>
     </ClInclude>
     <ClInclude Include="bass_fx.h">
       <Filter>Libraries\BASS</Filter>
+    </ClInclude>
+    <ClInclude Include="detours.h">
+      <Filter>Libraries\detours</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -60,8 +30,8 @@
     <Filter Include="Libraries\BASS">
       <UniqueIdentifier>{04a5009d-0f22-455e-992a-fdc53a71a5c3}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Libraries\mhook">
-      <UniqueIdentifier>{d6daeace-15ab-4465-a66b-1a9ec1c69054}</UniqueIdentifier>
+    <Filter Include="Libraries\detours">
+      <UniqueIdentifier>{decad8cf-21c7-4d21-ae92-f9b70163eb2a}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -71,5 +41,11 @@
     <Library Include="bass_fx.lib">
       <Filter>Libraries\BASS</Filter>
     </Library>
+    <Library Include="detours.lib">
+      <Filter>Libraries\detours</Filter>
+    </Library>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Singleton.tpl" />
   </ItemGroup>
 </Project>

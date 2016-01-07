@@ -17,14 +17,13 @@
 #include "Hooker.h"
 #include "Server.h"
 
-concurrency::concurrent_unordered_map<tstring, tstring> AudioInfo;
-std::pair<tstring, tstring> Playing;
-CRITICAL_SECTION hMutex;
+std::shared_ptr<Observer> Observer::instance;
+std::once_flag Observer::once_flag;
 
-Hooker<tReadFile> hkrReadFile(_T("kernel32.dll"), "ReadFile", hkReadFile);
-BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped)
+BOOL WINAPI Observer::ReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped)
 {
-    if (!hkrReadFile.GetFunction()(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped))
+    Observer *self = Observer::GetInstance();
+    if (!self->hookerReadFile.GetFunction()(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped))
     {
         return FALSE;
     }
@@ -74,7 +73,7 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
             free(szAudioFilePathStripped);
 #endif
 
-            AudioInfo.insert({ szAudioFilePath, szFilePath });
+            self->audioInfo.insert({ szAudioFilePath, szFilePath });
             break;
         }
         free(buffer);
@@ -82,12 +81,12 @@ BOOL WINAPI hkReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead
     else
     {
         // [ audioPath, beatmapPath ]
-        concurrency::concurrent_unordered_map<tstring, tstring>::iterator info;
-        if ((info = AudioInfo.find(szFilePath)) != AudioInfo.end())
+        decltype(self->audioInfo)::iterator info;
+        if ((info = self->audioInfo.find(szFilePath)) != self->audioInfo.end())
         {
-            EnterCriticalSection(&hMutex);
-            Playing = { info->first.substr(4), info->second.substr(4) };
-            LeaveCriticalSection(&hMutex);
+            EnterCriticalSection(&self->hCritiaclSection);
+            self->playing = { info->first.substr(4), info->second.substr(4) };
+            LeaveCriticalSection(&self->hCritiaclSection);
         }
     }
     return TRUE;
@@ -101,10 +100,10 @@ inline long long Now()
     return t;
 }
 
-Hooker<tBASS_ChannelPlay> hkrPlay(_T("bass.dll"), "BASS_ChannelPlay", hkBASS_ChannelPlay);
-BOOL BASSDEF(hkBASS_ChannelPlay)(DWORD handle, BOOL restart)
+BOOL WINAPI Observer::BASS_ChannelPlay(DWORD handle, BOOL restart)
 {
-    if (!hkrPlay.GetFunction()(handle, restart))
+    Observer *self = Observer::GetInstance();
+    if (!self->hookerBASS_ChannelPlay.GetFunction()(handle, restart))
     {
         return FALSE;
     }
@@ -115,15 +114,15 @@ BOOL BASSDEF(hkBASS_ChannelPlay)(DWORD handle, BOOL restart)
     {
         double currentTime = BASS_ChannelBytes2Seconds(handle, BASS_ChannelGetPosition(handle, BASS_POS_BYTE));
         float tempo; BASS_ChannelGetAttribute(handle, BASS_ATTRIB_TEMPO, &tempo);
-        cbBASS_Control(Now(), currentTime, tempo);
+        self->Report_BASS(Now(), currentTime, tempo);
     }
     return TRUE;
 }
 
-Hooker<tBASS_ChannelSetPosition> hkrSetPos(_T("bass.dll"), "BASS_ChannelSetPosition", hkBASS_ChannelSetPosition);
-BOOL BASSDEF(hkBASS_ChannelSetPosition)(DWORD handle, QWORD pos, DWORD mode)
+BOOL WINAPI Observer::BASS_ChannelSetPosition(DWORD handle, QWORD pos, DWORD mode)
 {
-    if (!hkrSetPos.GetFunction()(handle, pos, mode))
+    Observer *self = Observer::GetInstance();
+    if (!self->hookerBASS_ChannelSetPosition.GetFunction()(handle, pos, mode))
     {
         return FALSE;
     }
@@ -141,15 +140,15 @@ BOOL BASSDEF(hkBASS_ChannelSetPosition)(DWORD handle, QWORD pos, DWORD mode)
         {
             tempo = -100;
         }
-        cbBASS_Control(Now(), currentTime, tempo);
+        self->Report_BASS(Now(), currentTime, tempo);
     }
     return TRUE;
 }
 
-Hooker<tBASS_ChannelSetAttribute> hkrSetAttr(_T("bass.dll"), "BASS_ChannelSetAttribute", hkBASS_ChannelSetAttribute);
-BOOL BASSDEF(hkBASS_ChannelSetAttribute)(DWORD handle, DWORD attrib, float value)
+BOOL WINAPI Observer::BASS_ChannelSetAttribute(DWORD handle, DWORD attrib, float value)
 {
-    if (!hkrSetAttr.GetFunction()(handle, attrib, value))
+    Observer *self = Observer::GetInstance();
+    if (!self->hookerBASS_ChannelSetAttribute.GetFunction()(handle, attrib, value))
     {
         return FALSE;
     }
@@ -159,15 +158,15 @@ BOOL BASSDEF(hkBASS_ChannelSetAttribute)(DWORD handle, DWORD attrib, float value
     if ((info.ctype & BASS_CTYPE_STREAM) && attrib == BASS_ATTRIB_TEMPO)
     {
         double currentTime = BASS_ChannelBytes2Seconds(handle, BASS_ChannelGetPosition(handle, BASS_POS_BYTE));
-        cbBASS_Control(Now(), currentTime, value);
+        self->Report_BASS(Now(), currentTime, value);
     }
     return TRUE;
 }
 
-Hooker<tBASS_ChannelPause> hkrPause(_T("bass.dll"), "BASS_ChannelPause", hkBASS_ChannelPause);
-BOOL BASSDEF(hkBASS_ChannelPause)(DWORD handle)
+BOOL WINAPI Observer::BASS_ChannelPause(DWORD handle)
 {
-    if (!hkrPause.GetFunction()(handle))
+    Observer *self = Observer::GetInstance();
+    if (!self->hookerBASS_ChannelPause.GetFunction()(handle))
     {
         return FALSE;
     }
@@ -177,42 +176,39 @@ BOOL BASSDEF(hkBASS_ChannelPause)(DWORD handle)
     if (info.ctype & BASS_CTYPE_STREAM)
     {
         double currentTime = BASS_ChannelBytes2Seconds(handle, BASS_ChannelGetPosition(handle, BASS_POS_BYTE));
-        cbBASS_Control(Now(), currentTime, -100);
+        self->Report_BASS(Now(), currentTime, -100);
     }
     return TRUE;
 }
 
-
-inline void cbBASS_Control(long long calledAt, double currentTime, float tempo)
+void Observer::Report_BASS(long long calledAt, double currentTime, float tempo)
 {
-    TCHAR message[nBufferSize];
+    TCHAR message[Server::nMessageLength];
     tstring audioPath, beatmapPath;
-    EnterCriticalSection(&hMutex);
-    std::tie(audioPath, beatmapPath) = Playing;
-    LeaveCriticalSection(&hMutex);
+    Observer *self = Observer::GetInstance();
+    EnterCriticalSection(&self->hCritiaclSection);
+    std::tie(audioPath, beatmapPath) = self->playing;
+    LeaveCriticalSection(&self->hCritiaclSection);
     _stprintf(message, _T("%llx|%s|%lf|%f|%s\n"), calledAt, audioPath.c_str(), currentTime, tempo, beatmapPath.c_str());
-    PushMessage(message);
+    Server::GetInstance()->PushMessage(message);
 }
 
-
-void RunObserver()
+void Observer::Run()
 {
-    InitializeCriticalSection(&hMutex);
-    hkrReadFile.Hook();
+    this->hookerReadFile.Hook();
 
-    hkrPlay.Hook();
-    hkrSetAttr.Hook();
-    hkrSetPos.Hook();
-    hkrPause.Hook();
+    this->hookerBASS_ChannelPlay.Hook();
+    this->hookerBASS_ChannelSetPosition.Hook();
+    this->hookerBASS_ChannelSetAttribute.Hook();
+    this->hookerBASS_ChannelPause.Hook();
 }
 
-void StopObserver()
+void Observer::Stop()
 {
-    hkrPause.Unhook();
-    hkrSetAttr.Unhook();
-    hkrSetPos.Unhook();
-    hkrPlay.Unhook();
+    this->hookerBASS_ChannelPause.Unhook();
+    this->hookerBASS_ChannelSetAttribute.Unhook();
+    this->hookerBASS_ChannelSetPosition.Unhook();
+    this->hookerBASS_ChannelPlay.Unhook();
 
-    hkrReadFile.Unhook();
-    DeleteCriticalSection(&hMutex);
+    this->hookerReadFile.Unhook();
 }

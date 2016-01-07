@@ -1,7 +1,7 @@
 #include <tchar.h>
 
 #include <Windows.h>
-#include "mhook-lib/mhook.h"
+#include "detours.h"
 
 template<typename T>
 Hooker<T>::Hooker(const TCHAR *szModuleName, const char *szFunctionName, T *pHookFunction = nullptr)
@@ -38,7 +38,10 @@ void Hooker<T>::Hook()
         return;
     }
 
-    this->hooked = static_cast<bool>(Mhook_SetHook(reinterpret_cast<PVOID *>(&this->pFunction), reinterpret_cast<PVOID>(this->pHookFunction)));
+    DetourTransactionBegin();
+    DetourUpdateThread(GetCurrentThread());
+    DetourAttach(&(PVOID&) this->pFunction, (PVOID) this->pHookFunction);
+    this->hooked = DetourTransactionCommit() == NO_ERROR;
 }
 
 template<typename T>
@@ -49,5 +52,8 @@ void Hooker<T>::Unhook()
         return;
     }
 
-    this->hooked = !static_cast<bool>(Mhook_Unhook(reinterpret_cast<PVOID *>(&this->pHookFunction)));
+    DetourTransactionBegin();
+    DetourUpdateThread(GetCurrentThread());
+    DetourDetach(&(PVOID&) this->pFunction, (PVOID) this->pHookFunction);
+    this->hooked = DetourTransactionCommit() != NO_ERROR;
 }
