@@ -12,8 +12,8 @@
 class Observer
 {
 public:
-    void Run();
-    void Stop();
+    void Initalize();
+    void Release();
 
 private:
     static BOOL WINAPI ReadFile(HANDLE, LPVOID, DWORD, LPDWORD, LPOVERLAPPED);
@@ -22,11 +22,13 @@ private:
     static BOOL BASSDEF(BASS_ChannelSetAttribute)(DWORD, DWORD, float);
     static BOOL BASSDEF(BASS_ChannelPause)(DWORD);
 
-    void Report_BASS(long long, double, float);
+    void SendTempoInfomation(long long, double, float);
     CRITICAL_SECTION hCritiaclSection;
 
-    concurrency::concurrent_unordered_map<tstring, tstring> audioInfo;
-    std::pair<tstring, tstring> playing;
+	struct {
+		tstring audioPath;
+		tstring beatmapPath;
+	} currentPlaying;
 
     Hooker<decltype(Observer::ReadFile)> hookerReadFile;
     Hooker<decltype(Observer::BASS_ChannelPlay)> hookerBASS_ChannelPlay;
@@ -48,11 +50,11 @@ public:
     }
 
 private:
-    Observer() : hookerReadFile(_T("kernel32.dll"), "ReadFile", Observer::ReadFile),
-        hookerBASS_ChannelPlay(_T("bass.dll"), "BASS_ChannelPlay", Observer::BASS_ChannelPlay),
-        hookerBASS_ChannelSetPosition(_T("bass.dll"), "BASS_ChannelSetPosition", Observer::BASS_ChannelSetPosition),
-        hookerBASS_ChannelSetAttribute(_T("bass.dll"), "BASS_ChannelSetAttribute", Observer::BASS_ChannelSetAttribute),
-        hookerBASS_ChannelPause(_T("bass.dll"), "BASS_ChannelPause", Observer::BASS_ChannelPause)
+    Observer() : hookerReadFile(L"kernel32.dll", "ReadFile", Observer::ReadFile),
+        hookerBASS_ChannelPlay(L"bass.dll", "BASS_ChannelPlay", Observer::BASS_ChannelPlay),
+        hookerBASS_ChannelSetPosition(L"bass.dll", "BASS_ChannelSetPosition", Observer::BASS_ChannelSetPosition),
+        hookerBASS_ChannelSetAttribute(L"bass.dll", "BASS_ChannelSetAttribute", Observer::BASS_ChannelSetAttribute),
+        hookerBASS_ChannelPause(L"bass.dll", "BASS_ChannelPause", Observer::BASS_ChannelPause)
     {
         InitializeCriticalSection(&this->hCritiaclSection);
     }

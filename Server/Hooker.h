@@ -2,23 +2,23 @@
 
 #include <tchar.h>
 
-template<typename T>
+template<typename TypeFunction>
 class Hooker
 {
 public:
-    Hooker(const TCHAR *, const char *, T *);
+    Hooker(const TCHAR *, const char *, TypeFunction *);
     ~Hooker();
 
-    T *GetFunction();
-    void SetHookFunction(T *);
+	TypeFunction *GetFunction();
+    void SetHookFunction(TypeFunction *);
 
     void Hook();
     void Unhook();
 
 private:
-    T *pFunction;
-    T *pHookFunction;
-    bool hooked;
+	TypeFunction *pFunction;
+	TypeFunction *pHookFunction;
+    bool isHooked;
 };
 
 #include "Hooker.hpp"

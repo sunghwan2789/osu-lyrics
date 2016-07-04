@@ -3,37 +3,37 @@
 #include <Windows.h>
 #include "detours.h"
 
-template<typename T>
-Hooker<T>::Hooker(const TCHAR *szModuleName, const char *szFunctionName, T *pHookFunction = nullptr)
+template<typename TypeFunction>
+Hooker<TypeFunction>::Hooker(const TCHAR *szModuleName, const char *szFunctionName, TypeFunction *pHookFunction = nullptr)
 {
-    this->hooked = false;
+    this->isHooked = false;
 
-    this->pFunction = reinterpret_cast<T *>(GetProcAddress(GetModuleHandle(szModuleName), szFunctionName));
+    this->pFunction = reinterpret_cast<TypeFunction *>(GetProcAddress(GetModuleHandle(szModuleName), szFunctionName));
     this->SetHookFunction(pHookFunction);
 }
 
-template<typename T>
-Hooker<T>::~Hooker()
+template<typename TypeFunction>
+Hooker<TypeFunction>::~Hooker()
 {
     this->Unhook();
 }
 
-template<typename T>
-T *Hooker<T>::GetFunction()
+template<typename TypeFunction>
+TypeFunction *Hooker<TypeFunction>::GetFunction()
 {
     return this->pFunction;
 }
 
-template<typename T>
-void Hooker<T>::SetHookFunction(T *pHookFunction)
+template<typename TypeFunction>
+void Hooker<TypeFunction>::SetHookFunction(TypeFunction *pHookFunction)
 {
     this->pHookFunction = pHookFunction;
 }
 
-template<typename T>
-void Hooker<T>::Hook()
+template<typename TypeFunction>
+void Hooker<TypeFunction>::Hook()
 {
-    if (this->hooked || this->pHookFunction == nullptr)
+    if (this->isHooked || this->pHookFunction == nullptr)
     {
         return;
     }
@@ -41,13 +41,13 @@ void Hooker<T>::Hook()
     DetourTransactionBegin();
     DetourUpdateThread(GetCurrentThread());
     DetourAttach(&(PVOID&) this->pFunction, (PVOID) this->pHookFunction);
-    this->hooked = DetourTransactionCommit() == NO_ERROR;
+    this->isHooked = DetourTransactionCommit() == NO_ERROR;
 }
 
-template<typename T>
-void Hooker<T>::Unhook()
+template<typename TypeFunction>
+void Hooker<TypeFunction>::Unhook()
 {
-    if (!this->hooked)
+    if (!this->isHooked)
     {
         return;
     }
@@ -55,5 +55,5 @@ void Hooker<T>::Unhook()
     DetourTransactionBegin();
     DetourUpdateThread(GetCurrentThread());
     DetourDetach(&(PVOID&) this->pFunction, (PVOID) this->pHookFunction);
-    this->hooked = DetourTransactionCommit() != NO_ERROR;
+    this->isHooked = DetourTransactionCommit() != NO_ERROR;
 }

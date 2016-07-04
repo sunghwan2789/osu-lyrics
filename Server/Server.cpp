@@ -77,11 +77,11 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
     if (fdwReason == DLL_PROCESS_ATTACH)
     {
         Server::GetInstance()->Run();
-        Observer::GetInstance()->Run();
+        Observer::GetInstance()->Initalize();
     }
     else if (fdwReason == DLL_PROCESS_DETACH)
     {
-        Observer::GetInstance()->Stop();
+        Observer::GetInstance()->Release();
         Server::GetInstance()->Stop();
     }
     return TRUE;

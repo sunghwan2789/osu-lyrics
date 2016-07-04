@@ -1,5 +1,7 @@
 #pragma comment(lib, "Shlwapi.lib")
 
+#pragma warning(disable:4996)
+
 #include "Observer.h"
 
 #include <cstdio>
@@ -17,13 +19,16 @@
 #include "Hooker.h"
 #include "Server.h"
 
+#define AUDIO_FILE_INFO_TOKEN "AudioFilename:"
+
 std::shared_ptr<Observer> Observer::instance;
 std::once_flag Observer::once_flag;
 
 BOOL WINAPI Observer::ReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped)
 {
-    Observer *self = Observer::GetInstance();
-    if (!self->hookerReadFile.GetFunction()(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped))
+    Observer *instance = Observer::GetInstance();
+
+    if (!instance->hookerReadFile.GetFunction()(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped))
     {
         return FALSE;
     }
@@ -31,69 +36,55 @@ BOOL WINAPI Observer::ReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfByt
     TCHAR szFilePath[MAX_PATH];
     DWORD nFilePathLength = GetFinalPathNameByHandle(hFile, szFilePath, MAX_PATH, VOLUME_NAME_DOS);
     //                  1: \\?\D:\Games\osu!\...
-    DWORD dwFilePosition = SetFilePointer(hFile, 0, NULL, FILE_CURRENT) - *lpNumberOfBytesRead;
+    DWORD dwFilePosition = SetFilePointer(hFile, 0, NULL, FILE_CURRENT) - (*lpNumberOfBytesRead);
     // 지금 읽는 파일이 비트맵 파일이고 앞부분을 읽었다면 음악 파일 경로 얻기:
     // AudioFilename은 앞부분에 있음 / 파일 핸들 또 열지 말고 일 한 번만 하자!
-    if (_tcsnicmp(_T(".osu"), &szFilePath[nFilePathLength - 4], 4) == 0 && dwFilePosition == 0)
+    if (wcsncmp(L".osu", &szFilePath[nFilePathLength - 4], 4) == 0 && dwFilePosition == 0)
     {
         // strtok은 소스를 변형하므로 일단 백업
         // .osu 파일은 UTF-8(Multibyte) 인코딩
-        char *buffer = strdup(reinterpret_cast<char *>(lpBuffer));
-        for (char *line = strtok(buffer, "\n"); line != NULL; line = strtok(NULL, "\n"))
+		
+		/* 줄마다 strtok으로 잘라내서 AudioFilename: 을 찾음. */
+        char *buffer = strdup((const char*)(lpBuffer));
+
+		for (char *line = strtok(buffer, "\n"); line != NULL; line = strtok(NULL, "\n"))
         {
-            if (strnicmp(line, "AudioFilename:", 14) != 0)
+            if (strnicmp(line, AUDIO_FILE_INFO_TOKEN, 14) != 0)
             {
                 continue;
             }
 
             // AudioFilename 값 얻기
             TCHAR szAudioFileName[MAX_PATH];
-#ifdef UNICODE
+
             mbstowcs(szAudioFileName, &line[14], MAX_PATH);
-#else
-            strncpy(szAudioFileName, &line[14], MAX_PATH);
-#endif
-            StrTrim(szAudioFileName, _T(" \r"));
+            StrTrimW(szAudioFileName, L" \r");
 
             TCHAR szAudioFilePath[MAX_PATH];
-            _tcscpy(szAudioFilePath, szFilePath);
-            PathRemoveFileSpec(szAudioFilePath);
-            PathCombine(szAudioFilePath, szAudioFilePath, szAudioFileName);
 
-            // 검색할 때 대소문자 구분하므로 정확한 파일 경로 얻기
-            WIN32_FIND_DATA fdata;
-            FindClose(FindFirstFile(szAudioFilePath, &fdata));
-            PathRemoveFileSpec(szAudioFilePath);
-            PathCombine(szAudioFilePath, szAudioFilePath, fdata.cFileName);
-#ifdef UNICODE
-            // PathCombineW가 \\?\를 제거한다;;
-            TCHAR *szAudioFilePathStripped = _tcsdup(szAudioFilePath);
-            _tcscpy(szAudioFilePath, _T("\\\\?\\"));
-            _tcscat(szAudioFilePath, szAudioFilePathStripped);
-            free(szAudioFilePathStripped);
-#endif
+			/* 앞부분의 이상한 글자를 제거하기위해 4번째 글자부터 시작. */
+            wcscpy(szAudioFilePath, &szFilePath[4]);
+            PathRemoveFileSpecW(szAudioFilePath);
+            PathCombineW(szAudioFilePath, szAudioFilePath, szAudioFileName);
 
-            self->audioInfo.insert({ szAudioFilePath, szFilePath });
+			EnterCriticalSection(&instance->hCritiaclSection);
+
+			instance->currentPlaying.audioPath = tstring(szAudioFilePath);
+			/* 앞부분의 이상한 글자를 제거하기위해 4번째 글자부터 시작. */
+			instance->currentPlaying.beatmapPath = (tstring(&szFilePath[4]));
+
+			LeaveCriticalSection(&instance->hCritiaclSection);
+
             break;
         }
+
         free(buffer);
-    }
-    else
-    {
-        // [ audioPath, beatmapPath ]
-        decltype(self->audioInfo)::iterator info;
-        if ((info = self->audioInfo.find(szFilePath)) != self->audioInfo.end())
-        {
-            EnterCriticalSection(&self->hCritiaclSection);
-            self->playing = { info->first.substr(4), info->second.substr(4) };
-            LeaveCriticalSection(&self->hCritiaclSection);
-        }
     }
     return TRUE;
 }
 
 
-inline long long Now()
+inline long long GetCurrentSysTime()
 {
     long long t;
     GetSystemTimeAsFileTime(reinterpret_cast<LPFILETIME>(&t));
@@ -102,71 +93,76 @@ inline long long Now()
 
 BOOL WINAPI Observer::BASS_ChannelPlay(DWORD handle, BOOL restart)
 {
-    Observer *self = Observer::GetInstance();
-    if (!self->hookerBASS_ChannelPlay.GetFunction()(handle, restart))
+    Observer *instance = Observer::GetInstance();
+
+    if (!instance->hookerBASS_ChannelPlay.GetFunction()(handle, restart))
     {
         return FALSE;
     }
 
     BASS_CHANNELINFO info;
     BASS_ChannelGetInfo(handle, &info);
+
     if (info.ctype & BASS_CTYPE_STREAM)
     {
-        double currentTime = BASS_ChannelBytes2Seconds(handle, BASS_ChannelGetPosition(handle, BASS_POS_BYTE));
+        double currentTimePos = BASS_ChannelBytes2Seconds(handle, BASS_ChannelGetPosition(handle, BASS_POS_BYTE));
         float tempo; BASS_ChannelGetAttribute(handle, BASS_ATTRIB_TEMPO, &tempo);
-        self->Report_BASS(Now(), currentTime, tempo);
+        instance->SendTempoInfomation(GetCurrentSysTime(), currentTimePos, tempo);
     }
     return TRUE;
 }
 
 BOOL WINAPI Observer::BASS_ChannelSetPosition(DWORD handle, QWORD pos, DWORD mode)
 {
-    Observer *self = Observer::GetInstance();
-    if (!self->hookerBASS_ChannelSetPosition.GetFunction()(handle, pos, mode))
+    Observer *instance = Observer::GetInstance();
+    if (!instance->hookerBASS_ChannelSetPosition.GetFunction()(handle, pos, mode))
     {
         return FALSE;
     }
 
     BASS_CHANNELINFO info;
     BASS_ChannelGetInfo(handle, &info);
+
     if (info.ctype & BASS_CTYPE_STREAM)
     {
         double currentTime = BASS_ChannelBytes2Seconds(handle, pos);
-        float tempo; BASS_ChannelGetAttribute(handle, BASS_ATTRIB_TEMPO, &tempo);
+        float CurrentTempo; BASS_ChannelGetAttribute(handle, BASS_ATTRIB_TEMPO, &CurrentTempo);
         // 주의!! pos가 일정 이하일 때,
         // 재생하면 BASS_ChannelPlay대신 이 함수가 호출되고,
         // BASS_ChannelIsActive 값은 BASS_ACTIVE_PAUSED임.
         if (BASS_ChannelIsActive(handle) == BASS_ACTIVE_PAUSED)
         {
-            tempo = -100;
+            CurrentTempo = -100;
         }
-        self->Report_BASS(Now(), currentTime, tempo);
+
+        instance->SendTempoInfomation(GetCurrentSysTime(), currentTime, CurrentTempo);
     }
     return TRUE;
 }
 
 BOOL WINAPI Observer::BASS_ChannelSetAttribute(DWORD handle, DWORD attrib, float value)
 {
-    Observer *self = Observer::GetInstance();
-    if (!self->hookerBASS_ChannelSetAttribute.GetFunction()(handle, attrib, value))
+    Observer *instance = Observer::GetInstance();
+    if (!instance->hookerBASS_ChannelSetAttribute.GetFunction()(handle, attrib, value))
     {
         return FALSE;
     }
 
     BASS_CHANNELINFO info;
     BASS_ChannelGetInfo(handle, &info);
+
     if ((info.ctype & BASS_CTYPE_STREAM) && attrib == BASS_ATTRIB_TEMPO)
     {
         double currentTime = BASS_ChannelBytes2Seconds(handle, BASS_ChannelGetPosition(handle, BASS_POS_BYTE));
-        self->Report_BASS(Now(), currentTime, value);
+        instance->SendTempoInfomation(GetCurrentSysTime(), currentTime, value);
     }
     return TRUE;
 }
 
 BOOL WINAPI Observer::BASS_ChannelPause(DWORD handle)
 {
-    Observer *self = Observer::GetInstance();
-    if (!self->hookerBASS_ChannelPause.GetFunction()(handle))
+    Observer *instance = Observer::GetInstance();
+    if (!instance->hookerBASS_ChannelPause.GetFunction()(handle))
     {
         return FALSE;
     }
@@ -176,24 +172,31 @@ BOOL WINAPI Observer::BASS_ChannelPause(DWORD handle)
     if (info.ctype & BASS_CTYPE_STREAM)
     {
         double currentTime = BASS_ChannelBytes2Seconds(handle, BASS_ChannelGetPosition(handle, BASS_POS_BYTE));
-        self->Report_BASS(Now(), currentTime, -100);
+        instance->SendTempoInfomation(GetCurrentSysTime(), currentTime, -100);
     }
     return TRUE;
 }
 
-void Observer::Report_BASS(long long calledAt, double currentTime, float tempo)
+void Observer::SendTempoInfomation(long long calledAt, double currentTime, float tempo)
 {
     TCHAR message[Server::nMessageLength];
-    tstring audioPath, beatmapPath;
-    Observer *self = Observer::GetInstance();
-    EnterCriticalSection(&self->hCritiaclSection);
-    std::tie(audioPath, beatmapPath) = self->playing;
-    LeaveCriticalSection(&self->hCritiaclSection);
-    _stprintf(message, _T("%llx|%s|%lf|%f|%s\n"), calledAt, audioPath.c_str(), currentTime, tempo, beatmapPath.c_str());
+
+    Observer *instance = Observer::GetInstance();
+
+	/* Get Current Playing */
+    EnterCriticalSection(&instance->hCritiaclSection);
+    swprintf(message, L"%llx|%s|%lf|%f|%s\n", 
+		calledAt, 
+		instance->currentPlaying.audioPath.c_str(),
+		currentTime, 
+		tempo, 
+		instance->currentPlaying.beatmapPath.c_str());
+	LeaveCriticalSection(&instance->hCritiaclSection);
+
     Server::GetInstance()->PushMessage(message);
 }
 
-void Observer::Run()
+void Observer::Initalize()
 {
     this->hookerReadFile.Hook();
 
@@ -203,7 +206,7 @@ void Observer::Run()
     this->hookerBASS_ChannelPause.Hook();
 }
 
-void Observer::Stop()
+void Observer::Release()
 {
     this->hookerBASS_ChannelPause.Unhook();
     this->hookerBASS_ChannelSetAttribute.Unhook();
