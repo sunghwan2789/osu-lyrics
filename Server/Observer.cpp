@@ -1,4 +1,5 @@
 #pragma comment(lib, "Shlwapi.lib")
+#pragma comment(lib, "opengl32.lib")
 
 #pragma warning(disable:4996)
 
@@ -10,8 +11,9 @@
 #include <string>
 #include <utility>
 #include <functional>
-#include <concurrent_unordered_map.h>
 
+#include <gl/GL.h>
+#include <gl/GLU.h>
 #include <Windows.h>
 #include <Shlwapi.h>
 #include "bass.h"
@@ -177,6 +179,15 @@ BOOL WINAPI Observer::BASS_ChannelPause(DWORD handle)
     return TRUE;
 }
 
+BOOL WINAPI Observer::wglSwapBuffers(HDC context)
+{
+	Observer *instance = Observer::GetInstance();
+
+	/* TODO: OpenGL로 자막 렌더링하기 */
+
+	return instance->hooker_wglSwapBuffers.GetFunction()(context);
+}
+
 void Observer::SendTempoInfomation(long long calledAt, double currentTime, float tempo)
 {
     TCHAR message[Server::nMessageLength];
@@ -204,10 +215,13 @@ void Observer::Initalize()
     this->hookerBASS_ChannelSetPosition.Hook();
     this->hookerBASS_ChannelSetAttribute.Hook();
     this->hookerBASS_ChannelPause.Hook();
+	this->hooker_wglSwapBuffers.Hook();
 }
 
 void Observer::Release()
 {
+	this->hooker_wglSwapBuffers.Unhook();
+
     this->hookerBASS_ChannelPause.Unhook();
     this->hookerBASS_ChannelSetAttribute.Unhook();
     this->hookerBASS_ChannelSetPosition.Unhook();

@@ -21,6 +21,7 @@ private:
     static BOOL BASSDEF(BASS_ChannelSetPosition)(DWORD, QWORD, DWORD);
     static BOOL BASSDEF(BASS_ChannelSetAttribute)(DWORD, DWORD, float);
     static BOOL BASSDEF(BASS_ChannelPause)(DWORD);
+	static BOOL BASSDEF(wglSwapBuffers)(HDC);
 
     void SendTempoInfomation(long long, double, float);
     CRITICAL_SECTION hCritiaclSection;
@@ -35,6 +36,7 @@ private:
     Hooker<decltype(Observer::BASS_ChannelSetPosition)> hookerBASS_ChannelSetPosition;
     Hooker<decltype(Observer::BASS_ChannelSetAttribute)> hookerBASS_ChannelSetAttribute;
     Hooker<decltype(Observer::BASS_ChannelPause)> hookerBASS_ChannelPause;
+	Hooker<decltype(Observer::wglSwapBuffers)> hooker_wglSwapBuffers;
 
 public:
     static Observer *GetInstance()
@@ -54,7 +56,8 @@ private:
         hookerBASS_ChannelPlay(L"bass.dll", "BASS_ChannelPlay", Observer::BASS_ChannelPlay),
         hookerBASS_ChannelSetPosition(L"bass.dll", "BASS_ChannelSetPosition", Observer::BASS_ChannelSetPosition),
         hookerBASS_ChannelSetAttribute(L"bass.dll", "BASS_ChannelSetAttribute", Observer::BASS_ChannelSetAttribute),
-        hookerBASS_ChannelPause(L"bass.dll", "BASS_ChannelPause", Observer::BASS_ChannelPause)
+        hookerBASS_ChannelPause(L"bass.dll", "BASS_ChannelPause", Observer::BASS_ChannelPause),
+		hooker_wglSwapBuffers(L"opengl32.dll", "wglSwapBuffers", Observer::wglSwapBuffers)
     {
         InitializeCriticalSection(&this->hCritiaclSection);
     }
