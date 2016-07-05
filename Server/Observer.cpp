@@ -183,7 +183,17 @@ BOOL WINAPI Observer::wglSwapBuffers(HDC context)
 {
 	Observer *instance = Observer::GetInstance();
 
-	/* TODO: OpenGL로 자막 렌더링하기 */
+	HWND hwnd;
+	RECT rect;
+
+	tstring lyrics = instance->GetLyrics();
+
+	hwnd = WindowFromDC(context);
+	GetClientRect(hwnd, &rect);
+
+	int result = DrawTextW(context, lyrics.c_str(), lyrics.length(), &rect, DT_CENTER);
+
+	if (!result) throw result;
 
 	return instance->hooker_wglSwapBuffers.GetFunction()(context);
 }

@@ -31,6 +31,9 @@ private:
 		tstring beatmapPath;
 	} currentPlaying;
 
+	tstring lyrics;
+	inline tstring GetLyrics() { return lyrics; }
+
     Hooker<decltype(Observer::ReadFile)> hookerReadFile;
     Hooker<decltype(Observer::BASS_ChannelPlay)> hookerBASS_ChannelPlay;
     Hooker<decltype(Observer::BASS_ChannelSetPosition)> hookerBASS_ChannelSetPosition;
