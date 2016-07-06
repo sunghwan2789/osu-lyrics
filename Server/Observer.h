@@ -22,7 +22,7 @@ private:
     static BOOL BASSDEF(BASS_ChannelSetAttribute)(DWORD, DWORD, float);
     static BOOL BASSDEF(BASS_ChannelPause)(DWORD);
 
-    void SendTempoInfomation(long long, double, float);
+    void SendInfomation(long long, double, float);
     CRITICAL_SECTION hCritiaclSection;
 
 	struct {
