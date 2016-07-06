@@ -107,7 +107,7 @@ BOOL WINAPI Observer::BASS_ChannelPlay(DWORD handle, BOOL restart)
     {
         double currentTimePos = BASS_ChannelBytes2Seconds(handle, BASS_ChannelGetPosition(handle, BASS_POS_BYTE));
         float tempo; BASS_ChannelGetAttribute(handle, BASS_ATTRIB_TEMPO, &tempo);
-        instance->SendTempoInfomation(GetCurrentSysTime(), currentTimePos, tempo);
+        instance->SendInfomation(GetCurrentSysTime(), currentTimePos, tempo);
     }
     return TRUE;
 }
@@ -135,7 +135,7 @@ BOOL WINAPI Observer::BASS_ChannelSetPosition(DWORD handle, QWORD pos, DWORD mod
             CurrentTempo = -100;
         }
 
-        instance->SendTempoInfomation(GetCurrentSysTime(), currentTime, CurrentTempo);
+        instance->SendInfomation(GetCurrentSysTime(), currentTime, CurrentTempo);
     }
     return TRUE;
 }
@@ -154,7 +154,7 @@ BOOL WINAPI Observer::BASS_ChannelSetAttribute(DWORD handle, DWORD attrib, float
     if ((info.ctype & BASS_CTYPE_STREAM) && attrib == BASS_ATTRIB_TEMPO)
     {
         double currentTime = BASS_ChannelBytes2Seconds(handle, BASS_ChannelGetPosition(handle, BASS_POS_BYTE));
-        instance->SendTempoInfomation(GetCurrentSysTime(), currentTime, value);
+        instance->SendInfomation(GetCurrentSysTime(), currentTime, value);
     }
     return TRUE;
 }
@@ -172,12 +172,12 @@ BOOL WINAPI Observer::BASS_ChannelPause(DWORD handle)
     if (info.ctype & BASS_CTYPE_STREAM)
     {
         double currentTime = BASS_ChannelBytes2Seconds(handle, BASS_ChannelGetPosition(handle, BASS_POS_BYTE));
-        instance->SendTempoInfomation(GetCurrentSysTime(), currentTime, -100);
+        instance->SendInfomation(GetCurrentSysTime(), currentTime, -100);
     }
     return TRUE;
 }
 
-void Observer::SendTempoInfomation(long long calledAt, double currentTime, float tempo)
+void Observer::SendInfomation(long long calledAt, double currentTime, float tempo)
 {
     TCHAR message[Server::nMessageLength];
 
