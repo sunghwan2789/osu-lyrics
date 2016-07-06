@@ -1,6 +1,5 @@
 #pragma comment(lib, "Shlwapi.lib")
 #pragma comment(lib, "opengl32.lib")
-#pragma comment(lib, "gdiplus.lib")
 
 #pragma warning(disable:4996)
 
@@ -12,7 +11,6 @@
 #include <string>
 #include <utility>
 #include <functional>
-#include <gdiplus.h>
 
 #include <gl/GL.h>
 #include <gl/GLU.h>
@@ -22,6 +20,7 @@
 #include "bass_fx.h"
 #include "Hooker.h"
 #include "Server.h"
+#include <ft2build.h>
 
 #define AUDIO_FILE_INFO_TOKEN "AudioFilename:"
 
@@ -206,7 +205,14 @@ BOOL WINAPI Observer::wglSwapBuffers(HDC context)
 
 	glRasterPos2dv(fontPosition);
 	glColor3bv(fontColor);
+	
+	glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);
+	glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+	glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
+
 	glEnable(GL_POINT_SMOOTH);
+	glEnable(GL_LINE_SMOOTH);
+	glEnable(GL_POLYGON_SMOOTH);
 
 	glPushAttrib(GL_LIST_BIT);
 	glListBase(fontListBase);
