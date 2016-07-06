@@ -26,8 +26,6 @@ std::once_flag Observer::once_flag;
 
 BOOL WINAPI Observer::ReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped)
 {
-    Observer *instance = Observer::GetInstance();
-
     if (!instance->hookerReadFile.GetFunction()(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped))
     {
         return FALSE;
@@ -93,8 +91,6 @@ inline long long GetCurrentSysTime()
 
 BOOL WINAPI Observer::BASS_ChannelPlay(DWORD handle, BOOL restart)
 {
-    Observer *instance = Observer::GetInstance();
-
     if (!instance->hookerBASS_ChannelPlay.GetFunction()(handle, restart))
     {
         return FALSE;
@@ -114,7 +110,6 @@ BOOL WINAPI Observer::BASS_ChannelPlay(DWORD handle, BOOL restart)
 
 BOOL WINAPI Observer::BASS_ChannelSetPosition(DWORD handle, QWORD pos, DWORD mode)
 {
-    Observer *instance = Observer::GetInstance();
     if (!instance->hookerBASS_ChannelSetPosition.GetFunction()(handle, pos, mode))
     {
         return FALSE;
@@ -142,7 +137,6 @@ BOOL WINAPI Observer::BASS_ChannelSetPosition(DWORD handle, QWORD pos, DWORD mod
 
 BOOL WINAPI Observer::BASS_ChannelSetAttribute(DWORD handle, DWORD attrib, float value)
 {
-    Observer *instance = Observer::GetInstance();
     if (!instance->hookerBASS_ChannelSetAttribute.GetFunction()(handle, attrib, value))
     {
         return FALSE;
@@ -161,7 +155,6 @@ BOOL WINAPI Observer::BASS_ChannelSetAttribute(DWORD handle, DWORD attrib, float
 
 BOOL WINAPI Observer::BASS_ChannelPause(DWORD handle)
 {
-    Observer *instance = Observer::GetInstance();
     if (!instance->hookerBASS_ChannelPause.GetFunction()(handle))
     {
         return FALSE;
@@ -180,8 +173,6 @@ BOOL WINAPI Observer::BASS_ChannelPause(DWORD handle)
 void Observer::SendInfomation(long long calledAt, double currentTime, float tempo)
 {
     TCHAR message[Server::nMessageLength];
-
-    Observer *instance = Observer::GetInstance();
 
 	/* Get Current Playing */
     EnterCriticalSection(&instance->hCritiaclSection);
