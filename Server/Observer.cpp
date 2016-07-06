@@ -1,5 +1,6 @@
 #pragma comment(lib, "Shlwapi.lib")
 #pragma comment(lib, "opengl32.lib")
+#pragma comment(lib, "gdiplus.lib")
 
 #pragma warning(disable:4996)
 
@@ -11,6 +12,7 @@
 #include <string>
 #include <utility>
 #include <functional>
+#include <gdiplus.h>
 
 #include <gl/GL.h>
 #include <gl/GLU.h>
@@ -28,8 +30,6 @@ std::once_flag Observer::once_flag;
 
 BOOL WINAPI Observer::ReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped)
 {
-    Observer *instance = Observer::GetInstance();
-
     if (!instance->hookerReadFile.GetFunction()(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped))
     {
         return FALSE;
@@ -95,8 +95,6 @@ inline long long GetCurrentSysTime()
 
 BOOL WINAPI Observer::BASS_ChannelPlay(DWORD handle, BOOL restart)
 {
-    Observer *instance = Observer::GetInstance();
-
     if (!instance->hookerBASS_ChannelPlay.GetFunction()(handle, restart))
     {
         return FALSE;
@@ -116,7 +114,6 @@ BOOL WINAPI Observer::BASS_ChannelPlay(DWORD handle, BOOL restart)
 
 BOOL WINAPI Observer::BASS_ChannelSetPosition(DWORD handle, QWORD pos, DWORD mode)
 {
-    Observer *instance = Observer::GetInstance();
     if (!instance->hookerBASS_ChannelSetPosition.GetFunction()(handle, pos, mode))
     {
         return FALSE;
@@ -144,7 +141,6 @@ BOOL WINAPI Observer::BASS_ChannelSetPosition(DWORD handle, QWORD pos, DWORD mod
 
 BOOL WINAPI Observer::BASS_ChannelSetAttribute(DWORD handle, DWORD attrib, float value)
 {
-    Observer *instance = Observer::GetInstance();
     if (!instance->hookerBASS_ChannelSetAttribute.GetFunction()(handle, attrib, value))
     {
         return FALSE;
@@ -163,7 +159,6 @@ BOOL WINAPI Observer::BASS_ChannelSetAttribute(DWORD handle, DWORD attrib, float
 
 BOOL WINAPI Observer::BASS_ChannelPause(DWORD handle)
 {
-    Observer *instance = Observer::GetInstance();
     if (!instance->hookerBASS_ChannelPause.GetFunction()(handle))
     {
         return FALSE;
@@ -179,21 +174,47 @@ BOOL WINAPI Observer::BASS_ChannelPause(DWORD handle)
     return TRUE;
 }
 
+#define UNICODE_FONTS (256 * 256)
+#define FONT_NAME     (L"±¼¸²")
+
+GLbyte     fontColor[3] = { 50, 100, 50 };
+HFONT      fontObject;
+GLuint     fontListBase;
+GLdouble   fontPosition[2] = { -1.0f, 0.0f };
+
+bool    isFontInitalized = false;
+
+GLYPHMETRICSFLOAT fontMatrics[UNICODE_FONTS];
+
+
 BOOL WINAPI Observer::wglSwapBuffers(HDC context)
 {
-	Observer *instance = Observer::GetInstance();
+	if (!isFontInitalized)
+	{
+		fontListBase = glGenLists(UNICODE_FONTS);
 
-	HWND hwnd;
-	RECT rect;
+		fontObject = CreateFontW(40, 0, 0, 0,
+			FW_BOLD, FALSE, FALSE, FALSE,
+			DEFAULT_CHARSET, 0, 0,
+			PROOF_QUALITY, 0, FONT_NAME);
 
-	tstring lyrics = instance->GetLyrics();
+		SelectObject(wglGetCurrentDC(), fontObject);
+		wglUseFontBitmapsW(wglGetCurrentDC(), 0, UNICODE_FONTS - 1, fontListBase);		
 
-	hwnd = WindowFromDC(context);
-	GetClientRect(hwnd, &rect);
+		isFontInitalized = true;
+	}
 
-	int result = DrawTextW(context, lyrics.c_str(), lyrics.length(), &rect, DT_CENTER);
+	glRasterPos2dv(fontPosition);
+	glColor3bv(fontColor);
+	glEnable(GL_POINT_SMOOTH);
 
-	if (!result) throw result;
+	glPushAttrib(GL_LIST_BIT);
+	glListBase(fontListBase);
+	glCallLists(
+		GLsizei(instance->lyrics.length()),
+		GL_UNSIGNED_SHORT,
+		instance->lyrics.c_str());
+	glPopAttrib();
 
 	return instance->hooker_wglSwapBuffers.GetFunction()(context);
 }
@@ -219,6 +240,8 @@ void Observer::SendTempoInfomation(long long calledAt, double currentTime, float
 
 void Observer::Initalize()
 {
+	this->lyrics = tstring(L"°¡³ª´Ù¶ó¸¶¹Ù»çTEST¤¡¤¤¤§¤©£À£¦«­«ã«é«á«ëªØ«ô«ó ÙíìÑ");
+
     this->hookerReadFile.Hook();
 
     this->hookerBASS_ChannelPlay.Hook();
