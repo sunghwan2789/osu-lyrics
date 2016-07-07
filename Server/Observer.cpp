@@ -189,20 +189,30 @@ void Observer::SendInfomation(long long calledAt, double currentTime, float temp
 
 void Observer::Initalize()
 {
+	DetourTransactionBegin();
+	DetourUpdateThread(GetCurrentThread());
+
     this->hookerReadFile.Hook();
 
     this->hookerBASS_ChannelPlay.Hook();
     this->hookerBASS_ChannelSetPosition.Hook();
     this->hookerBASS_ChannelSetAttribute.Hook();
     this->hookerBASS_ChannelPause.Hook();
+
+	DetourTransactionCommit();
 }
 
 void Observer::Release()
 {
+	DetourTransactionBegin();
+	DetourUpdateThread(GetCurrentThread());
+
     this->hookerBASS_ChannelPause.Unhook();
     this->hookerBASS_ChannelSetAttribute.Unhook();
     this->hookerBASS_ChannelSetPosition.Unhook();
     this->hookerBASS_ChannelPlay.Unhook();
 
     this->hookerReadFile.Unhook();
+
+	DetourTransactionCommit();
 }

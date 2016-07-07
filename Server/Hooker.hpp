@@ -38,10 +38,7 @@ void Hooker<TypeFunction>::Hook()
         return;
     }
 
-    DetourTransactionBegin();
-    DetourUpdateThread(GetCurrentThread());
-    DetourAttach(&(PVOID&) this->pFunction, (PVOID) this->pHookFunction);
-    this->isHooked = DetourTransactionCommit() == NO_ERROR;
+	this->isHooked  = !!DetourAttach(&(PVOID&) this->pFunction, (PVOID) this->pHookFunction);
 }
 
 template<typename TypeFunction>
@@ -52,8 +49,6 @@ void Hooker<TypeFunction>::Unhook()
         return;
     }
 
-    DetourTransactionBegin();
-    DetourUpdateThread(GetCurrentThread());
-    DetourDetach(&(PVOID&) this->pFunction, (PVOID) this->pHookFunction);
-    this->isHooked = DetourTransactionCommit() != NO_ERROR;
+    
+	this->isHooked  = !DetourDetach(&(PVOID&) this->pFunction, (PVOID) this->pHookFunction);
 }
