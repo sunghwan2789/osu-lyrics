@@ -5,12 +5,8 @@
 #include "Observer.h"
 
 #include <cstdio>
-#include <cstdlib>
 #include <tchar.h>
 #include <string>
-#include <utility>
-#include <functional>
-#include <concurrent_unordered_map.h>
 
 #include <Windows.h>
 #include <Shlwapi.h>
