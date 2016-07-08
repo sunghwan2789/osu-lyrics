@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tchar.h>
+#include "detours.h"
 
 template<typename TypeFunction>
 class Hooker
