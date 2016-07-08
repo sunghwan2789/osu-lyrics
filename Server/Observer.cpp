@@ -1,8 +1,8 @@
 #pragma comment(lib, "Shlwapi.lib")
 #pragma comment(lib, "opengl32.lib")
-#pragma comment(lib, "freetype.lib")
 
 #pragma warning(disable:4996)
+#pragma warning(disable:4244)
 
 #include "Observer.h"
 
@@ -178,7 +178,7 @@ BOOL WINAPI Observer::BASS_ChannelPause(DWORD handle)
 }
 
 #define UNICODE_FONTS (256 * 256)
-#define FONT_NAME     ("±¼¸².ttf")
+#define FONT_NAME     ("C:/Windows/Fonts/H2PORL.TTF")
 
 GLbyte     fontColor[3] = { 50, 100, 50 };
 GLuint     fontListBase;
@@ -205,12 +205,13 @@ BOOL WINAPI Observer::wglSwapBuffers(HDC context)
 	{
 		FT_Init_FreeType(&ft_library);
 		FT_New_Face(ft_library, FONT_NAME, 0, &ft_face);
-		FT_Set_Char_Size(ft_face, 0, 16 * 64, 96, 96);
+		FT_Set_Char_Size(ft_face, 0, 16 * 16, 96, 96);
+
 
 		fontListBase = glGenLists(UNICODE_FONTS);
 		glGenTextures(UNICODE_FONTS, fontTextures);
 
-		for (wchar_t i = 0; i < UNICODE_FONTS; i++)
+		for (unsigned int i = 0; i < UNICODE_FONTS; i++)
 		{
 			FT_Glyph       glyph;
 			FT_BitmapGlyph glyphBitmap;
@@ -230,8 +231,8 @@ BOOL WINAPI Observer::wglSwapBuffers(HDC context)
 
 			expanded_data = new GLubyte[2 * width * height];
 
-			for (int j = 0; j <height; j++) {
-				for (int i = 0; i < width; i++) {
+			for (unsigned int j = 0; j < height; j++) {
+				for (unsigned int i = 0; i < width; i++) {
 					expanded_data[2 * (i + j * width)] = 255;
 					expanded_data[2 * (i + j * width) + 1] =
 						(i >= bitmap.width || j >= bitmap.rows) ? 0 : bitmap.buffer[i + bitmap.width * j];
@@ -259,6 +260,8 @@ BOOL WINAPI Observer::wglSwapBuffers(HDC context)
 			glTranslatef(ft_face->glyph->advance.x >> 6, 0, 0);
 
 			glEndList();
+
+			FT_Done_Glyph(glyph);
 		}
 
 		FT_Done_Face(ft_face);

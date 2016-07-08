@@ -1,7 +1,6 @@
 #include <tchar.h>
 
 #include <Windows.h>
-#include "detours.h"
 
 template<typename TypeFunction>
 Hooker<TypeFunction>::Hooker(const TCHAR *szModuleName, const char *szFunctionName, TypeFunction *pHookFunction = nullptr)
