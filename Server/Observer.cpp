@@ -1,26 +1,30 @@
 #pragma comment(lib, "Shlwapi.lib")
 #pragma comment(lib, "opengl32.lib")
+#pragma comment(lib, "freetype.lib")
 
 #pragma warning(disable:4996)
 
 #include "Observer.h"
 
 #include <cstdio>
-#include <cstdlib>
 #include <tchar.h>
 #include <string>
-#include <utility>
-#include <functional>
 
 #include <gl/GL.h>
 #include <gl/GLU.h>
+
 #include <Windows.h>
 #include <Shlwapi.h>
 #include "bass.h"
 #include "bass_fx.h"
 #include "Hooker.h"
 #include "Server.h"
+
 #include <ft2build.h>
+#include <freetype/freetype.h>
+#include <freetype/ftglyph.h>
+#include <freetype/ftoutln.h>
+#include <freetype/fttrigon.h>
 
 #define AUDIO_FILE_INFO_TOKEN "AudioFilename:"
 
@@ -174,45 +178,97 @@ BOOL WINAPI Observer::BASS_ChannelPause(DWORD handle)
 }
 
 #define UNICODE_FONTS (256 * 256)
-#define FONT_NAME     (L"±¼¸²")
+#define FONT_NAME     ("±¼¸².ttf")
 
 GLbyte     fontColor[3] = { 50, 100, 50 };
-HFONT      fontObject;
 GLuint     fontListBase;
+GLuint     fontTextures[UNICODE_FONTS];
+
 GLdouble   fontPosition[2] = { -1.0f, 0.0f };
 
-bool    isFontInitalized = false;
+bool       isFontInitalized = false;
 
-GLYPHMETRICSFLOAT fontMatrics[UNICODE_FONTS];
+FT_Library ft_library;
+FT_Face    ft_face;
 
+inline int next_p2(int a)
+{
+	int rval = 1;
+
+	while (rval < a) rval <<= 1;
+	return rval;
+}
 
 BOOL WINAPI Observer::wglSwapBuffers(HDC context)
 {
 	if (!isFontInitalized)
 	{
+		FT_Init_FreeType(&ft_library);
+		FT_New_Face(ft_library, FONT_NAME, 0, &ft_face);
+		FT_Set_Char_Size(ft_face, 0, 16 * 64, 96, 96);
+
 		fontListBase = glGenLists(UNICODE_FONTS);
+		glGenTextures(UNICODE_FONTS, fontTextures);
 
-		fontObject = CreateFontW(40, 0, 0, 0,
-			FW_BOLD, FALSE, FALSE, FALSE,
-			DEFAULT_CHARSET, 0, 0,
-			PROOF_QUALITY, 0, FONT_NAME);
+		for (wchar_t i = 0; i < UNICODE_FONTS; i++)
+		{
+			FT_Glyph       glyph;
+			FT_BitmapGlyph glyphBitmap;
 
-		SelectObject(wglGetCurrentDC(), fontObject);
-		wglUseFontBitmapsW(wglGetCurrentDC(), 0, UNICODE_FONTS - 1, fontListBase);		
+			GLubyte*       expanded_data;
+
+			FT_Load_Glyph(ft_face, FT_Get_Char_Index(ft_face, i), FT_LOAD_DEFAULT);
+			FT_Get_Glyph(ft_face->glyph, &glyph);
+
+			FT_Glyph_To_Bitmap(&glyph, ft_render_mode_normal, 0, 1);
+
+			glyphBitmap = (FT_BitmapGlyph)glyph;
+			FT_Bitmap& bitmap = glyphBitmap->bitmap;
+
+			uint32_t width = next_p2(bitmap.width);
+			uint32_t height = next_p2(bitmap.rows);
+
+			expanded_data = new GLubyte[2 * width * height];
+
+			for (int j = 0; j <height; j++) {
+				for (int i = 0; i < width; i++) {
+					expanded_data[2 * (i + j * width)] = 255;
+					expanded_data[2 * (i + j * width) + 1] =
+						(i >= bitmap.width || j >= bitmap.rows) ? 0 : bitmap.buffer[i + bitmap.width * j];
+				}
+			}
+
+			delete[] expanded_data;
+			
+			glNewList(fontListBase + i, GL_COMPILE);
+			glBindTexture(GL_TEXTURE_2D, fontTextures[i]);
+			glPushMatrix();
+			glTranslatef(glyphBitmap->left, 0, 0);
+			glTranslatef(0, glyphBitmap->top - bitmap.rows, 0);
+
+			float   x = (float)bitmap.width / (float)width,
+					y = (float)bitmap.rows / (float)height;
+
+			glBegin(GL_QUADS);
+			glTexCoord2d(0, 0); glVertex2f(0, bitmap.rows);
+			glTexCoord2d(0, y); glVertex2f(0, 0);
+			glTexCoord2d(x, y); glVertex2f(bitmap.width, 0);
+			glTexCoord2d(x, 0); glVertex2f(bitmap.width, bitmap.rows);
+			glEnd();
+			glPopMatrix();
+			glTranslatef(ft_face->glyph->advance.x >> 6, 0, 0);
+
+			glEndList();
+		}
+
+		FT_Done_Face(ft_face);
+		FT_Done_FreeType(ft_library);
 
 		isFontInitalized = true;
 	}
 
 	glRasterPos2dv(fontPosition);
 	glColor3bv(fontColor);
-	
-	glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);
-	glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-	glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
-
-	glEnable(GL_POINT_SMOOTH);
-	glEnable(GL_LINE_SMOOTH);
-	glEnable(GL_POLYGON_SMOOTH);
 
 	glPushAttrib(GL_LIST_BIT);
 	glListBase(fontListBase);
