@@ -4,7 +4,7 @@
 #include "detours.h"
 
 template<typename TypeFunction>
-Hooker<TypeFunction>::Hooker(const TCHAR *szModuleName, const char *szFunctionName, TypeFunction *pHookFunction = nullptr)
+Hooker<TypeFunction>::Hooker(const wchar_t *szModuleName, const char *szFunctionName, TypeFunction *pHookFunction = nullptr)
 {
     this->isHooked = false;
 
@@ -19,7 +19,7 @@ Hooker<TypeFunction>::~Hooker()
 }
 
 template<typename TypeFunction>
-TypeFunction *Hooker<TypeFunction>::GetFunction()
+TypeFunction *Hooker<TypeFunction>::GetOriginalFunction()
 {
     return this->pFunction;
 }
@@ -48,7 +48,6 @@ void Hooker<TypeFunction>::Unhook()
     {
         return;
     }
-
     
 	this->isHooked  = !DetourDetach(&(PVOID&) this->pFunction, (PVOID) this->pHookFunction);
 }

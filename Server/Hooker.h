@@ -1,15 +1,13 @@
 #pragma once
 
-#include <tchar.h>
-
 template<typename TypeFunction>
 class Hooker
 {
 public:
-    Hooker(const TCHAR *, const char *, TypeFunction *);
+    Hooker(const wchar_t*, const char *, TypeFunction *);
     ~Hooker();
 
-	TypeFunction *GetFunction();
+	TypeFunction *GetOriginalFunction();
     void SetHookFunction(TypeFunction *);
 
     void Hook();
