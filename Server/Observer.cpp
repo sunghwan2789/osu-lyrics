@@ -125,7 +125,8 @@ BOOL WINAPI Observer::BASS_ChannelPlay(DWORD handle, BOOL restart)
     if (info.ctype & BASS_CTYPE_STREAM)
     {
         double currentTime = BASS_ChannelBytes2Seconds(handle, BASS_ChannelGetPosition(handle, BASS_POS_BYTE));
-        float tempo; BASS_ChannelGetAttribute(handle, BASS_ATTRIB_TEMPO, &tempo);
+        float tempo = 0;
+        BASS_ChannelGetAttribute(handle, BASS_ATTRIB_TEMPO, &tempo);
         self->Update(currentTime, tempo);
     }
     return TRUE;
@@ -144,7 +145,8 @@ BOOL WINAPI Observer::BASS_ChannelSetPosition(DWORD handle, QWORD pos, DWORD mod
     if (info.ctype & BASS_CTYPE_STREAM)
     {
         double currentTime = BASS_ChannelBytes2Seconds(handle, pos);
-        float tempo; BASS_ChannelGetAttribute(handle, BASS_ATTRIB_TEMPO, &tempo);
+        float tempo = 0;
+        BASS_ChannelGetAttribute(handle, BASS_ATTRIB_TEMPO, &tempo);
         // 주의!! pos가 일정 이하일 때,
         // 재생하면 BASS_ChannelPlay대신 이 함수가 호출되고,
         // BASS_ChannelIsActive 값은 BASS_ACTIVE_PAUSED임.
