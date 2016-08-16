@@ -8,9 +8,9 @@ std::once_flag Server::once_flag;
 DWORD WINAPI Server::Thread(LPVOID lParam)
 {
     Server *self = Server::GetInstance();
-    self->hPipe = CreateNamedPipe(L"\\\\.\\pipe\\osu!Lyrics", PIPE_ACCESS_OUTBOUND,
+    self->hPipe = CreateNamedPipe(_T("\\\\.\\pipe\\osu!Lyrics"), PIPE_ACCESS_OUTBOUND,
         PIPE_TYPE_MESSAGE | PIPE_WAIT, 1, Server::nBufferSize, 0, INFINITE, NULL);
-    std::wstring message;
+    tstring message;
     DWORD nNumberOfBytesWritten;
     // 스레드 종료 요청이 들어올 때까지 클라이언트 접속 무한 대기
     while (!self->cancelThread)
@@ -29,7 +29,7 @@ DWORD WINAPI Server::Thread(LPVOID lParam)
                 continue;
             }
 
-            if (WriteFile(self->hPipe, message.c_str(), message.length() * sizeof(wchar_t), &nNumberOfBytesWritten, NULL))
+            if (WriteFile(self->hPipe, message.c_str(), message.length() * sizeof(tstring::value_type), &nNumberOfBytesWritten, NULL))
             {
                 continue;
             }
@@ -44,7 +44,7 @@ DWORD WINAPI Server::Thread(LPVOID lParam)
     return 0;
 }
 
-void Server::PushMessage(std::wstring&& message)
+void Server::PushMessage(tstring&& message)
 {
     if (!this->pipeConnected)
     {
@@ -77,11 +77,11 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
     if (fdwReason == DLL_PROCESS_ATTACH)
     {
         Server::GetInstance()->Run();
-        Observer::GetInstance()->Run();
+        Observer::GetInstance()->Initalize();
     }
     else if (fdwReason == DLL_PROCESS_DETACH)
     {
-        Observer::GetInstance()->Stop();
+        Observer::GetInstance()->Release();
         Server::GetInstance()->Stop();
     }
     return TRUE;

@@ -12,9 +12,8 @@
 class Observer
 {
 public:
-    void Run();
-    void Stop();
-    void Update(double, float);
+    void Initalize();
+    void Release();
 
 private:
     static BOOL WINAPI ReadFile(HANDLE, LPVOID, DWORD, LPDWORD, LPOVERLAPPED);
@@ -23,14 +22,13 @@ private:
     static BOOL BASSDEF(BASS_ChannelSetAttribute)(DWORD, DWORD, float);
     static BOOL BASSDEF(BASS_ChannelPause)(DWORD);
 
-    // what osu! played
-    // [ audioPath, beatmapPath ]
-    concurrency::concurrent_unordered_map<std::wstring, std::wstring> audioInfo;
-    // what osu! is playing
-    // [ audioPath, beatmapPath ]
-    std::pair<std::wstring, std::wstring> playing;
-    // thread safe하지 않은 playing을 참조할 때 사용
+    void SendInfomation(long long, double, float);
     CRITICAL_SECTION hCritiaclSection;
+
+	struct {
+		tstring audioPath;
+		tstring beatmapPath;
+	} currentPlaying;
 
     Hooker<decltype(Observer::ReadFile)> hookerReadFile;
     Hooker<decltype(Observer::BASS_ChannelPlay)> hookerBASS_ChannelPlay;
@@ -52,12 +50,11 @@ public:
     }
 
 private:
-    Observer()
-        : hookerReadFile(L"kernel32.dll", "ReadFile", Observer::ReadFile),
-          hookerBASS_ChannelPlay(L"bass.dll", "BASS_ChannelPlay", Observer::BASS_ChannelPlay),
-          hookerBASS_ChannelSetPosition(L"bass.dll", "BASS_ChannelSetPosition", Observer::BASS_ChannelSetPosition),
-          hookerBASS_ChannelSetAttribute(L"bass.dll", "BASS_ChannelSetAttribute", Observer::BASS_ChannelSetAttribute),
-          hookerBASS_ChannelPause(L"bass.dll", "BASS_ChannelPause", Observer::BASS_ChannelPause)
+    Observer() : hookerReadFile(L"kernel32.dll", "ReadFile", Observer::ReadFile),
+        hookerBASS_ChannelPlay(L"bass.dll", "BASS_ChannelPlay", Observer::BASS_ChannelPlay),
+        hookerBASS_ChannelSetPosition(L"bass.dll", "BASS_ChannelSetPosition", Observer::BASS_ChannelSetPosition),
+        hookerBASS_ChannelSetAttribute(L"bass.dll", "BASS_ChannelSetAttribute", Observer::BASS_ChannelSetAttribute),
+        hookerBASS_ChannelPause(L"bass.dll", "BASS_ChannelPause", Observer::BASS_ChannelPause)
     {
         InitializeCriticalSection(&this->hCritiaclSection);
     }
