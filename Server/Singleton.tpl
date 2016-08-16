@@ -39,4 +39,4 @@ private:
 
 // Singleton.cpp
 std::shared_ptr<Singleton> Singleton::instance;
-std::once_flag once_flag;
+std::once_flag Singleton::once_flag;

@@ -1,24 +1,24 @@
 #pragma once
 
-#include <tchar.h>
+#include <cwchar>
 
-template<typename TypeFunction>
+template<typename T>
 class Hooker
 {
 public:
-    Hooker(const TCHAR *, const char *, TypeFunction *);
+    Hooker(const wchar_t *, const char *, T *);
     ~Hooker();
 
-	TypeFunction *GetFunction();
-    void SetHookFunction(TypeFunction *);
+    T *GetFunction();
+    void SetHookFunction(T *);
 
     void Hook();
     void Unhook();
 
 private:
-	TypeFunction *pFunction;
-	TypeFunction *pHookFunction;
-    bool isHooked;
+    T *pFunction;
+    T *pHookFunction;
+    bool hooked;
 };
 
 #include "Hooker.hpp"

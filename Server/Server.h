@@ -1,6 +1,6 @@
 #pragma once
 
-#include <tchar.h>
+#include <cwchar>
 #include <string>
 #include <memory>
 #include <mutex>
@@ -8,17 +8,15 @@
 
 #include <Windows.h>
 
-typedef std::basic_string<TCHAR> tstring;
-
 class Server
 {
 public:
     static const DWORD nMessageLength = MAX_PATH * 3;
-    static const DWORD nBufferSize = Server::nMessageLength * sizeof(tstring::value_type);
+    static const DWORD nBufferSize = Server::nMessageLength * sizeof(wchar_t);
     
     void Run();
     void Stop();
-    void PushMessage(tstring&&);
+    void PushMessage(std::wstring&&);
 
 private:
     static DWORD WINAPI Thread(LPVOID);
@@ -29,7 +27,7 @@ private:
     HANDLE hPipe;
     std::atomic<bool> pipeConnected;
 
-    concurrency::concurrent_queue<tstring> messageQueue;
+    concurrency::concurrent_queue<std::wstring> messageQueue;
     HANDLE hPushEvent;
 
 public:
@@ -46,7 +44,12 @@ public:
     }
 
 private:
-    Server() : hThread(NULL), cancelThread(false), hPipe(NULL), pipeConnected(false), hPushEvent(NULL) {}
+    Server()
+        : hThread(NULL),
+          cancelThread(false),
+          hPipe(NULL),
+          pipeConnected(false),
+          hPushEvent(NULL) {}
     ~Server() {}
 
     Server(const Server&) = delete;
