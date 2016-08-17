@@ -30,11 +30,13 @@ BOOL WINAPI proxyReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToR
         return FALSE;
     }
 
-    TCHAR tmpFilePath[MAX_PATH];
-    DWORD dwFilePathLength = GetFinalPathNameByHandle(hFile, tmpFilePath, MAX_PATH, VOLUME_NAME_DOS);
+    TCHAR nameTmpFilePath[MAX_PATH];
+
+    DWORD dwTmpFilePathLength = GetFinalPathNameByHandle(hFile, nameTmpFilePath, MAX_PATH, VOLUME_NAME_DOS);
     DWORD dwFilePosition = SetFilePointer(hFile, 0, NULL, FILE_CURRENT) - (*lpNumberOfBytesRead);
 
-    TCHAR* nameFilePath = CutStringFromFront(tmpFilePath, 4);
+    TCHAR* nameFilePath = CutStringFromFront(nameTmpFilePath, 4);
+    DWORD  dwFilePathLength = dwTmpFilePathLength - 4;
 
     // 지금 읽는 파일이 비트맵 파일이고 앞부분을 읽었다면 음악 파일 경로 얻기:
     // 파일 이름이 포함된 Path 끝부분 4글자를 자름. 4글자와  .osu를 비교하여 이 파일이 osu 파일인지 확인함
@@ -67,7 +69,7 @@ BOOL WINAPI proxyReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToR
 			EnterCriticalSection(&InstanceObserver.hCritiaclSection);
             InstanceObserver.currentPlaying.beatmapPath = (std::wstring(nameFilePath));
 			InstanceObserver.currentPlaying.audioPath = (std::wstring(nameAudioFilePath));
-            InstanceObserver.listPlayed.push_back(InstanceObserver.currentPlaying);
+            InstanceObserver.listPlayedCached.push_back(InstanceObserver.currentPlaying);
 			LeaveCriticalSection(&InstanceObserver.hCritiaclSection);
 
             break;
@@ -78,10 +80,14 @@ BOOL WINAPI proxyReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToR
     }
     else
     {
+        /* Beatmap을 다시 불러오지 않고 Cache에서 불러올때가 있는데.                          */
+        /* 그럴경우에는 Audio파일만 읽으니 동일한 Audio파일이 기존에 읽힌적이 있는지 확인하고 */
+        /* 현제 실행되고있는 곡을 지금 읽은 AudioFile으로 바꾼다.                             */
         EnterCriticalSection(&InstanceObserver.hCritiaclSection);
-        for (auto info = InstanceObserver.listPlayed.begin(); info != InstanceObserver.listPlayed.end(); ++info)
+        for (auto info = InstanceObserver.listPlayedCached.begin(); info != InstanceObserver.listPlayedCached.end(); ++info)
         {
-            if (StrCmpW(nameFilePath, info->audioPath.c_str()))
+            /* 같은 AudioFile인지 비교한다. */
+            if (!StrCmpW(nameFilePath, info->audioPath.c_str()))
             {
                 InstanceObserver.currentPlaying.beatmapPath = (info->beatmapPath);
                 InstanceObserver.currentPlaying.audioPath = (info->audioPath);
