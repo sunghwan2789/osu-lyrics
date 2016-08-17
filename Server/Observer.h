@@ -30,7 +30,8 @@ public:
 		std::wstring beatmapPath;
 	} currentPlaying;
 
-    std::list<SongInfo> listPlayedCached;
+    std::list<SongInfo> listBeatmapCached;
+    bool isSongCached(TCHAR* nameSongPath);
 
     Hooker<decltype(proxyReadFile)> hookerReadFile;
     Hooker<decltype(proxyBASS_ChannelPlay)> hookerBASS_ChannelPlay;
