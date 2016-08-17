@@ -130,7 +130,8 @@ BOOL WINAPI proxyBASS_ChannelPlay(DWORD handle, BOOL restart)
     if (info.ctype & BASS_CTYPE_STREAM)
     {
         double currentTimePos = BASS_ChannelBytes2Seconds(handle, BASS_ChannelGetPosition(handle, BASS_POS_BYTE));
-        float tempo; BASS_ChannelGetAttribute(handle, BASS_ATTRIB_TEMPO, &tempo);
+        float tempo = 0; 
+        BASS_ChannelGetAttribute(handle, BASS_ATTRIB_TEMPO, &tempo);
         InstanceObserver.SendInfomation(GetCurrentSysTime(), currentTimePos, tempo);
     }
     return TRUE;
