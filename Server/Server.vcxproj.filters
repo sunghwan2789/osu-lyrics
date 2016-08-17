@@ -45,7 +45,4 @@
       <Filter>Libraries\detours</Filter>
     </Library>
   </ItemGroup>
-  <ItemGroup>
-    <None Include="Singleton.tpl" />
-  </ItemGroup>
 </Project>

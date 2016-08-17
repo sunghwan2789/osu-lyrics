@@ -98,11 +98,6 @@
     <ClInclude Include="Observer.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Server.h" />
-    <None Include="Singleton.tpl">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <FileType>CppHeader</FileType>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc" />

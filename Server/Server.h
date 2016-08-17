@@ -34,8 +34,8 @@ public:
         isThreadCanceled(false), 
         hPipe(NULL), 
         isPipeConnected(false), 
-        hPushEvent(NULL) {}
-    ~Server() {}
+        hPushEvent(NULL) { Run(); }
+    ~Server() { Stop(); }
 
     Server(const Server&) = delete;
     Server(Server&&) = delete;
@@ -43,4 +43,4 @@ public:
     Server& operator=(Server&&) = delete;
 };
 
-static Server InstanceServer;
+Server* GetServerInstance();

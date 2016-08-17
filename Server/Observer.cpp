@@ -13,6 +13,8 @@
 #include "Hooker.h"
 #include "Server.h"
 
+Observer InstanceObserver;
+
 #define AUDIO_FILE_INFO_TOKEN "AudioFilename:"
 #define AUDIO_FILE_INFO_TOKEN_LENGTH 14
 
@@ -28,9 +30,11 @@ BOOL WINAPI proxyReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToR
         return FALSE;
     }
 
-    TCHAR nameFilePath[MAX_PATH];
-    DWORD dwFilePathLength = GetFinalPathNameByHandle(hFile, nameFilePath, MAX_PATH, VOLUME_NAME_DOS);
+    TCHAR tmpFilePath[MAX_PATH];
+    DWORD dwFilePathLength = GetFinalPathNameByHandle(hFile, tmpFilePath, MAX_PATH, VOLUME_NAME_DOS);
     DWORD dwFilePosition = SetFilePointer(hFile, 0, NULL, FILE_CURRENT) - (*lpNumberOfBytesRead);
+
+    TCHAR* nameFilePath = CutStringFromFront(tmpFilePath, 4);
 
     // 지금 읽는 파일이 비트맵 파일이고 앞부분을 읽었다면 음악 파일 경로 얻기:
     // 파일 이름이 포함된 Path 끝부분 4글자를 자름. 4글자와  .osu를 비교하여 이 파일이 osu 파일인지 확인함
@@ -49,30 +53,21 @@ BOOL WINAPI proxyReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToR
                 continue;
             }
 
-            /* NOTE: 제대로 디버깅해서 값을 비교할때까지 "NOT TO FIX" 내가 디버깅 할때에는 동일한 값이 나옵니다.     */
-            /* 그리고 Path 함수들을 이용해서 부자연스럽게 //?/를 제거하려고 하지 마세요. 함수의 의미를 모르게됩니다. */ 
-            /* //?/ 는 4글자. 즉 앞의 4글자부터 포인터를 시작하면 자연스럽게 //?/를 없엘수 있습니다.                 */
-
             TCHAR nameAudioFile[MAX_PATH];
-
             mbstowcs(nameAudioFile, &lineFile[AUDIO_FILE_INFO_TOKEN_LENGTH], MAX_PATH);
             StrTrimW(nameAudioFile, L" \r");
 
             TCHAR nameAudioFilePath[MAX_PATH];
-
-			/* 앞부분의 "//?/" 를 제거하기위해 앞의 4번째 글자부터 시작. (&nameFilePath[4]) */
-            wcscpy(nameAudioFilePath, CutStringFromFront(nameFilePath, 4));
+            wcscpy(nameAudioFilePath, nameFilePath);
             /* nameAudioFilePath에서 파일명을 지웁니다. */
             PathRemoveFileSpecW(nameAudioFilePath);
             /* 파일명이 지워진 Path인 nameAudioFilePath에 nameAudioFile붙여, 완전한 Path를 만듭니다. */
             PathCombineW(nameAudioFilePath, nameAudioFilePath, nameAudioFile);
 
 			EnterCriticalSection(&InstanceObserver.hCritiaclSection);
-
-            /* 앞부분의 "//?/" 를 제거하기위해 앞의 4번째 글자부터 시작. (&nameFilePath[4]) */
-            InstanceObserver.currentPlaying.beatmapPath = (std::wstring(CutStringFromFront(nameFilePath, 4)));
+            InstanceObserver.currentPlaying.beatmapPath = (std::wstring(nameFilePath));
 			InstanceObserver.currentPlaying.audioPath = (std::wstring(nameAudioFilePath));
-
+            InstanceObserver.listPlayed.push_back(InstanceObserver.currentPlaying);
 			LeaveCriticalSection(&InstanceObserver.hCritiaclSection);
 
             break;
@@ -80,6 +75,20 @@ BOOL WINAPI proxyReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToR
 
         /* strdup를 이용해 복사한 문자열의 메모리를 해제시킵니다. */
         free(buffer);
+    }
+    else
+    {
+        EnterCriticalSection(&InstanceObserver.hCritiaclSection);
+        for (auto info = InstanceObserver.listPlayed.begin(); info != InstanceObserver.listPlayed.end(); ++info)
+        {
+            if (StrCmpW(nameFilePath, info->audioPath.c_str()))
+            {
+                InstanceObserver.currentPlaying.beatmapPath = (info->beatmapPath);
+                InstanceObserver.currentPlaying.audioPath = (info->audioPath);
+                break;
+            }
+        }
+        LeaveCriticalSection(&InstanceObserver.hCritiaclSection);
     }
     return TRUE;
 }
@@ -179,16 +188,16 @@ void Observer::SendInfomation(long long calledAt, double currentTime, float temp
     TCHAR message[Server::MAX_MESSAGE_LENGTH];
 
 	/* 지금 무엇을 플레이하고있는지 proxyReadFile 에서 얻어낸 값을 클라이언트로 전송합니다. */
-    EnterCriticalSection(&InstanceObserver.hCritiaclSection);
+    EnterCriticalSection(&hCritiaclSection);
     swprintf(message, L"%llx|%s|%lf|%f|%s\n", 
 		calledAt, 
-		InstanceObserver.currentPlaying.audioPath.c_str(),
+		currentPlaying.audioPath.c_str(),
 		currentTime, 
 		tempo, 
-		InstanceObserver.currentPlaying.beatmapPath.c_str());
-	LeaveCriticalSection(&InstanceObserver.hCritiaclSection);
+		currentPlaying.beatmapPath.c_str());
+	LeaveCriticalSection(&hCritiaclSection);
 
-    InstanceServer.PushMessage(message);
+    GetServerInstance()->PushMessage(message);
 }
 
 void Observer::Start()

@@ -2,6 +2,13 @@
 
 #include "Observer.h"
 
+Server InstanceServer;
+
+Server* GetServerInstance()
+{
+    return &InstanceServer;
+}
+
 DWORD WINAPI Server::Thread(LPVOID lParam)
 {
     InstanceServer.hPipe = CreateNamedPipe(L"\\\\.\\pipe\\osu!Lyrics", PIPE_ACCESS_OUTBOUND,
@@ -55,17 +62,16 @@ void Server::PushMessage(std::wstring&& message)
 void Server::Run()
 {
     this->hPushEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-
     this->hThread = CreateThread(NULL, 0, Server::Thread, NULL, 0, NULL);
 }
 
 void Server::Stop()
 {
     this->isThreadCanceled = true;
+
     DisconnectNamedPipe(this->hPipe);
     WaitForSingleObject(this->hThread, INFINITE);
     CloseHandle(this->hThread);
-
     CloseHandle(this->hPushEvent);
 }
 
@@ -73,13 +79,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
     if (fdwReason == DLL_PROCESS_ATTACH)
     {
-        InstanceServer.Run();
-        InstanceObserver.Start();
     }
     else if (fdwReason == DLL_PROCESS_DETACH)
     {
-        InstanceObserver.Stop();
-        InstanceServer.Stop();
     }
     return TRUE;
 }
