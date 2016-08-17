@@ -1,54 +1,74 @@
 #include "Server.h"
 
-#include "Observer.h"
+#include <string>
 
-Server InstanceServer;
+#include <Windows.h>
 
-Server* GetServerInstance()
+DWORD WINAPI Server::Run(LPVOID lParam)
 {
-    return &InstanceServer;
-}
+    this->hPushEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 
-DWORD WINAPI Server::Thread(LPVOID lParam)
-{
-    InstanceServer.hPipe = CreateNamedPipe(L"\\\\.\\pipe\\osu!Lyrics", PIPE_ACCESS_OUTBOUND,
+    this->hPipe = CreateNamedPipe(L"\\\\.\\pipe\\osu!Lyrics", PIPE_ACCESS_OUTBOUND,
         PIPE_TYPE_MESSAGE | PIPE_WAIT, 1, Server::nBufferSize, 0, INFINITE, NULL);
-
     std::wstring message;
     DWORD nNumberOfBytesWritten;
     // 스레드 종료 요청이 들어올 때까지 클라이언트 접속 무한 대기
-    while (!InstanceServer.isThreadCanceled)
+    while (!this->isCancellationRequested)
     {
         // ConnectNamedPipe는 클라이언트와 연결될 때까지 무한 대기함:
         // 취소는 DisconnectNamedPipe로 가능
-        if (ConnectNamedPipe(InstanceServer.hPipe, NULL) || GetLastError() == ERROR_PIPE_CONNECTED)
+        if (ConnectNamedPipe(this->hPipe, NULL) || GetLastError() == ERROR_PIPE_CONNECTED)
         {
-            InstanceServer.isPipeConnected = true;
+            this->isPipeConnected = true;
 
             // 메시지 큐가 비었을 때 최대 3초간 기다리고 다시 시도:
             // 클라이언트 접속을 대기해야 하기 때문에 INTINITE 지양
-            if (!InstanceServer.messageQueue.try_pop(message))
+            if (!this->messageQueue.try_pop(message))
             {
-                WaitForSingleObject(InstanceServer.hPushEvent, 3000);
+                WaitForSingleObject(this->hPushEvent, 3000);
                 continue;
             }
 
-            if (WriteFile(InstanceServer.hPipe, message.c_str(), message.length() * sizeof(std::wstring::value_type), &nNumberOfBytesWritten, NULL))
+            if (WriteFile(this->hPipe, message.c_str(), message.length() * sizeof(std::wstring::value_type), &nNumberOfBytesWritten, NULL))
             {
                 continue;
             }
         }
-        InstanceServer.isPipeConnected = false;
-        DisconnectNamedPipe(InstanceServer.hPipe);
+        this->isPipeConnected = false;
+        DisconnectNamedPipe(this->hPipe);
     }
     // 클라이언트 연결 종료
-    InstanceServer.isPipeConnected = false;
-    DisconnectNamedPipe(InstanceServer.hPipe);
-    CloseHandle(InstanceServer.hPipe);
+    this->isPipeConnected = false;
+    DisconnectNamedPipe(this->hPipe);
+    CloseHandle(this->hPipe);
+
+    CloseHandle(this->hPushEvent);
     return 0;
 }
 
-void Server::PushMessage(std::wstring&& message)
+namespace bettertrunkneeded_maybetemplatetrunk_question
+{
+    DWORD WINAPI trunk(LPVOID lParam)
+    {
+        Server *server = (Server *) lParam;
+        return server->Run(nullptr);
+    }
+}
+
+void Server::Start()
+{
+    this->hThread = CreateThread(NULL, 0, bettertrunkneeded_maybetemplatetrunk_question::trunk, this, 0, NULL);
+}
+
+void Server::Stop()
+{
+    this->isCancellationRequested = true;
+    DisconnectNamedPipe(this->hPipe);
+    WaitForSingleObject(this->hThread, INFINITE);
+    CloseHandle(this->hThread);
+}
+
+void Server::Update(std::wstring&& message)
 {
     if (!this->isPipeConnected)
     {
@@ -57,31 +77,4 @@ void Server::PushMessage(std::wstring&& message)
 
     this->messageQueue.push(message);
     SetEvent(this->hPushEvent);
-}
-
-void Server::Run()
-{
-    this->hPushEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-    this->hThread = CreateThread(NULL, 0, Server::Thread, NULL, 0, NULL);
-}
-
-void Server::Stop()
-{
-    this->isThreadCanceled = true;
-
-    DisconnectNamedPipe(this->hPipe);
-    WaitForSingleObject(this->hThread, INFINITE);
-    CloseHandle(this->hThread);
-    CloseHandle(this->hPushEvent);
-}
-
-BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
-{
-    if (fdwReason == DLL_PROCESS_ATTACH)
-    {
-    }
-    else if (fdwReason == DLL_PROCESS_DETACH)
-    {
-    }
-    return TRUE;
 }

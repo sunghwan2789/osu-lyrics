@@ -1,4 +1,4 @@
-#include <tchar.h>
+#include <cwchar>
 
 #include <Windows.h>
 #include "detours.h"
@@ -8,7 +8,7 @@ Hooker<TypeFunction>::Hooker(const wchar_t *szModuleName, const char *szFunction
 {
     this->isHooked = false;
 
-    this->pFunction = reinterpret_cast<TypeFunction *>(GetProcAddress(GetModuleHandle(szModuleName), szFunctionName));
+    this->pFunction = (TypeFunction *) GetProcAddress(GetModuleHandle(szModuleName), szFunctionName);
     this->SetHookFunction(pHookFunction);
 }
 
@@ -38,7 +38,10 @@ void Hooker<TypeFunction>::Hook()
         return;
     }
 
-	this->isHooked  = !!DetourAttach(&(PVOID&) this->pFunction, (PVOID) this->pHookFunction);
+    DetourTransactionBegin();
+    DetourUpdateThread(GetCurrentThread());
+    DetourAttach(&(PVOID&) this->pFunction, (PVOID) this->pHookFunction);
+    this->isHooked = DetourTransactionCommit() == NO_ERROR;
 }
 
 template<typename TypeFunction>
@@ -48,6 +51,9 @@ void Hooker<TypeFunction>::Unhook()
     {
         return;
     }
-    
-	this->isHooked  = !DetourDetach(&(PVOID&) this->pFunction, (PVOID) this->pHookFunction);
+
+    DetourTransactionBegin();
+    DetourUpdateThread(GetCurrentThread());
+    DetourDetach(&(PVOID&) this->pFunction, (PVOID) this->pHookFunction);
+    this->isHooked = DetourTransactionCommit() != NO_ERROR;
 }

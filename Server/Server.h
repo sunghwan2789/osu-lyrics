@@ -1,46 +1,38 @@
 #pragma once
 
-#include <tchar.h>
 #include <string>
-#include <memory>
-#include <mutex>
 #include <atomic>
 #include <concurrent_queue.h>
 
 #include <Windows.h>
+#include "Observer.h"
 
-class Server
+class Server : public Observer
 {
 public:
-    static const DWORD MAX_MESSAGE_LENGTH = MAX_PATH * 3;
-    static const DWORD nBufferSize = Server::MAX_MESSAGE_LENGTH * sizeof(std::wstring::value_type);
-    
-    void Run();
+    static const DWORD nMessageLength = MAX_PATH * 3;
+    static const DWORD nBufferSize = Server::nMessageLength * sizeof(std::wstring::value_type);
+
+    Server() :
+        hThread(NULL),
+        isCancellationRequested(false),
+        hPipe(NULL),
+        isPipeConnected(false),
+        hPushEvent(NULL) {}
+
+    DWORD WINAPI Run(LPVOID);
+    void Start();
     void Stop();
-    void PushMessage(std::wstring&&);
 
-    static DWORD WINAPI Thread(LPVOID);
+    virtual void Update(std::wstring&&);
 
+private:
     HANDLE hThread;
-    std::atomic<bool> isThreadCanceled;
+    std::atomic<bool> isCancellationRequested;
 
     HANDLE hPipe;
     std::atomic<bool> isPipeConnected;
 
     concurrency::concurrent_queue<std::wstring> messageQueue;
     HANDLE hPushEvent;
-    Server() : 
-        hThread(NULL), 
-        isThreadCanceled(false), 
-        hPipe(NULL), 
-        isPipeConnected(false), 
-        hPushEvent(NULL) { Run(); }
-    ~Server() { Stop(); }
-
-    Server(const Server&) = delete;
-    Server(Server&&) = delete;
-    Server& operator=(const Server&) = delete;
-    Server& operator=(Server&&) = delete;
 };
-
-Server* GetServerInstance();
