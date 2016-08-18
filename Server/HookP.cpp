@@ -4,7 +4,6 @@
 
 #include <cstdio>
 #include <cstdlib>
-#include <cwchar>
 #include <string>
 #include <utility>
 #include <functional>

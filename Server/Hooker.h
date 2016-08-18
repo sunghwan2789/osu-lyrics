@@ -1,7 +1,5 @@
 #pragma once
 
-#include <cwchar>
-
 template<typename TypeFunction>
 class Hooker
 {
