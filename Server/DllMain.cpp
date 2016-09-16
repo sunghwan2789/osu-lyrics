@@ -1,9 +1,9 @@
 #include <Windows.h>
 #include "Server.h"
-#include "HookP.h"
+#include "Monitor.h"
 
-Server *server;
-HookP *observer;
+Server* server;
+Monitor* monitor;
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
@@ -11,16 +11,17 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
     {
         server = new Server();
         server->Start();
-        observer = new HookP();
-        observer->Attach(server);
-        observer->Run();
+        monitor = new Monitor();
+        monitor->Attach(static_cast<Observer*>(server));
+        monitor->Activate();
     }
     else if (fdwReason == DLL_PROCESS_DETACH)
     {
-        observer->Stop();
-        observer->Detach(server);
+        monitor->Disable();
+        monitor->Detach(static_cast<Observer*>(server));
         server->Stop();
-        delete observer;
+        delete monitor;
+        server->Wait();
         delete server;
     }
     return TRUE;

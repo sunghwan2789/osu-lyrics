@@ -1,17 +1,16 @@
 #pragma once
 
-#include <string>
+#include "Observable.h"
+
 #include <vector>
 
-#include "Observer.h"
-
-class Subject
+class Subject : public Observable
 {
 public:
-    void Attach(Observer *);
-    void Detach(Observer *);
-    void Notify(std::wstring&&);
+    virtual void Attach(Observer*) override;
+    virtual void Detach(Observer*) override;
+    virtual void Notify(const std::wstring&) override;
 
 private:
-    std::vector<Observer *> observers;
+    std::vector<Observer*> observers;
 };

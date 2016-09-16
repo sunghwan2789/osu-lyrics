@@ -4,7 +4,15 @@
 
 #include <Windows.h>
 
-DWORD WINAPI Server::Run(LPVOID lParam)
+Server::Server() :
+    isCancellationRequested(false),
+    hPipe(NULL),
+    isPipeConnected(false),
+    hPushEvent(NULL)
+{
+}
+
+void Server::Run()
 {
     this->hPushEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 
@@ -43,32 +51,15 @@ DWORD WINAPI Server::Run(LPVOID lParam)
     CloseHandle(this->hPipe);
 
     CloseHandle(this->hPushEvent);
-    return 0;
-}
-
-namespace bettertrunkneeded_maybetemplatetrunk_question
-{
-    DWORD WINAPI trunk(LPVOID lParam)
-    {
-        Server *server = (Server *) lParam;
-        return server->Run(nullptr);
-    }
-}
-
-void Server::Start()
-{
-    this->hThread = CreateThread(NULL, 0, bettertrunkneeded_maybetemplatetrunk_question::trunk, this, 0, NULL);
 }
 
 void Server::Stop()
 {
     this->isCancellationRequested = true;
     DisconnectNamedPipe(this->hPipe);
-    WaitForSingleObject(this->hThread, INFINITE);
-    CloseHandle(this->hThread);
 }
 
-void Server::Update(std::wstring&& message)
+void Server::Update(const std::wstring& message)
 {
     if (!this->isPipeConnected)
     {

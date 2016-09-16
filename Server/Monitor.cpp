@@ -1,31 +1,40 @@
 #pragma comment(lib, "Shlwapi.lib")
 
-#include "HookP.h"
+#include "Monitor.h"
 
 #include <cstdio>
 #include <cstdlib>
-#include <string>
 #include <utility>
 #include <functional>
-#include <concurrent_unordered_map.h>
 
-#include <Windows.h>
 #include <Shlwapi.h>
-#include "bass.h"
-#include "bass_fx.h"
-#include "Hooker.h"
 #include "Server.h"
 
-HookP *HookP::Instance;
-HookP *HookP::GetInstance()
+Monitor::Monitor() :
+    hookerReadFile(L"kernel32.dll", "ReadFile"),
+    hookerBASS_ChannelPlay(L"bass.dll", "BASS_ChannelPlay"),
+    hookerBASS_ChannelSetPosition(L"bass.dll", "BASS_ChannelSetPosition"),
+    hookerBASS_ChannelSetAttribute(L"bass.dll", "BASS_ChannelSetAttribute"),
+    hookerBASS_ChannelPause(L"bass.dll", "BASS_ChannelPause")
 {
-    return Instance;
+    InitializeCriticalSection(&this->hCritiaclSection);
+
+    hookerReadFile.SetHookFunction(&Monitor::OnReadFile, this);
+    hookerBASS_ChannelPlay.SetHookFunction(&Monitor::OnBASS_ChannelPlay, this);
+    hookerBASS_ChannelSetPosition.SetHookFunction(&Monitor::OnBASS_ChannelSetPosition, this);
+    hookerBASS_ChannelSetAttribute.SetHookFunction(&Monitor::OnBASS_ChannelSetAttribute, this);
+    hookerBASS_ChannelPause.SetHookFunction(&Monitor::OnBASS_ChannelPause, this);
 }
 
-BOOL WINAPI HookP::ReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped)
+Monitor::~Monitor()
 {
-    HookP *self = HookP::GetInstance();
-    if (!self->hookerReadFile.GetOriginalFunction()(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped))
+    DeleteCriticalSection(&this->hCritiaclSection);
+}
+
+
+BOOL Monitor::OnReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped)
+{
+    if (!this->hookerReadFile.GetOriginalFunction()(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped))
     {
         return FALSE;
     }
@@ -82,7 +91,7 @@ BOOL WINAPI HookP::ReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesT
 
             // osu!에서 비트맵을 바꿀 때 매번 비트맵 파일을 읽지 않고 캐시에서 불러오기도 함
             // => 비트맵 파일보다는 음악 파일을 읽을 때 재생 정보 갱신해야
-            self->audioInfo.insert({szAudioFilePath, szFilePath});
+            this->audioInfo.insert({szAudioFilePath, szFilePath});
             break;
         }
         // strdup 뒤처리
@@ -91,22 +100,21 @@ BOOL WINAPI HookP::ReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesT
     // 지금 읽는 파일이 비트맵 음악 파일일 때 재생 정보 갱신하기
     else
     {
-        decltype(self->audioInfo)::iterator info;
-        if ((info = self->audioInfo.find(szFilePath)) != self->audioInfo.end())
+        decltype(this->audioInfo)::iterator info;
+        if ((info = this->audioInfo.find(szFilePath)) != this->audioInfo.end())
         {
-            EnterCriticalSection(&self->hCritiaclSection);
-            self->playing = {info->first.substr(4), info->second.substr(4)};
-            LeaveCriticalSection(&self->hCritiaclSection);
+            EnterCriticalSection(&this->hCritiaclSection);
+            this->playing = {info->first.substr(4), info->second.substr(4)};
+            LeaveCriticalSection(&this->hCritiaclSection);
         }
     }
     return TRUE;
 }
 
 
-BOOL WINAPI HookP::BASS_ChannelPlay(DWORD handle, BOOL restart)
+BOOL Monitor::OnBASS_ChannelPlay(DWORD handle, BOOL restart)
 {
-    HookP *self = HookP::GetInstance();
-    if (!self->hookerBASS_ChannelPlay.GetOriginalFunction()(handle, restart))
+    if (!this->hookerBASS_ChannelPlay.GetOriginalFunction()(handle, restart))
     {
         return FALSE;
     }
@@ -118,15 +126,14 @@ BOOL WINAPI HookP::BASS_ChannelPlay(DWORD handle, BOOL restart)
         double currentTime = BASS_ChannelBytes2Seconds(handle, BASS_ChannelGetPosition(handle, BASS_POS_BYTE));
         float tempo = 0;
         BASS_ChannelGetAttribute(handle, BASS_ATTRIB_TEMPO, &tempo);
-        self->Notify(currentTime, tempo);
+        this->Notify(currentTime, tempo);
     }
     return TRUE;
 }
 
-BOOL WINAPI HookP::BASS_ChannelSetPosition(DWORD handle, QWORD pos, DWORD mode)
+BOOL Monitor::OnBASS_ChannelSetPosition(DWORD handle, QWORD pos, DWORD mode)
 {
-    HookP *self = HookP::GetInstance();
-    if (!self->hookerBASS_ChannelSetPosition.GetOriginalFunction()(handle, pos, mode))
+    if (!this->hookerBASS_ChannelSetPosition.GetOriginalFunction()(handle, pos, mode))
     {
         return FALSE;
     }
@@ -145,15 +152,14 @@ BOOL WINAPI HookP::BASS_ChannelSetPosition(DWORD handle, QWORD pos, DWORD mode)
         {
             tempo = -100;
         }
-        self->Notify(currentTime, tempo);
+        this->Notify(currentTime, tempo);
     }
     return TRUE;
 }
 
-BOOL WINAPI HookP::BASS_ChannelSetAttribute(DWORD handle, DWORD attrib, float value)
+BOOL Monitor::OnBASS_ChannelSetAttribute(DWORD handle, DWORD attrib, float value)
 {
-    HookP *self = HookP::GetInstance();
-    if (!self->hookerBASS_ChannelSetAttribute.GetOriginalFunction()(handle, attrib, value))
+    if (!this->hookerBASS_ChannelSetAttribute.GetOriginalFunction()(handle, attrib, value))
     {
         return FALSE;
     }
@@ -163,15 +169,14 @@ BOOL WINAPI HookP::BASS_ChannelSetAttribute(DWORD handle, DWORD attrib, float va
     if ((info.ctype & BASS_CTYPE_STREAM) && attrib == BASS_ATTRIB_TEMPO)
     {
         double currentTime = BASS_ChannelBytes2Seconds(handle, BASS_ChannelGetPosition(handle, BASS_POS_BYTE));
-        self->Notify(currentTime, value);
+        this->Notify(currentTime, value);
     }
     return TRUE;
 }
 
-BOOL WINAPI HookP::BASS_ChannelPause(DWORD handle)
+BOOL Monitor::OnBASS_ChannelPause(DWORD handle)
 {
-    HookP *self = HookP::GetInstance();
-    if (!self->hookerBASS_ChannelPause.GetOriginalFunction()(handle))
+    if (!this->hookerBASS_ChannelPause.GetOriginalFunction()(handle))
     {
         return FALSE;
     }
@@ -181,7 +186,7 @@ BOOL WINAPI HookP::BASS_ChannelPause(DWORD handle)
     if (info.ctype & BASS_CTYPE_STREAM)
     {
         double currentTime = BASS_ChannelBytes2Seconds(handle, BASS_ChannelGetPosition(handle, BASS_POS_BYTE));
-        self->Notify(currentTime, -100);
+        this->Notify(currentTime, -100);
     }
     return TRUE;
 }
@@ -199,7 +204,7 @@ inline long long GetSystemTimeAsFileTime()
     return ((long long) ft.dwHighDateTime << 32) + ft.dwLowDateTime;
 }
 
-void HookP::Notify(double currentTime, float tempo)
+void Monitor::Notify(double currentTime, float tempo)
 {
     wchar_t message[Server::nMessageLength];
     EnterCriticalSection(&this->hCritiaclSection);
@@ -214,7 +219,7 @@ void HookP::Notify(double currentTime, float tempo)
     Subject::Notify(message);
 }
 
-void HookP::Run()
+void Monitor::Activate()
 {
     this->hookerReadFile.Hook();
 
@@ -224,7 +229,7 @@ void HookP::Run()
     this->hookerBASS_ChannelPause.Hook();
 }
 
-void HookP::Stop()
+void Monitor::Disable()
 {
     this->hookerBASS_ChannelPause.Unhook();
     this->hookerBASS_ChannelSetAttribute.Unhook();

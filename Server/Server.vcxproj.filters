@@ -2,13 +2,14 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="Server.cpp" />
-    <ClCompile Include="Program.cpp" />
-    <ClCompile Include="HookP.cpp" />
     <ClCompile Include="Subject.cpp" />
+    <ClCompile Include="THUNK.cpp" />
+    <ClCompile Include="Thread.cpp" />
+    <ClCompile Include="Monitor.cpp" />
+    <ClCompile Include="DllMain.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Hooker.h" />
-    <ClInclude Include="Hooker.hpp" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Server.h" />
     <ClInclude Include="bass.h">
@@ -20,9 +21,14 @@
     <ClInclude Include="detours.h">
       <Filter>Libraries\detours</Filter>
     </ClInclude>
-    <ClInclude Include="HookP.h" />
     <ClInclude Include="Observer.h" />
     <ClInclude Include="Subject.h" />
+    <ClInclude Include="brute_cast.h" />
+    <ClInclude Include="THUNK.h" />
+    <ClInclude Include="Runnable.h" />
+    <ClInclude Include="Thread.h" />
+    <ClInclude Include="Monitor.h" />
+    <ClInclude Include="Observable.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc" />

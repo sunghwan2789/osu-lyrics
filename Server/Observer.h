@@ -5,5 +5,5 @@
 class Observer
 {
 public:
-    virtual void Update(std::wstring&&) = 0;
+    virtual void Update(const std::wstring&) = 0;
 };
