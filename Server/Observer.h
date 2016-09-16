@@ -2,8 +2,7 @@
 
 #include <string>
 
-class Observer
+struct Observer
 {
-public:
     virtual void Update(const std::wstring&) = 0;
 };
