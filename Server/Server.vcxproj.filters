@@ -1,17 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="Server.cpp" />
-    <ClCompile Include="Subject.cpp" />
-    <ClCompile Include="THUNK.cpp" />
-    <ClCompile Include="Thread.cpp" />
-    <ClCompile Include="Monitor.cpp" />
-    <ClCompile Include="DllMain.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="Hooker.h" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include="Server.h" />
     <ClInclude Include="bass.h">
       <Filter>Libraries\BASS</Filter>
     </ClInclude>
@@ -21,14 +11,7 @@
     <ClInclude Include="detours.h">
       <Filter>Libraries\detours</Filter>
     </ClInclude>
-    <ClInclude Include="Observer.h" />
-    <ClInclude Include="Subject.h" />
-    <ClInclude Include="brute_cast.h" />
-    <ClInclude Include="THUNK.h" />
-    <ClInclude Include="Runnable.h" />
-    <ClInclude Include="Thread.h" />
-    <ClInclude Include="Monitor.h" />
-    <ClInclude Include="Observable.h" />
+    <ClInclude Include="Core.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc" />
@@ -54,5 +37,8 @@
     <Library Include="detours.lib">
       <Filter>Libraries\detours</Filter>
     </Library>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Core.cpp" />
   </ItemGroup>
 </Project>
