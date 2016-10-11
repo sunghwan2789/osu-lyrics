@@ -157,6 +157,7 @@ BOOL WINAPI proxyReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToR
         
         if (cachedInfo != g_songCached.end())
         {
+            g_audioPath   = cachedInfo->first;
             g_beatmapPath = cachedInfo->second;
         }
 
