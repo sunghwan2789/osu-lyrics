@@ -183,7 +183,7 @@ BOOL WINAPI proxyBASS_ChannelPlay(DWORD handle, BOOL restart)
         float currentTempo = 0;
         BASS_ChannelGetAttribute(handle, BASS_ATTRIB_TEMPO, &currentTempo);
 
-        //Notify(currentTime, currentTempo);
+        Notify(currentTime, currentTempo);
     }
     return TRUE;
 
