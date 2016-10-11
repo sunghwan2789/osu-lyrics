@@ -136,7 +136,7 @@ BOOL WINAPI proxyReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToR
             if (g_songCached.find(g_audioPath) == g_songCached.end())
             {
                 g_songCached.insert(
-                    std::pair<std::wstring, std::wstring>(nameAudioFile, nameFile));
+                    std::pair<std::wstring, std::wstring>(pathAudioFile, nameFile));
             }
 
             g_songMutex.unlock();
@@ -153,10 +153,11 @@ BOOL WINAPI proxyReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToR
         // 그럴경우에는 Audio파일만 읽으니 기존에 동일한 Beatmap의 Audio파일이 기존에 
         // 읽힌적이 있는지 확인하고 현재 실행되고있는 곡을 지금 읽은 AudioFile으로 바꾼다.                            
         g_songMutex.lock();
+        auto cachedInfo = g_songCached.find(nameFile);
         
-        if (g_songCached.find(nameFile) != g_songCached.end())
+        if (cachedInfo != g_songCached.end())
         {
-            g_beatmapPath = g_songCached.find(nameFile)->second;
+            g_beatmapPath = cachedInfo->second;
         }
 
         g_songMutex.unlock();
