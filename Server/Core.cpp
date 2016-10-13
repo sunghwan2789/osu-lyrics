@@ -66,13 +66,13 @@ void Notify(double currentTime, float tempo)
 {
     wchar_t message[MAX_MESSAGE_LENGTH];
 
-    long long sysTime;
-    GetSystemTime((LPSYSTEMTIME)&sysTime);
+    FILETIME ft;
+    GetSystemTimeAsFileTime(&ft);
 
     // 지금 무엇을 플레이하고있는지 proxyReadFile 에서 얻어낸 값을 클라이언트로 전송합니다.
     g_songMutex.lock();
     swprintf(message, L"%llx|%s|%lf|%f|%s\n",
-        sysTime,
+        ((long long)ft.dwHighDateTime << 32) + ft.dwLowDateTime,
         g_audioPath.c_str(),
         currentTime,
         tempo,
