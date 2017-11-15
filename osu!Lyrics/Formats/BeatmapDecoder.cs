@@ -8,9 +8,10 @@ using System.Threading.Tasks;
 
 namespace osu_Lyrics.Formats
 {
-    abstract class BeatmapDecoder
+    using Predicate = Predicate<string>;
+    internal abstract class BeatmapDecoder
     {
-        private static readonly List<Tuple<Predicate<string>, Type>> decoders = default;
+        private static readonly List<Tuple<Predicate, Type>> decoders = new List<Tuple<Predicate, Type>>();
 
         static BeatmapDecoder()
         {
@@ -44,9 +45,9 @@ namespace osu_Lyrics.Formats
             return (BeatmapDecoder)Activator.CreateInstance(decoder, line);
         }
 
-        protected static void AddDecoder<T>(Predicate<string> predict) where T : BeatmapDecoder
+        protected static void AddDecoder<T>(Predicate predict) where T : BeatmapDecoder
         {
-            decoders.Add(new Tuple<Predicate<string>, Type>(predict, typeof(T)));
+            decoders.Add(new Tuple<Predicate, Type>(predict, typeof(T)));
         }
 
         public virtual Beatmap Decode(StreamReader stream)

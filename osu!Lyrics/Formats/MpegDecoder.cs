@@ -1,85 +1,89 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
+using osu_Lyrics.Models;
 
 namespace osu_Lyrics.Formats
 {
-    internal class Mpeg : IO.AudioDecoder
+    internal class MpegDecoder : AudioDecoder
     {
-        public Mpeg(Stream s)
+        public static void Register()
+        {
+            AddDecoder<MpegDecoder>(TypeCheck);
+        }
+
+        public static bool TypeCheck(Stream s)
         {
             s.Seek(0, SeekOrigin.Begin);
 
-            // ID3
+            SkipID3v2(s);
+            SeekHeader(s);
+
+            return s.Position < s.Length - 1;
+        }
+
+        private static void SkipID3v2(Stream s)
+        {
+            const int IDENTIFIER = 0x494433;
+
             var buff = new byte[10];
             int read;
             do
             {
                 read = s.Read(buff, 0, buff.Length);
-                if (Program.IntB(buff, 0, 3) == 0x494433) // "ID3"
-                {
-                    s.Seek(buff[6] << 21 | buff[7] << 14 | buff[8] << 7 | buff[9], SeekOrigin.Current);
-                }
-                else
+
+                // 더이상 ID3v2 태그가 없는 경우
+                if (Program.IntB(buff, 0, 3) != IDENTIFIER)
                 {
                     s.Seek(-buff.Length, SeekOrigin.Current);
                     break;
                 }
-            } while (read == buff.Length);
 
-            // header
-            buff = new byte[4096];
+                // ID3v2 태그 건너뛰기
+                s.Seek(buff[6] << 21 | buff[7] << 14 | buff[8] << 7 | buff[9], SeekOrigin.Current);
+            } while (read > 0);
+        }
+
+        private static void SeekHeader(Stream s)
+        {
+            const int FRAME_SYNC = 0xFFE0F0;
+
+            var buff = new byte[3];
+            int read;
             do
             {
                 read = s.Read(buff, 0, buff.Length);
-                for (var i = 3; i < read; i++)
+
+                // MPEG 헤더를 찾았을 경우
+                if ((Program.IntB(buff, 0, 3) & FRAME_SYNC) == FRAME_SYNC)
                 {
-                    var header = Program.IntB(buff, i - 3);
-                    if (Validate(header))
-                    {
-                        RawPosition = s.Position - read + i - 3;
-                        read = 0;
-                    }
+                    s.Seek(-buff.Length, SeekOrigin.Current);
+                    break;
                 }
-                s.Seek(-4, SeekOrigin.Current);
-            } while (read == buff.Length);
-
-            SetHash(s);
+                
+                // 패딩 건너뛰기
+                s.Seek(-buff.Length + 1, SeekOrigin.Current);
+            } while (read > 0);
         }
 
-        private static bool Validate(int header)
-        {
-            return ((header >> 21) & 0x7FF) == 0x7FF && ParseVersion(header) != 1 && ParseLayer(header) != 0 &&
-                   ParseBitRate(header) != 0 && ParseBitRate(header) != 0xF && ParseSampleRate(header) != 3 &&
-                   ParseEmphasis(header) != 2;
-        }
+        public MpegDecoder() { }
 
-        private static int ParseVersion(int header)
+        protected override void ParseFile(Stream stream, Audio audio)
         {
-            return (header >> 19) & 3;
-        }
+            if (audio == null)
+            {
+                throw new ArgumentNullException(nameof(audio));
+            }
+            if (stream == null)
+            {
+                throw new ArgumentNullException(nameof(stream));
+            }
 
-        private static int ParseLayer(int header)
-        {
-            return (header >> 17) & 3;
-        }
+            stream.Seek(0, SeekOrigin.Begin);
 
-        private static int ParseBitRate(int header)
-        {
-            return (header >> 12) & 0xF;
-        }
+            SkipID3v2(stream);
+            SeekHeader(stream);
 
-        private static int ParseSampleRate(int header)
-        {
-            return (header >> 10) & 3;
-        }
-
-        private static int ParseMode(int header)
-        {
-            return (header >> 6) & 3;
-        }
-
-        private static int ParseEmphasis(int header)
-        {
-            return header & 3;
+            audio.CheckSum = GetCheckSum(stream);
         }
     }
 }

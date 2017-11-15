@@ -15,6 +15,7 @@ using System.Threading;
 using osu_Lyrics.Interop;
 using osu_Lyrics.Forms;
 using osu_Lyrics.Models;
+using osu_Lyrics.Formats;
 
 namespace osu_Lyrics
 {
@@ -233,7 +234,15 @@ namespace osu_Lyrics
             // 재생 중인 곡이 바꼈다!
             if (data[1] != curAudio.Path)
             {
-                curAudio = new Audio(data[1], data[4]);
+                using (var fs = new FileStream(data[1], FileMode.Open, FileAccess.Read))
+                {
+                    curAudio = AudioDecoder.GetDecoder(fs)?.Decode(fs);
+                }
+                curAudio.Path = data[1];
+                using (var sr = new StreamReader(data[4]))
+                {
+                    curAudio.Beatmap = BeatmapDecoder.GetDecoder(sr)?.Decode(sr);
+                }
                 UpdateLyrics();
             }
             curTime = DateTimeOffset.Now.Subtract(
@@ -263,7 +272,7 @@ namespace osu_Lyrics
                 // 파일 해시로 가사 검색
                 var newLyrics = await GetLyricsAsync(new Dictionary<string, string>
                 {
-                    { "[HASH]", curAudio.Hash }
+                    { "[HASH]", curAudio.CheckSum }
                 });
 
                 if (newLyrics == null && curAudio.Beatmap != null)

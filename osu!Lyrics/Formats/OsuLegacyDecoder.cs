@@ -12,16 +12,17 @@ namespace osu_Lyrics.Formats
     {
         public static void Register()
         {
-            AddDecoder<OsuLegacyDecoder>(header => header.StartsWith(@"osu file format v"));
+            AddDecoder<OsuLegacyDecoder>(TypeCheck);
         }
 
-        public OsuLegacyDecoder()
+        private static bool TypeCheck(string header)
         {
+            return header.StartsWith(@"osu file format v");
         }
 
-        public OsuLegacyDecoder(string header)
-        {
-        }
+        public OsuLegacyDecoder() { }
+
+        public OsuLegacyDecoder(string header) { }
 
         private enum Section
         {
