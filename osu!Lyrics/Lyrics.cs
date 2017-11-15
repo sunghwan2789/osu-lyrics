@@ -7,15 +7,14 @@ using System.Drawing.Text;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using osu_Lyrics.Properties;
 using System.Threading;
-using static osu_Lyrics.Interop.NativeMethods;
 using osu_Lyrics.Interop;
 using osu_Lyrics.Forms;
+using osu_Lyrics.Models;
 
 namespace osu_Lyrics
 {
@@ -56,7 +55,7 @@ namespace osu_Lyrics
             // 초기 설정을 위해 대화 상자 열기
             if (!File.Exists(Settings._Path))
             {
-                Task.Run(() => Invoke(new MethodInvoker(menuSetting.PerformClick)));
+                BeginInvoke(new MethodInvoker(menuSetting.PerformClick));
             }
             while (!Osu.Process.HasExited)
             {

@@ -1,8 +1,8 @@
 ﻿using System.IO;
 
-namespace osu_Lyrics
+namespace osu_Lyrics.Formats
 {
-    internal class Mpeg : AudioHash
+    internal class Mpeg : IO.AudioDecoder
     {
         public Mpeg(Stream s)
         {

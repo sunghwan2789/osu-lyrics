@@ -1,4 +1,7 @@
-﻿namespace osu_Lyrics
+﻿using osu_Lyrics.Formats;
+using System.IO;
+
+namespace osu_Lyrics.Models
 {
     internal class Audio
     {
@@ -18,12 +21,15 @@
             this.Path = path;
             try
             {
-                this.Hash = AudioHash.Load(path);
+                this.Hash = IO.AudioDecoder.Load(path);
             }
             catch {}
             try
             {
-                this.Beatmap = Beatmap.Load(beatmapPath);
+                using (var sr = new StreamReader(beatmapPath))
+                {
+                    this.Beatmap = BeatmapDecoder.GetDecoder(sr)?.Decode(sr);
+                }
             }
             catch {}
         }

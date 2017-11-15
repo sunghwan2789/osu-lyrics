@@ -1,8 +1,8 @@
 ﻿using System.IO;
 
-namespace osu_Lyrics
+namespace osu_Lyrics.Formats
 {
-    internal class Ogg : AudioHash
+    internal class Ogg : IO.AudioDecoder
     {
         public Ogg(Stream s)
         {

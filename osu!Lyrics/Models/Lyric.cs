@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace osu_Lyrics
+namespace osu_Lyrics.Models
 {
     internal class Lyric
     {

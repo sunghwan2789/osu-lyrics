@@ -30,6 +30,7 @@
     <PlatformTarget>x86</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
     <OutputPath>bin\Release\</OutputPath>
@@ -45,25 +46,28 @@
     <Reference Include="System.Core" />
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.Net.Http" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Audio.cs" />
-    <Compile Include="AudioHash.cs" />
-    <Compile Include="Beatmap.cs" />
+    <Compile Include="Formats\BeatmapDecoder.cs" />
+    <Compile Include="Formats\OsuLegacyDecoder.cs" />
+    <Compile Include="Models\Audio.cs" />
+    <Compile Include="Formats\AudioDecoder.cs" />
+    <Compile Include="Models\Beatmap.cs" />
     <Compile Include="Constants.cs" />
     <Compile Include="Forms\GhostLayeredWindow.cs" />
     <Compile Include="IO\FileEx.cs" />
     <Compile Include="Interop\ExternDll.cs" />
     <Compile Include="Forms\LayeredWindow.cs" />
-    <Compile Include="Lyric.cs" />
+    <Compile Include="Models\Lyric.cs" />
     <Compile Include="Lyrics.cs" />
     <Compile Include="Lyrics.Designer.cs">
       <DependentUpon>Lyrics.cs</DependentUpon>
     </Compile>
-    <Compile Include="AudioHash.Mpeg.cs" />
-    <Compile Include="AudioHash.Ogg.cs" />
+    <Compile Include="Formats\MpegDecoder.cs" />
+    <Compile Include="Formats\OggDecoder.cs" />
     <Compile Include="Interop\Osu.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

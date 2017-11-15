@@ -25,10 +25,6 @@ namespace osu_Lyrics.Interop
 
         [return: MarshalAs(UnmanagedType.Bool)]
         [DllImport(ExternDll.User32, SetLastError = true)]
-        public static extern bool SetLayeredWindowAttributes(IntPtr hwnd, int crKey, byte bAlpha, int dwFlags);
-
-        [return: MarshalAs(UnmanagedType.Bool)]
-        [DllImport(ExternDll.User32, SetLastError = true)]
         public static extern bool UpdateLayeredWindow(IntPtr hwnd, IntPtr hdcDst, ref Point pptDst, ref Size pSizeDst, IntPtr hdcSrc, ref Point pptSrc, int crKey, ref BLENDFUNCTION pBlend, int dwFlags);
 
         [StructLayout(LayoutKind.Sequential)]

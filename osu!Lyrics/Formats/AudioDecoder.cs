@@ -3,9 +3,9 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 
-namespace osu_Lyrics
+namespace osu_Lyrics.IO
 {
-    internal class AudioHash
+    internal class AudioDecoder
     {
         protected long RawPosition = 0;
 
@@ -25,8 +25,8 @@ namespace osu_Lyrics
             {
                 var buff = new byte[4];
                 var mediaType = Program.IntB(buff, 0, fs.Read(buff, 0, 4)) == 0x4F676753 ? // "OggS"
-                    (AudioHash) new Ogg(fs) :
-                    (AudioHash) new Mpeg(fs);
+                    (AudioDecoder) new Formats.Ogg(fs) :
+                    (AudioDecoder) new Formats.Mpeg(fs);
                 return mediaType.Hash;
             }
         }
