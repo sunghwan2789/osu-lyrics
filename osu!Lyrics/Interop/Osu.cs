@@ -13,7 +13,7 @@ using System.Linq;
 using System.Text;
 using static osu_Lyrics.Interop.NativeMethods;
 
-namespace osu_Lyrics
+namespace osu_Lyrics.Interop
 {
     internal class Osu
     {
@@ -193,7 +193,7 @@ namespace osu_Lyrics
 
         #region WindowInfo()
 
-        public static Point Location
+        public static Point ClientLocation
         {
             get
             {
@@ -209,6 +209,14 @@ namespace osu_Lyrics
             {
                 GetClientRect(Process.MainWindowHandle, out Rectangle rect);
                 return rect.Size;
+            }
+        }
+
+        public static Rectangle ClientBounds
+        {
+            get
+            {
+                return new Rectangle(ClientLocation, ClientSize);
             }
         }
 

@@ -53,9 +53,10 @@
     <Compile Include="AudioHash.cs" />
     <Compile Include="Beatmap.cs" />
     <Compile Include="Constants.cs" />
+    <Compile Include="Forms\GhostLayeredWindow.cs" />
     <Compile Include="IO\FileEx.cs" />
     <Compile Include="Interop\ExternDll.cs" />
-    <Compile Include="LayeredWindow.cs" />
+    <Compile Include="Forms\LayeredWindow.cs" />
     <Compile Include="Lyric.cs" />
     <Compile Include="Lyrics.cs" />
     <Compile Include="Lyrics.Designer.cs">
@@ -63,7 +64,7 @@
     </Compile>
     <Compile Include="AudioHash.Mpeg.cs" />
     <Compile Include="AudioHash.Ogg.cs" />
-    <Compile Include="Osu.cs" />
+    <Compile Include="Interop\Osu.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
@@ -92,6 +93,7 @@
   <ItemGroup>
     <EmbeddedResource Include="Server.dll" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PreBuildEvent>copy /y "$(SolutionDir)Server\bin\$(ConfigurationName)\Server.dll" "$(ProjectDir)"</PreBuildEvent>

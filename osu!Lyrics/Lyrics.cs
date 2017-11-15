@@ -14,11 +14,12 @@ using System.Windows.Forms;
 using osu_Lyrics.Properties;
 using System.Threading;
 using static osu_Lyrics.Interop.NativeMethods;
+using osu_Lyrics.Interop;
+using osu_Lyrics.Forms;
 
 namespace osu_Lyrics
 {
-    [System.ComponentModel.DesignerCategory("code")]
-    internal partial class Lyrics : LayeredWindow
+    internal partial class Lyrics : GhostLayeredWindow
     {
         #region Lyrics()
 
@@ -32,17 +33,6 @@ namespace osu_Lyrics
             }
             InitializeComponent();
         }
-
-        protected override CreateParams CreateParams
-        {
-            get
-            {
-                var cp = base.CreateParams;
-                cp.ExStyle |= WS_EX_NOACTIVATE;
-                return cp;
-            }
-        }
-
 
         public override void Render(Graphics g)
         {
@@ -72,9 +62,9 @@ namespace osu_Lyrics
             {
                 if (Osu.IsForeground())
                 {
-                    if (!Location.Equals(Osu.Location))
+                    if (!Location.Equals(Osu.ClientLocation))
                     {
-                        Location = Osu.Location;
+                        Location = Osu.ClientLocation;
                     }
                     if (!Size.Equals(Osu.ClientSize))
                     {

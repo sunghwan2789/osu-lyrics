@@ -877,7 +877,7 @@ namespace osu_Lyrics
             Application.Exit();
             if (restartOsu)
             {
-                Osu.Process.Kill();
+                Interop.Osu.Process.Kill();
             }
             Process.Start(current);
         }

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using static osu_Lyrics.Interop.NativeMethods;
 
-namespace osu_Lyrics
+namespace osu_Lyrics.Forms
 {
     [System.ComponentModel.DesignerCategory("code")]
     class LayeredWindow : Form
@@ -18,7 +18,7 @@ namespace osu_Lyrics
             get
             {
                 var cp = base.CreateParams;
-                cp.ExStyle |= WS_EX_LAYERED | WS_EX_TRANSPARENT;
+                cp.ExStyle |= WS_EX_LAYERED;
                 return cp;
             }
         }

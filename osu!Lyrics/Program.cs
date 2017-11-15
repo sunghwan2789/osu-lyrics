@@ -13,7 +13,7 @@ namespace osu_Lyrics
         {
             using (new Mutex(true, Constants._MutexName, out bool createdNew))
             {
-                Osu.Show();
+                Interop.Osu.Show();
                 if (createdNew)
                 {
                     // 업데이트 전의 파일 삭제
