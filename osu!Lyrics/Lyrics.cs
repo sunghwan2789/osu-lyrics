@@ -37,8 +37,6 @@ namespace osu_Lyrics
         {
             get
             {
-                const int WS_EX_NOACTIVATE = 0x8000000;
-
                 var cp = base.CreateParams;
                 cp.ExStyle |= WS_EX_NOACTIVATE;
                 return cp;
@@ -74,14 +72,13 @@ namespace osu_Lyrics
             {
                 if (Osu.IsForeground())
                 {
-                    var osu = Osu.WindowInfo();
-                    if (!Location.Equals(osu.Location))
+                    if (!Location.Equals(Osu.Location))
                     {
-                        Location = osu.Location;
+                        Location = Osu.Location;
                     }
-                    if (!ClientSize.Equals(osu.ClientSize))
+                    if (!Size.Equals(Osu.ClientSize))
                     {
-                        ClientSize = osu.ClientSize;
+                        Size = Osu.ClientSize;
                         Settings.DrawingOrigin = Point.Empty;
                     }
                     if (Settings == null)

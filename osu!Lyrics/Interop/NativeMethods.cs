@@ -10,6 +10,10 @@ namespace osu_Lyrics.Interop
 {
     internal static class NativeMethods
     {
+        public const int WS_EX_TRANSPARENT = 0x00000020;
+        public const int WS_EX_LAYERED = 0x00080000;
+        public const int WS_EX_NOACTIVATE = 0x08000000;
+
         [DllImport(ExternDll.User32, SetLastError = true)]
         public static extern IntPtr GetDC(IntPtr hWnd);
 
@@ -28,29 +32,6 @@ namespace osu_Lyrics.Interop
         public static extern bool UpdateLayeredWindow(IntPtr hwnd, IntPtr hdcDst, ref Point pptDst, ref Size pSizeDst, IntPtr hdcSrc, ref Point pptSrc, int crKey, ref BLENDFUNCTION pBlend, int dwFlags);
 
         [StructLayout(LayoutKind.Sequential)]
-        public class POINT
-        {
-            public int x;
-            public int y;
-
-            public POINT()
-            {
-            }
-
-            public POINT(int x, int y)
-            {
-                this.x = x;
-                this.y = y;
-            }
-#if DEBUG
-            public override string ToString()
-            {
-                return "{x=" + x + ", y=" + y + "}";
-            }
-#endif
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
         public struct BLENDFUNCTION
         {
             public byte BlendOp;
@@ -59,8 +40,8 @@ namespace osu_Lyrics.Interop
             public byte AlphaFormat;
         }
 
-        public const int AC_SRC_OVER = 0x00000000;
-        public const int AC_SRC_ALPHA = 0x00000001;
+        public const int AC_SRC_OVER = 0x00;
+        public const int AC_SRC_ALPHA = 0x01;
         public const int ULW_COLORKEY = 0x00000001;
         public const int ULW_ALPHA = 0x00000002;
         public const int ULW_OPAQUE = 0x00000004;
@@ -104,15 +85,17 @@ namespace osu_Lyrics.Interop
         [DllImport(ExternDll.Kernel32, SetLastError = true)]
         public static extern IntPtr VirtualAllocEx(IntPtr hProcess, IntPtr lpAddress, uint dwSize, int flAllocationType, int flProtect);
         
-        public const int MEM_COMMIT = 0x1000;
-        public const int MEM_RESERVE = 0x2000;
-        public const int MEM_RELEASE = 0x8000;
-        // MEM_DECOMMIT???
-        public const int MEM_FREE = 0x10000;
+        public const int MEM_COMMIT = 0x00001000;
+        public const int MEM_RESERVE = 0x00002000;
+        public const int MEM_DECOMMIT = 0x00004000;
+        public const int MEM_RELEASE = 0x00008000;
+        public const int MEM_FREE = 0x00010000;
 
-        public const int PAGE_READWRITE = 0x04;
+        public const int PAGE_NOACCESS = 0x01;
         public const int PAGE_READONLY = 0x02;
+        public const int PAGE_READWRITE = 0x04;
         public const int PAGE_WRITECOPY = 0x08;
+        public const int PAGE_EXECUTE = 0x10;
         public const int PAGE_EXECUTE_READ = 0x20;
         public const int PAGE_EXECUTE_READWRITE = 0x40;
 
@@ -173,55 +156,10 @@ namespace osu_Lyrics.Interop
 
         [return: MarshalAs(UnmanagedType.Bool)]
         [DllImport(ExternDll.User32)]
-        public static extern bool ClientToScreen(IntPtr hWnd, POINT lpPoint);
+        public static extern bool ClientToScreen(IntPtr hWnd, ref Point lpPoint);
 
         [return: MarshalAs(UnmanagedType.Bool)]
         [DllImport(ExternDll.User32, SetLastError = true)]
-        public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
-
-        [StructLayout(LayoutKind.Sequential)]
-        public struct RECT
-        {
-            public int left;
-            public int top;
-            public int right;
-            public int bottom;
-
-            public RECT(int left, int top, int right, int bottom)
-            {
-                this.left = left;
-                this.top = top;
-                this.right = right;
-                this.bottom = bottom;
-            }
-
-            public RECT(System.Drawing.Rectangle r)
-            {
-                this.left = r.Left;
-                this.top = r.Top;
-                this.right = r.Right;
-                this.bottom = r.Bottom;
-            }
-
-            public static RECT FromXYWH(int x, int y, int width, int height)
-            {
-                return new RECT(x, y, x + width, y + height);
-            }
-
-            public System.Drawing.Size Size
-            {
-                get
-                {
-                    return new System.Drawing.Size(this.right - this.left, this.bottom - this.top);
-                }
-            }
-        }
-
-        //TODO DELETE
-        public struct WNDINFO
-        {
-            public Point Location;
-            public Size ClientSize;
-        }
+        public static extern bool GetClientRect(IntPtr hWnd, out Rectangle lpRect);
     }
 }

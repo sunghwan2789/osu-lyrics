@@ -17,31 +17,43 @@ namespace osu_Lyrics
         {
             get
             {
-                const int WS_EX_LAYERED = 0x80000;
-                const int WS_EX_TRANSPARENT = 0x20;
-
                 var cp = base.CreateParams;
                 cp.ExStyle |= WS_EX_LAYERED | WS_EX_TRANSPARENT;
                 return cp;
             }
         }
 
-        public new FormBorderStyle FormBorderStyle { get; } = FormBorderStyle.None;
-
-        public LayeredWindow() : base()
-        {
-            base.FormBorderStyle = FormBorderStyle.None;
-        }
-
         protected override void OnLoad(EventArgs e)
         {
+            base.OnLoad(e);
             UpdateLayer();
         }
 
         protected override void OnPaint(PaintEventArgs e)
         {
+            base.OnPaint(e);
             UpdateLayer();
         }
+
+        private Point DestinationPoint = Point.Empty;
+
+        protected override void OnLocationChanged(EventArgs e)
+        {
+            base.OnLocationChanged(e);
+            DestinationPoint = Location;
+            UpdateLayer();
+        }
+
+        private Size DestinationSize = Size.Empty;
+
+        protected override void OnSizeChanged(EventArgs e)
+        {
+            base.OnSizeChanged(e);
+            DestinationSize = Size;
+            UpdateLayer();
+        }
+
+        protected Point SourcePoint = Point.Empty;
 
         protected BLENDFUNCTION BlendFunction = new BLENDFUNCTION
         {
@@ -55,43 +67,32 @@ namespace osu_Lyrics
         {
             var hScreenDC = GetDC(IntPtr.Zero);
             var hDC = CreateCompatibleDC(hScreenDC);
-            var hBitmap = IntPtr.Zero;
-            var hOldBitmap = IntPtr.Zero;
 
-            Bitmap bmp = null;
-            Graphics g = null;
             try
             {
-                bmp = new Bitmap(Width, Height, PixelFormat.Format32bppArgb);
-                g = Graphics.FromImage(bmp);
+                var hBitmap = IntPtr.Zero;
+                using (var bmp = new Bitmap(Width, Height, PixelFormat.Format32bppArgb))
+                using (var g = Graphics.FromImage(bmp))
+                {
+                    Render(g);
+                    hBitmap = bmp.GetHbitmap(Color.FromArgb(0));
+                }
+                var hOldBitmap = SelectObject(hDC, hBitmap);
 
-                Render(g);
-                hBitmap = bmp.GetHbitmap(Color.FromArgb(0));
-                hOldBitmap = SelectObject(hDC, hBitmap);
+                UpdateLayeredWindow(Handle, hScreenDC, ref DestinationPoint, ref DestinationSize, hDC, ref SourcePoint, 0, ref BlendFunction, ULW_ALPHA);
 
-                var ptDst = Location;
-                var sizeDst = Size;
-                var ptSrc = Point.Empty;
-                UpdateLayeredWindow(Handle, hScreenDC, ref ptDst, ref sizeDst, hDC, ref ptSrc, 0, ref BlendFunction, ULW_ALPHA);
+                if (hBitmap != IntPtr.Zero)
+                {
+                    SelectObject(hDC, hOldBitmap);
+                    DeleteObject(hBitmap);
+                }
             }
             catch { }
-            finally
-            {
-                g?.Dispose();
-                bmp?.Dispose();
-            }
 
-            if (hBitmap != IntPtr.Zero)
-            {
-                SelectObject(hDC, hOldBitmap);
-                DeleteObject(hBitmap);
-            }
             DeleteDC(hDC);
             ReleaseDC(IntPtr.Zero, hScreenDC);
         }
 
-        public virtual void Render(Graphics g)
-        {
-        }
+        public virtual void Render(Graphics g) { }
     }
 }

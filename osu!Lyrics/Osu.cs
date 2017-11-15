@@ -193,20 +193,23 @@ namespace osu_Lyrics
 
         #region WindowInfo()
 
-        public static WNDINFO WindowInfo()
+        public static Point Location
         {
-            var location = new POINT(0, 0);
-            ClientToScreen(Process.MainWindowHandle, location);
-
-            GetWindowRect(Process.MainWindowHandle, out RECT rect);
-            var border = location.x - rect.left;
-            var title = location.y - rect.top;
-
-            return new WNDINFO
+            get
             {
-                Location = new Point(location.x, location.y),
-                ClientSize = new Size(rect.right - rect.left - border * 2, rect.bottom - rect.top - border - title)
-            };
+                var location = Point.Empty;
+                ClientToScreen(Process.MainWindowHandle, ref location);
+                return location;
+            }
+        }
+
+        public static Size ClientSize
+        {
+            get
+            {
+                GetClientRect(Process.MainWindowHandle, out Rectangle rect);
+                return rect.Size;
+            }
         }
 
         #endregion
