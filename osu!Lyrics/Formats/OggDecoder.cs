@@ -23,7 +23,7 @@ namespace osu_Lyrics.Formats
         {
             s.Seek(52, SeekOrigin.Begin);
 
-            var buff = new byte[12];
+            var buff = new byte[11];
             int read;
             do
             {
@@ -32,7 +32,6 @@ namespace osu_Lyrics.Formats
                 // Setup 헤더를 찾았을 경우
                 if (Validate(buff))
                 {
-                    s.Seek(-read, SeekOrigin.Current);
                     break;
                 }
 

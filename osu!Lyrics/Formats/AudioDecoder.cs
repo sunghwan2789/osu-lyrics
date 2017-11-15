@@ -14,8 +14,8 @@ namespace osu_Lyrics.Formats
 
         static AudioDecoder()
         {
-            MpegDecoder.Register();
             OggDecoder.Register();
+            MpegDecoder.Register();
         }
 
         public static AudioDecoder GetDecoder(Stream stream)
