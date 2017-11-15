@@ -43,17 +43,21 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Audio.cs" />
     <Compile Include="AudioHash.cs" />
     <Compile Include="Beatmap.cs" />
+    <Compile Include="Constants.cs" />
+    <Compile Include="FileEx.cs" />
+    <Compile Include="Interop\ExternDll.cs" />
+    <Compile Include="LayeredWindow.cs" />
     <Compile Include="Lyric.cs" />
-    <Compile Include="Lyrics.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="Lyrics.cs" />
     <Compile Include="Lyrics.Designer.cs">
       <DependentUpon>Lyrics.cs</DependentUpon>
     </Compile>
@@ -74,6 +78,7 @@
     <Compile Include="Settings.Designer.cs">
       <DependentUpon>Settings.cs</DependentUpon>
     </Compile>
+    <Compile Include="Interop\NativeMethods.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Properties\Resources.resx">

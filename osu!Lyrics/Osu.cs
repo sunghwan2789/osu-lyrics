@@ -11,6 +11,7 @@ using System.Windows.Forms;
 using Microsoft.Win32;
 using System.Linq;
 using System.Text;
+using static osu_Lyrics.Interop.NativeMethods;
 
 namespace osu_Lyrics
 {
@@ -58,14 +59,14 @@ namespace osu_Lyrics
 
         #region Show()
 
-        [DllImport("user32.dll")]
-        private static extern IntPtr GetForegroundWindow();
-
-        [DllImport("user32.dll")]
-        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-
-        [DllImport("user32.dll")]
-        private static extern bool SetForegroundWindow(IntPtr hWnd);
+        public static bool IsForeground()
+        {
+            if (GetForegroundWindow() == Process.MainWindowHandle)
+            {
+                return true;
+            }
+            return Lyrics.Settings?.Visible ?? false;
+        }
 
         /// <summary>
         /// 창이 활성화되어 있는지 확인하거나 활성화함.
@@ -80,35 +81,17 @@ namespace osu_Lyrics
             {
                 return false;
             }
-            if (!checkOnly)
-            {
-                ShowWindow(Process.MainWindowHandle, SW_SHOWNORMAL);
-                SetForegroundWindow(Process.MainWindowHandle);
-            }
-            return Lyrics.Settings == null || !Lyrics.Settings.Visible;
+            ShowWindow(Process.MainWindowHandle, SW_SHOWNORMAL);
+            SetForegroundWindow(Process.MainWindowHandle);
+            return !Lyrics.Settings?.Visible ?? true;
         }
 
         #endregion
 
         #region HookKeyboard(Action<Keys> action), UnhookKeyboard()
 
-        // DECLARED
-        //[DllImport("user32.dll")]
-        //private static extern IntPtr GetForegroundWindow();
-
-        [DllImport("user32.dll")]
-        private static extern IntPtr SetWindowsHookEx(int idHook, HOOKPROC lpfn, IntPtr hMod, uint dwThreadId);
-
-        [DllImport("user32.dll")]
-        private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
-
-        [DllImport("user32.dll")]
-        private static extern bool UnhookWindowsHookEx(IntPtr hhk);
-
-        private delegate IntPtr HOOKPROC(int code, IntPtr wParam, IntPtr lParam);
-
         private static IntPtr _hhkk; // hookHandleKeyKeyboard
-        private static HOOKPROC _hpk; // hookProcKeyboard
+        private static HookProc _hpk; // hookProcKeyboard
         private static Func<Keys, bool> _hak; // hookActionKeyboard
 
         public static void HookKeyboard(Func<Keys, bool> action)
@@ -121,7 +104,7 @@ namespace osu_Lyrics
             }
 
             _hak = action;
-            _hpk = new HOOKPROC(LowLevelKeyboardProc);
+            _hpk = new HookProc(LowLevelKeyboardProc);
             _hhkk = SetWindowsHookEx(WH_KEYBOARD_LL, _hpk, IntPtr.Zero, 0);
         }
 
@@ -131,7 +114,7 @@ namespace osu_Lyrics
             const int WM_KEYDOWN = 0x100;
             const int WM_SYSKEYDOWN = 0x104;
 
-            if (!Show(true) && nCode == HC_ACTION)
+            if (IsForeground() && nCode == HC_ACTION)
             {
                 var state = wParam.ToInt32();
                 // 설정 중이면 키보드 후킹 안 하기!
@@ -154,61 +137,24 @@ namespace osu_Lyrics
         #endregion
 
         #region Listen(Action<string[]> onSignal)
-
-        [DllImport("kernel32.dll")]
-        private static extern IntPtr OpenProcess(uint dwDesiredAccess, bool bInheritHandle, uint dwProcessId);
-
-        [DllImport("kernel32.dll")]
-        private static extern IntPtr GetModuleHandle(string lpModuleName);
-
-        [DllImport("kernel32.dll")]
-        private static extern IntPtr GetProcAddress(IntPtr hModule, string lpProcName);
-
-        [DllImport("kernel32.dll")]
-        private static extern IntPtr VirtualAllocEx(IntPtr hProcess, IntPtr lpAddress, UIntPtr dwSize, uint flAllocationType, uint flProtect);
-
-        [DllImport("kernel32.dll")]
-        private static extern bool VirtualFreeEx(IntPtr hProcess, IntPtr lpAddress, UIntPtr dwSize, uint dwFreeType);
-
-        [DllImport("kernel32.dll")]
-        private static extern bool WriteProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, IntPtr lpBuffer, UIntPtr nSize, UIntPtr lpNumberOfBytesWritten);
-
-        [DllImport("kernel32.dll")]
-        private static extern IntPtr CreateRemoteThread(IntPtr hProcess, IntPtr lpThreadAttributes, UIntPtr dwStackSize, IntPtr lpStartAddress, IntPtr lpParameter, uint dwCreationFlags, UIntPtr lpThreadId);
-
-        [DllImport("kernel32.dll")]
-        private static extern uint WaitForSingleObject(IntPtr hHandle, uint dwMilliseconds);
-
-        [DllImport("kernel32.dll")]
-        private static extern UIntPtr GlobalSize(IntPtr hMem);
-
-        [DllImport("kernel32.dll")]
-        private static extern bool CloseHandle(IntPtr hObject);
         
         private static bool InjectDLL(string dllPath)
         {
-            const uint PROCESS_ALL_ACCESS = 0x1F0FFF;
-            const uint MEM_RESERVE = 0x2000;
-            const uint MEM_COMMIT = 0x1000;
-            const uint PAGE_READWRITE = 0x04;
-            const uint INFINITE = 0xFFFFFFFF;
-            const uint MEM_RELEASE = 0x8000;
-            
-            var hProcess = OpenProcess(PROCESS_ALL_ACCESS, false, (uint) Process.Id);
+            var hProcess = OpenProcess(PROCESS_ALL_ACCESS, false, Process.Id);
 
             var szFileName = Marshal.StringToHGlobalUni(dllPath);
             var nFileNameLength = GlobalSize(szFileName);
             var pParameter = VirtualAllocEx(hProcess, IntPtr.Zero, nFileNameLength, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-            WriteProcessMemory(hProcess, pParameter, szFileName, nFileNameLength, UIntPtr.Zero);
+            WriteProcessMemory(hProcess, pParameter, szFileName, nFileNameLength, out _);
             Marshal.FreeHGlobal(szFileName);
 
             var pThreadProc = GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryW");
 
-            var hThread = CreateRemoteThread(hProcess, IntPtr.Zero, UIntPtr.Zero, pThreadProc, pParameter, 0, UIntPtr.Zero);
+            var hThread = CreateRemoteThread(hProcess, IntPtr.Zero, 0, pThreadProc, pParameter, 0, IntPtr.Zero);
             WaitForSingleObject(hThread, INFINITE);
             CloseHandle(hThread);
 
-            VirtualFreeEx(hProcess, pParameter, UIntPtr.Zero, MEM_RELEASE);
+            VirtualFreeEx(hProcess, pParameter, 0, MEM_RELEASE);
 
             CloseHandle(hProcess);
 
@@ -219,9 +165,9 @@ namespace osu_Lyrics
         {
             // dll의 fileVersion을 바탕으로 버전별로 겹치지 않는 경로에 압축 풀기:
             // 시스템 커널에 이전 버전의 dll이 같은 이름으로 남아있을 수 있음
-            Program.Extract(Assembly.GetExecutingAssembly().GetManifestResourceStream("osu_Lyrics.Server.dll"), Settings._Server);
-            var dest = Settings._Server + "." + FileVersionInfo.GetVersionInfo(Settings._Server).FileVersion;
-            Program.Move(Settings._Server, dest);
+            FileEx.Extract(Assembly.GetExecutingAssembly().GetManifestResourceStream("osu_Lyrics.Server.dll"), Constants._Server);
+            var dest = Constants._Server + "." + FileVersionInfo.GetVersionInfo(Constants._Server).FileVersion;
+            FileEx.Move(Constants._Server, dest);
             if (!InjectDLL(dest))
             {
                 return false;
@@ -247,39 +193,18 @@ namespace osu_Lyrics
 
         #region WindowInfo()
 
-        [DllImport("user32.dll")]
-        private static extern bool ClientToScreen(IntPtr hWnd, ref Point lpPoint);
-
-        [DllImport("user32.dll")]
-        private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
-
-        private struct RECT
-        {
-            public int left;
-            public int top;
-            public int right;
-            public int bottom;
-        }
-
-        public struct WNDINFO
-        {
-            public Point Location;
-            public Size ClientSize;
-        }
-
         public static WNDINFO WindowInfo()
         {
-            var location = Point.Empty;
-            ClientToScreen(Process.MainWindowHandle, ref location);
+            var location = new POINT(0, 0);
+            ClientToScreen(Process.MainWindowHandle, location);
 
-            RECT rect;
-            GetWindowRect(Process.MainWindowHandle, out rect);
-            var border = location.X - rect.left;
-            var title = location.Y - rect.top;
+            GetWindowRect(Process.MainWindowHandle, out RECT rect);
+            var border = location.x - rect.left;
+            var title = location.y - rect.top;
 
             return new WNDINFO
             {
-                Location = location,
+                Location = new Point(location.x, location.y),
                 ClientSize = new Size(rect.right - rect.left - border * 2, rect.bottom - rect.top - border - title)
             };
         }

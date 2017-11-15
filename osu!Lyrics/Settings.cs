@@ -9,6 +9,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
+using static osu_Lyrics.Interop.NativeMethods;
 
 namespace osu_Lyrics
 {
@@ -21,19 +22,7 @@ namespace osu_Lyrics
 
         private bool Loaded;
 
-        [DllImport("kernel32.dll")]
-        private static extern uint GetPrivateProfileString(string lpAppName, string lpKeyName, string lpDefault, StringBuilder lpReturnedString, uint nSize, string lpFileName);
-
-        [DllImport("kernel32.dll")]
-        private static extern bool WritePrivateProfileString(string lpAppName, string lpKeyName, string lpString, string lpFileName);
-
-        [DllImport("user32.dll")]
-        private static extern short GetAsyncKeyState(Keys vKey);
-
-        public static readonly string _MutexName = "osu!Lyrics." + Application.ProductVersion;
         public static readonly string _Path = Application.ExecutablePath + ".cfg";
-        public static readonly string _Server = Path.Combine(Path.GetTempPath(), "osu!Lyrics.dll");
-        public static readonly string _BakExt = ".del";
 
         private static string Get(string section, string key)
         {
@@ -878,11 +867,11 @@ namespace osu_Lyrics
                 }
 
                 ms.Seek(0, SeekOrigin.Begin);
-                Program.Extract(new DeflateStream(ms, CompressionMode.Decompress), update);
+                FileEx.Extract(new DeflateStream(ms, CompressionMode.Decompress), update);
             }
 
             // 윈도우는 실행 중인 파일 삭제는 못 하지만 이름 변경은 가능
-            File.Move(current, current + _BakExt);
+            File.Move(current, current + Constants._BakExt);
             File.Move(update, current);
 
             Application.Exit();

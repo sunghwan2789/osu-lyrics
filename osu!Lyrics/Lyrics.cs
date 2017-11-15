@@ -13,41 +13,14 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using osu_Lyrics.Properties;
 using System.Threading;
+using static osu_Lyrics.Interop.NativeMethods;
 
 namespace osu_Lyrics
 {
-    internal partial class Lyrics : Form
+    [System.ComponentModel.DesignerCategory("code")]
+    internal partial class Lyrics : LayeredWindow
     {
         #region Lyrics()
-
-        [DllImport("user32.dll")]
-        private static extern IntPtr GetDC(IntPtr hWnd);
-
-        [DllImport("gdi32.dll")]
-        private static extern IntPtr CreateCompatibleDC(IntPtr hdc);
-
-        [DllImport("gdi32.dll")]
-        private static extern IntPtr SelectObject(IntPtr hdc, IntPtr hgdiobj);
-
-        [DllImport("user32.dll")]
-        private static extern bool UpdateLayeredWindow(IntPtr hwnd, IntPtr hdcDst, ref Point pptDst, ref Size psize, IntPtr hdcSrc, ref Point pprSrc, int crKey, ref BLENDFUNCTION pblend, uint dwFlags);
-
-        private struct BLENDFUNCTION
-        {
-            public byte BlendOp;
-            public byte BlendFlags;
-            public byte SourceConstantAlpha;
-            public byte AlphaFormat;
-        }
-
-        [DllImport("user32.dll")]
-        private static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
-
-        [DllImport("gdi32.dll")]
-        private static extern bool DeleteObject(IntPtr hObject);
-
-        [DllImport("gdi32.dll")]
-        private static extern bool DeleteDC(IntPtr hdc);
 
         public static Lyrics Constructor;
 
@@ -64,77 +37,29 @@ namespace osu_Lyrics
         {
             get
             {
-                const int WS_EX_LAYERED = 0x80000;
-                const int WS_EX_TRANSPARENT = 0x20;
                 const int WS_EX_NOACTIVATE = 0x8000000;
 
                 var cp = base.CreateParams;
-                cp.ExStyle |= WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE;
+                cp.ExStyle |= WS_EX_NOACTIVATE;
                 return cp;
             }
         }
 
-        protected override void OnPaint(PaintEventArgs e)
+
+        public override void Render(Graphics g)
         {
-            const byte AC_SRC_OVER = 0;
-            const byte AC_SRC_ALPHA = 1;
-            const uint ULW_ALPHA = 2;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
 
-            var hDC = GetDC(IntPtr.Zero);
-            var hMemDC = CreateCompatibleDC(hDC);
-            var hBitmap = IntPtr.Zero;
-            var hOldBitmap = IntPtr.Zero;
-
-            Bitmap bmp = null;
-            Graphics g = null;
-            try
-            {
-                bmp = new Bitmap(Width, Height, PixelFormat.Format32bppArgb);
-                g = Graphics.FromImage(bmp);
-                g.SmoothingMode = SmoothingMode.AntiAlias;
-                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
-
-                DrawLyric(g);
-                hBitmap = bmp.GetHbitmap(Color.FromArgb(0));
-                hOldBitmap = SelectObject(hMemDC, hBitmap);
-
-                var cur = Location;
-                var size = bmp.Size;
-                var point = Point.Empty;
-                var blend = new BLENDFUNCTION
-                {
-                    BlendOp = AC_SRC_OVER,
-                    BlendFlags = 0,
-                    SourceConstantAlpha = 255,
-                    AlphaFormat = AC_SRC_ALPHA
-                };
-                UpdateLayeredWindow(Handle, hDC, ref cur, ref size, hMemDC, ref point, 0, ref blend, ULW_ALPHA);
-            }
-            catch {}
-            if (g != null)
-            {
-                g.Dispose();
-            }
-            if (bmp != null)
-            {
-                bmp.Dispose();
-            }
-
-            ReleaseDC(IntPtr.Zero, hDC);
-            if (hBitmap != IntPtr.Zero)
-            {
-                SelectObject(hMemDC, hOldBitmap);
-                DeleteObject(hBitmap);
-            }
-            DeleteDC(hMemDC);
+            DrawLyric(g);
         }
 
         #endregion
 
         private void Lyrics_Load(object sender, EventArgs e)
         {
-            Notice(Osu.Listen(Osu_Signal) ? Settings._MutexName : "초기화 실패");
+            Notice(Osu.Listen(Osu_Signal) ? Constants._MutexName : "초기화 실패");
             Osu.HookKeyboard(Osu_KeyDown);
         }
 
@@ -147,7 +72,7 @@ namespace osu_Lyrics
             }
             while (!Osu.Process.HasExited)
             {
-                if (!Osu.Show(true))
+                if (Osu.IsForeground())
                 {
                     var osu = Osu.WindowInfo();
                     if (!Location.Equals(osu.Location))
