@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace osu_Lyrics
+namespace osu_Lyrics.IO
 {
     static class FileEx
     {

@@ -17,7 +17,7 @@ namespace osu_Lyrics
                 if (createdNew)
                 {
                     // 업데이트 전의 파일 삭제
-                    Task.Run(() => FileEx.PostDel(Application.ExecutablePath + Constants._BakExt));
+                    Task.Run(() => IO.FileEx.PostDel(Application.ExecutablePath + Constants._BakExt));
 
                     Application.EnableVisualStyles();
                     Application.SetCompatibleTextRenderingDefault(false);

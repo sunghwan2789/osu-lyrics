@@ -165,9 +165,9 @@ namespace osu_Lyrics
         {
             // dll의 fileVersion을 바탕으로 버전별로 겹치지 않는 경로에 압축 풀기:
             // 시스템 커널에 이전 버전의 dll이 같은 이름으로 남아있을 수 있음
-            FileEx.Extract(Assembly.GetExecutingAssembly().GetManifestResourceStream("osu_Lyrics.Server.dll"), Constants._Server);
+            IO.FileEx.Extract(Assembly.GetExecutingAssembly().GetManifestResourceStream("osu_Lyrics.Server.dll"), Constants._Server);
             var dest = Constants._Server + "." + FileVersionInfo.GetVersionInfo(Constants._Server).FileVersion;
-            FileEx.Move(Constants._Server, dest);
+            IO.FileEx.Move(Constants._Server, dest);
             if (!InjectDLL(dest))
             {
                 return false;

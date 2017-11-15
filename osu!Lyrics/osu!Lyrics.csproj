@@ -53,7 +53,7 @@
     <Compile Include="AudioHash.cs" />
     <Compile Include="Beatmap.cs" />
     <Compile Include="Constants.cs" />
-    <Compile Include="FileEx.cs" />
+    <Compile Include="IO\FileEx.cs" />
     <Compile Include="Interop\ExternDll.cs" />
     <Compile Include="LayeredWindow.cs" />
     <Compile Include="Lyric.cs" />

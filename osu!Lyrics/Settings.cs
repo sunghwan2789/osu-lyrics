@@ -867,7 +867,7 @@ namespace osu_Lyrics
                 }
 
                 ms.Seek(0, SeekOrigin.Begin);
-                FileEx.Extract(new DeflateStream(ms, CompressionMode.Decompress), update);
+                IO.FileEx.Extract(new DeflateStream(ms, CompressionMode.Decompress), update);
             }
 
             // 윈도우는 실행 중인 파일 삭제는 못 하지만 이름 변경은 가능
