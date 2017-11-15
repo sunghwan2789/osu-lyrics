@@ -31,7 +31,7 @@ namespace osu_Lyrics.Formats
             {
                 throw new IOException(@"Unknown file format");
             }
-            return (AudioDecoder)Activator.CreateInstance(decoder, true);
+            return (AudioDecoder)Activator.CreateInstance(decoder);
         }
 
         protected static void AddDecoder<T>(Predicate predict) where T : AudioDecoder

@@ -34,7 +34,7 @@ namespace osu_Lyrics.Formats
                 // 더이상 ID3v2 태그가 없는 경우
                 if (Program.IntB(buff, 0, 3) != IDENTIFIER)
                 {
-                    s.Seek(-buff.Length, SeekOrigin.Current);
+                    s.Seek(-read, SeekOrigin.Current);
                     break;
                 }
 
@@ -45,27 +45,71 @@ namespace osu_Lyrics.Formats
 
         private static void SeekHeader(Stream s)
         {
-            const int FRAME_SYNC = 0xFFE0F0;
-
-            var buff = new byte[3];
+            var buff = new byte[4];
             int read;
             do
             {
                 read = s.Read(buff, 0, buff.Length);
 
                 // MPEG 헤더를 찾았을 경우
-                if ((Program.IntB(buff, 0, 3) & FRAME_SYNC) == FRAME_SYNC)
+                if (Validate(Program.IntB(buff, 0, 4)))
                 {
-                    s.Seek(-buff.Length, SeekOrigin.Current);
+                    s.Seek(-read, SeekOrigin.Current);
                     break;
                 }
                 
                 // 패딩 건너뛰기
-                s.Seek(-buff.Length + 1, SeekOrigin.Current);
+                s.Seek(-read + 1, SeekOrigin.Current);
             } while (read > 0);
         }
 
         public MpegDecoder() { }
+
+        private static bool Validate(int header)
+        {
+            const int SYNC = 0b1111_1111_111;
+            const int VERSION_RESERVED = 0b01;
+            const int LAYER_RESERVED = 0b00;
+            const int BITRATE_BAD = 0b1111;
+            const int SAMPLERATE_RESERVED = 0b11;
+            const int EMPHASIS_RESERVED = 0b10;
+            return ParseSync(header) == SYNC
+                && ParseVersion(header) != VERSION_RESERVED
+                && ParseLayer(header) != LAYER_RESERVED
+                && ParseBitRate(header) != BITRATE_BAD
+                && ParseSampleRate(header) != SAMPLERATE_RESERVED
+                && ParseEmphasis(header) != EMPHASIS_RESERVED;
+        }
+        
+        private static int ParseSync(int header)
+        {
+            return (header >> 21) & 0x7FF;
+        }
+
+        private static int ParseVersion(int header)
+        {
+            return (header >> 19) & 3;
+        }
+
+        private static int ParseLayer(int header)
+        {
+            return (header >> 17) & 3;
+        }
+
+        private static int ParseBitRate(int header)
+        {
+            return (header >> 12) & 0xF;
+        }
+
+        private static int ParseSampleRate(int header)
+        {
+            return (header >> 10) & 3;
+        }
+
+        private static int ParseEmphasis(int header)
+        {
+            return header & 3;
+        }
 
         protected override void ParseFile(Stream stream, Audio audio)
         {
