@@ -133,10 +133,7 @@ namespace osu_Lyrics
 
         #endregion
 
-        private static double Now()
-        {
-            return new TimeSpan(DateTime.Now.Ticks).TotalSeconds;
-        }
+        private static double Now() => new TimeSpan(DateTime.Now.Ticks).TotalSeconds;
 
         /// <summary>
         /// 알송 서버에서 가사를 가져옴.

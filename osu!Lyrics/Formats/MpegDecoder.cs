@@ -81,35 +81,12 @@ namespace osu_Lyrics.Formats
                 && ParseEmphasis(header) != EMPHASIS_RESERVED;
         }
         
-        private static int ParseSync(int header)
-        {
-            return (header >> 21) & 0x7FF;
-        }
-
-        private static int ParseVersion(int header)
-        {
-            return (header >> 19) & 3;
-        }
-
-        private static int ParseLayer(int header)
-        {
-            return (header >> 17) & 3;
-        }
-
-        private static int ParseBitRate(int header)
-        {
-            return (header >> 12) & 0xF;
-        }
-
-        private static int ParseSampleRate(int header)
-        {
-            return (header >> 10) & 3;
-        }
-
-        private static int ParseEmphasis(int header)
-        {
-            return header & 3;
-        }
+        private static int ParseSync(int header) => (header >> 21) & 0x7FF;
+        private static int ParseVersion(int header) => (header >> 19) & 3;
+        private static int ParseLayer(int header) => (header >> 17) & 3;
+        private static int ParseBitRate(int header) => (header >> 12) & 0xF;
+        private static int ParseSampleRate(int header) => (header >> 10) & 3;
+        private static int ParseEmphasis(int header) => header & 3;
 
         protected override void ParseFile(Stream stream, Audio audio)
         {

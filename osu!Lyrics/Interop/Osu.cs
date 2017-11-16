@@ -15,7 +15,7 @@ using static osu_Lyrics.Interop.NativeMethods;
 
 namespace osu_Lyrics.Interop
 {
-    internal class Osu
+    internal static class Osu
     {
         #region Process
 
@@ -42,10 +42,9 @@ namespace osu_Lyrics.Interop
                 }
 
                 // osu!가 실행 중이 아니므로 하나 띄운다
-                var exec = Registry.GetValue(@"HKEY_CLASSES_ROOT\osu!\shell\open\command", null, null);
-                if (exec != null)
+                if (Registry.GetValue(@"HKEY_CLASSES_ROOT\osu!\shell\open\command", null, null) is string exec)
                 {
-                    _process = Process.Start(exec.ToString().Split(new[] { '"' }, StringSplitOptions.RemoveEmptyEntries)[0]);
+                    _process = Process.Start(exec.Split()[0].Trim('"'));
                     return Process;
                 }
 
@@ -118,7 +117,18 @@ namespace osu_Lyrics.Interop
         #endregion
 
         #region Listen(Action<string[]> onSignal)
-        
+
+        private static bool PrepareIPC()
+        {
+            // dll의 fileVersion을 바탕으로 버전별로 겹치지 않는 경로에 압축 풀기:
+            // 시스템 커널에 이전 버전의 dll이 같은 이름으로 남아있을 수 있음
+            IO.FileEx.Extract(Assembly.GetExecutingAssembly().GetManifestResourceStream("osu_Lyrics.Server.dll"), Constants._Server);
+            var dest = Constants._Server + "." + FileVersionInfo.GetVersionInfo(Constants._Server).FileVersion;
+            IO.FileEx.Move(Constants._Server, dest);
+
+            return InjectDll(dest);
+        }
+
         private static bool InjectDll(string dllPath)
         {
             var hProcess = OpenProcess(PROCESS_ALL_ACCESS, false, Process.Id);
@@ -142,31 +152,28 @@ namespace osu_Lyrics.Interop
             return hThread != IntPtr.Zero;
         }
 
+        private static void ListenIPC(Action<string> onSignal)
+        {
+            // 백그라운드에서 서버로부터 데이터를 받아 전달
+            using (var pipe = new NamedPipeClientStream(".", "osu!Lyrics", PipeDirection.In, PipeOptions.None))
+            using (var sr = new StreamReader(pipe, Encoding.Unicode))
+            {
+                pipe.Connect();
+                while (pipe.IsConnected && !sr.EndOfStream)
+                {
+                    onSignal.BeginInvoke(sr.ReadLine(), null, null);
+                }
+            }
+        }
+
         public static bool Listen(Action<string> onSignal)
         {
-            // dll의 fileVersion을 바탕으로 버전별로 겹치지 않는 경로에 압축 풀기:
-            // 시스템 커널에 이전 버전의 dll이 같은 이름으로 남아있을 수 있음
-            IO.FileEx.Extract(Assembly.GetExecutingAssembly().GetManifestResourceStream("osu_Lyrics.Server.dll"), Constants._Server);
-            var dest = Constants._Server + "." + FileVersionInfo.GetVersionInfo(Constants._Server).FileVersion;
-            IO.FileEx.Move(Constants._Server, dest);
-            if (!InjectDll(dest))
+            if (!PrepareIPC())
             {
                 return false;
             }
 
-            // 백그라운드에서 서버로부터 데이터를 받아 전달
-            Task.Run(() =>
-            {
-                using (var pipe = new NamedPipeClientStream(".", "osu!Lyrics", PipeDirection.In, PipeOptions.None))
-                using (var sr = new StreamReader(pipe, Encoding.Unicode))
-                {
-                    pipe.Connect();
-                    while (pipe.IsConnected && !sr.EndOfStream)
-                    {
-                        onSignal(sr.ReadLine());
-                    }
-                }
-            });
+            Task.Run(() => ListenIPC(onSignal));
             return true;
         }
 
@@ -193,13 +200,7 @@ namespace osu_Lyrics.Interop
             }
         }
 
-        public static Rectangle ClientBounds
-        {
-            get
-            {
-                return new Rectangle(ClientLocation, ClientSize);
-            }
-        }
+        public static Rectangle ClientBounds => new Rectangle(ClientLocation, ClientSize);
 
         #endregion
     }
