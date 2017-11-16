@@ -58,7 +58,7 @@ namespace osu_Lyrics.Interop
 
         #region Show()
 
-        public static bool IsForeground() => GetForegroundWindow() == Process.MainWindowHandle;
+        public static bool IsForeground => GetForegroundWindow() == Process.MainWindowHandle;
 
         public static void Show()
         {
@@ -70,35 +70,36 @@ namespace osu_Lyrics.Interop
 
         #region HookKeyboard(Action<Keys> action), UnhookKeyboard()
 
+        public static event KeyEventHandler KeyDown;
+
         private static IntPtr _hhkk = IntPtr.Zero; // hookHandleKeyKeyboard
         private static HookProc _hpk; // hookProcKeyboard
-        private static Func<Keys, bool> _hak; // hookActionKeyboard
 
-        public static void HookKeyboard(Func<Keys, bool> action)
+        public static void HookKeyboard()
         {
             if (_hhkk != IntPtr.Zero)
             {
-                throw new StackOverflowException();
+                throw new InvalidOperationException();
             }
 
-            _hak = action;
             _hpk = new HookProc(LowLevelKeyboardProc);
             _hhkk = SetWindowsHookEx(WH_KEYBOARD_LL, _hpk, IntPtr.Zero, 0);
         }
 
         private static IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam)
         {
-            if (IsForeground() && nCode == HC_ACTION)
+            if (IsForeground && nCode == HC_ACTION)
             {
                 var state = wParam.ToInt32();
-                // 설정 중이면 키보드 후킹 안 하기!
-                if (!(CanvasWindow.Settings?.Visible ?? false)
-                    && (state == WM_KEYDOWN || state == WM_SYSKEYDOWN)
-                    && _hak((Keys) Marshal.ReadInt32(lParam))
-                    && Settings.SuppressKey)
+                if (state == WM_KEYDOWN || state == WM_SYSKEYDOWN)
                 {
-                    // 설정 중 "핫키 전송 막기" 활성화시 osu!로 핫기 전송 막는 부분..
-                    return (IntPtr) 1;
+                    //var keyData = (Marshal.PtrToStructure(lParam, typeof(KBDLLHOOKSTRUCT)) as KBDLLHOOKSTRUCT)?.vkCode;
+                    var e = new KeyEventArgs((Keys) Marshal.ReadInt32(lParam));
+                    KeyDown?.Invoke(null, e);
+                    if (e.SuppressKeyPress)
+                    {
+                        return (IntPtr) 1;
+                    }
                 }
             }
             return CallNextHookEx(_hhkk, nCode, wParam, lParam);
@@ -110,13 +111,14 @@ namespace osu_Lyrics.Interop
             {
                 UnhookWindowsHookEx(_hhkk);
                 _hpk = null;
-                _hak = null;
             }
         }
 
         #endregion
 
         #region Listen(Action<string[]> onSignal)
+
+        public static event Action<string> ReceivedMessage;
 
         private static bool PrepareIPC()
         {
@@ -172,6 +174,7 @@ namespace osu_Lyrics.Interop
             {
                 return false;
             }
+            ReceivedMessage += onSignal;
 
             Task.Run(() => ListenIPC(onSignal));
             return true;

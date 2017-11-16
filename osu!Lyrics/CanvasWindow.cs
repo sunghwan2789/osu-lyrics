@@ -48,7 +48,8 @@ namespace osu_Lyrics
         private void Lyrics_Load(object sender, EventArgs e)
         {
             Notice(Osu.Listen(Osu_Signal) ? Constants._MutexName : "초기화 실패");
-            Osu.HookKeyboard(Osu_KeyDown);
+            Osu.KeyDown += Osu_KeyDown;
+            Osu.HookKeyboard();
         }
 
         private async void Lyrics_Shown(object sender, EventArgs e)
@@ -60,7 +61,7 @@ namespace osu_Lyrics
             }
             while (!Osu.Process.HasExited)
             {
-                if (Osu.IsForeground())
+                if (Osu.IsForeground)
                 {
                     if (!Location.Equals(Osu.ClientLocation))
                     {
@@ -439,31 +440,44 @@ namespace osu_Lyrics
 
 
 
-        private bool Osu_KeyDown(Keys key)
+        private void Osu_KeyDown(object sender, KeyEventArgs e)
         {
-            if (key == Settings.KeyToggle)
+            // 설정 중이면 키보드 후킹 안 하기!
+            if (Settings?.Visible ?? false)
+            {
+                return;
+            }
+
+            // 매칭되는 핫키가 있다면 osu!로 키 전송 방지
+            e.SuppressKeyPress = Settings.SuppressKey;
+
+            if (e.KeyData == Settings.KeyToggle)
             {
                 showLyric = !showLyric;
                 Notice("가사 {0}", showLyric ? "보임" : "숨김");
-                return true;
+                return;
             }
+
+            // 가사 보임 상태에서만 처리하는 핫키들
             if (!Settings.BlockSyncOnHide || (Settings.BlockSyncOnHide && showLyric))
             {
-                if (key == Settings.KeyBackward)
+                if (e.KeyData == Settings.KeyBackward)
                 {
                     curAudio.Sync += 0.5;
                     lyricsCache = lyricsCache;
                     Notice("싱크 느리게({0}초)", curAudio.Sync.ToString("F1"));
-                    return true;
+                    return;
                 }
-                if (key == Settings.KeyForward)
+                if (e.KeyData == Settings.KeyForward)
                 {
                     curAudio.Sync -= 0.5;
                     Notice("싱크 빠르게({0}초)", curAudio.Sync.ToString("F1"));
-                    return true;
+                    return;
                 }
             }
-            return false;
+
+            // 매칭되는 핫키가 없으므로 osu!로 키 전송
+            e.SuppressKeyPress = false;
         }
 
 

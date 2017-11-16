@@ -179,6 +179,16 @@ namespace osu_Lyrics.Interop
         public const int WM_SYSCHAR = 0x0106;
         public const int WM_SYSDEADCHAR = 0x0107;
 
+        [StructLayout(LayoutKind.Sequential)]
+        public struct KBDLLHOOKSTRUCT
+        {
+            public int vkCode;
+            public int scanCode;
+            public int flags;
+            public int time;
+            public IntPtr dwExtraInfo;
+        }
+
         [DllImport(ExternDll.User32)]
         public static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
 
