@@ -7,47 +7,21 @@ using System.Drawing.Text;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using osu_Lyrics.Properties;
 using System.Threading;
+using osu_Lyrics.Interop;
+using osu_Lyrics.Forms;
+using osu_Lyrics.Models;
+using osu_Lyrics.Formats;
 
 namespace osu_Lyrics
 {
-    internal partial class Lyrics : Form
+    internal partial class Lyrics : GhostLayeredWindow
     {
         #region Lyrics()
-
-        [DllImport("user32.dll")]
-        private static extern IntPtr GetDC(IntPtr hWnd);
-
-        [DllImport("gdi32.dll")]
-        private static extern IntPtr CreateCompatibleDC(IntPtr hdc);
-
-        [DllImport("gdi32.dll")]
-        private static extern IntPtr SelectObject(IntPtr hdc, IntPtr hgdiobj);
-
-        [DllImport("user32.dll")]
-        private static extern bool UpdateLayeredWindow(IntPtr hwnd, IntPtr hdcDst, ref Point pptDst, ref Size psize, IntPtr hdcSrc, ref Point pprSrc, int crKey, ref BLENDFUNCTION pblend, uint dwFlags);
-
-        private struct BLENDFUNCTION
-        {
-            public byte BlendOp;
-            public byte BlendFlags;
-            public byte SourceConstantAlpha;
-            public byte AlphaFormat;
-        }
-
-        [DllImport("user32.dll")]
-        private static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
-
-        [DllImport("gdi32.dll")]
-        private static extern bool DeleteObject(IntPtr hObject);
-
-        [DllImport("gdi32.dll")]
-        private static extern bool DeleteDC(IntPtr hdc);
 
         public static Lyrics Constructor;
 
@@ -60,81 +34,20 @@ namespace osu_Lyrics
             InitializeComponent();
         }
 
-        protected override CreateParams CreateParams
+        public override void Render(Graphics g)
         {
-            get
-            {
-                const int WS_EX_LAYERED = 0x80000;
-                const int WS_EX_TRANSPARENT = 0x20;
-                const int WS_EX_NOACTIVATE = 0x8000000;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
 
-                var cp = base.CreateParams;
-                cp.ExStyle |= WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE;
-                return cp;
-            }
-        }
-
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            const byte AC_SRC_OVER = 0;
-            const byte AC_SRC_ALPHA = 1;
-            const uint ULW_ALPHA = 2;
-
-            var hDC = GetDC(IntPtr.Zero);
-            var hMemDC = CreateCompatibleDC(hDC);
-            var hBitmap = IntPtr.Zero;
-            var hOldBitmap = IntPtr.Zero;
-
-            Bitmap bmp = null;
-            Graphics g = null;
-            try
-            {
-                bmp = new Bitmap(Width, Height, PixelFormat.Format32bppArgb);
-                g = Graphics.FromImage(bmp);
-                g.SmoothingMode = SmoothingMode.AntiAlias;
-                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
-
-                DrawLyric(g);
-                hBitmap = bmp.GetHbitmap(Color.FromArgb(0));
-                hOldBitmap = SelectObject(hMemDC, hBitmap);
-
-                var cur = Location;
-                var size = bmp.Size;
-                var point = Point.Empty;
-                var blend = new BLENDFUNCTION
-                {
-                    BlendOp = AC_SRC_OVER,
-                    BlendFlags = 0,
-                    SourceConstantAlpha = 255,
-                    AlphaFormat = AC_SRC_ALPHA
-                };
-                UpdateLayeredWindow(Handle, hDC, ref cur, ref size, hMemDC, ref point, 0, ref blend, ULW_ALPHA);
-            }
-            catch {}
-            if (g != null)
-            {
-                g.Dispose();
-            }
-            if (bmp != null)
-            {
-                bmp.Dispose();
-            }
-
-            ReleaseDC(IntPtr.Zero, hDC);
-            if (hBitmap != IntPtr.Zero)
-            {
-                SelectObject(hMemDC, hOldBitmap);
-                DeleteObject(hBitmap);
-            }
-            DeleteDC(hMemDC);
+            DrawLyric(g);
         }
 
         #endregion
 
         private void Lyrics_Load(object sender, EventArgs e)
         {
-            Notice(Osu.Listen(Osu_Signal) ? Settings._MutexName : "초기화 실패");
+            Notice(Osu.Listen(Osu_Signal) ? Constants._MutexName : "초기화 실패");
             Osu.HookKeyboard(Osu_KeyDown);
         }
 
@@ -143,26 +56,29 @@ namespace osu_Lyrics
             // 초기 설정을 위해 대화 상자 열기
             if (!File.Exists(Settings._Path))
             {
-                Task.Run(() => Invoke(new MethodInvoker(menuSetting.PerformClick)));
+                BeginInvoke(new MethodInvoker(menuSetting.PerformClick));
             }
             while (!Osu.Process.HasExited)
             {
-                if (!Osu.Show(true))
+                if (Osu.IsForeground())
                 {
-                    var osu = Osu.WindowInfo();
-                    if (!Location.Equals(osu.Location))
+                    if (!Location.Equals(Osu.ClientLocation))
                     {
-                        Location = osu.Location;
+                        Location = Osu.ClientLocation;
                     }
-                    if (!ClientSize.Equals(osu.ClientSize))
+                    if (!Size.Equals(Osu.ClientSize))
                     {
-                        ClientSize = osu.ClientSize;
+                        Size = Osu.ClientSize;
                         Settings.DrawingOrigin = Point.Empty;
                     }
-                    if (Settings == null)
+                    if (!(Settings?.Visible ?? false))
                     {
                         TopMost = true;
                     }
+                    Visible = true;
+                }
+                else if (Settings?.Visible ?? false)
+                {
                     Visible = true;
                 }
                 else if (Settings.ShowWhileOsuTop)
@@ -217,10 +133,7 @@ namespace osu_Lyrics
 
         #endregion
 
-        private static double Now()
-        {
-            return new TimeSpan(DateTime.Now.Ticks).TotalSeconds;
-        }
+        private static double Now() => new TimeSpan(DateTime.Now.Ticks).TotalSeconds;
 
         /// <summary>
         /// 알송 서버에서 가사를 가져옴.
@@ -322,7 +235,15 @@ namespace osu_Lyrics
             // 재생 중인 곡이 바꼈다!
             if (data[1] != curAudio.Path)
             {
-                curAudio = new Audio(data[1], data[4]);
+                using (var fs = new FileStream(data[1], FileMode.Open, FileAccess.Read))
+                {
+                    curAudio = AudioDecoder.GetDecoder(fs)?.Decode(fs);
+                }
+                curAudio.Path = data[1];
+                using (var sr = new StreamReader(data[4]))
+                {
+                    curAudio.Beatmap = BeatmapDecoder.GetDecoder(sr)?.Decode(sr);
+                }
                 UpdateLyrics();
             }
             curTime = DateTimeOffset.Now.Subtract(
@@ -352,7 +273,7 @@ namespace osu_Lyrics
                 // 파일 해시로 가사 검색
                 var newLyrics = await GetLyricsAsync(new Dictionary<string, string>
                 {
-                    { "[HASH]", curAudio.Hash }
+                    { "[HASH]", curAudio.CheckSum }
                 });
 
                 if (newLyrics == null && curAudio.Beatmap != null)

@@ -471,7 +471,7 @@
             this.label18.TabIndex = 40;
             this.label18.Text = "?";
             this.toolTip1.SetToolTip(this.label18, "핫키로 조절한 싱크 타이밍은 곡이 바뀔 때마다 초기화됨\r\nEscape 키로 핫키 취소\r\n\r\n싱크 느리게 & 싱크 빠르게: 싱크 0.5초만큼 조절\r" +
-        "\n토글: 가사 숨김/보임\r\n\r\n핫키 전송 막기 기능은 핫키가 제구실하면 작동함");
+        "\n토글: 가사 숨김/보임\r\n\r\n핫키 전송 막기 기능은 핫키가 게임에 입력되지 않게 하는 기능임");
             // 
             // label17
             // 

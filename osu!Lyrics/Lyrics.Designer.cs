@@ -71,9 +71,7 @@
             // 
             // Lyrics
             // 
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
             this.Name = "Lyrics";
-            this.ShowInTaskbar = false;
             this.Text = "osu!Lyrics";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Lyrics_FormClosing);
             this.Load += new System.EventHandler(this.Lyrics_Load);

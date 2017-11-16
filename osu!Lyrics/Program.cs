@@ -11,63 +11,17 @@ namespace osu_Lyrics
         [STAThread]
         private static void Main()
         {
-            bool createdNew;
-            using (new Mutex(true, Settings._MutexName, out createdNew))
+            using (new Mutex(true, Constants._MutexName, out bool createdNew))
             {
-                Osu.Show();
+                Interop.Osu.Show();
                 if (createdNew)
                 {
                     // 업데이트 전의 파일 삭제
-                    Task.Run(() => PostDel(Application.ExecutablePath + Settings._BakExt));
+                    Task.Run(() => IO.FileEx.PostDel(Application.ExecutablePath + Constants._BakExt));
 
                     Application.EnableVisualStyles();
                     Application.SetCompatibleTextRenderingDefault(false);
                     Application.Run(new Lyrics());
-                }
-            }
-        }
-
-        public static void PreDel(string path)
-        {
-            try
-            {
-                File.Delete(path);
-            }
-            catch // running
-            {
-                var bak = path + Settings._BakExt;
-                PostDel(bak);
-                File.Move(path, bak);
-            }
-        }
-
-        public static void Extract(Stream s, string path)
-        {
-            PreDel(path);
-            using (var fs = File.OpenWrite(path))
-            {
-                s.CopyTo(fs);
-            }
-            s.Dispose();
-        }
-
-        public static void Move(string src, string dst)
-        {
-            PreDel(dst);
-            File.Move(src, dst);
-        }
-
-        public static void PostDel(string bak)
-        {
-            while (File.Exists(bak))
-            {
-                try
-                {
-                    File.Delete(bak);
-                }
-                catch
-                {
-                    Thread.Sleep(1000);
                 }
             }
         }
