@@ -71,10 +71,14 @@ namespace osu_Lyrics
                         Size = Osu.ClientSize;
                         Settings.DrawingOrigin = Point.Empty;
                     }
-                    if (Settings == null)
+                    if (!(Settings?.Visible ?? false))
                     {
                         TopMost = true;
                     }
+                    Visible = true;
+                }
+                else if (Settings?.Visible ?? false)
+                {
                     Visible = true;
                 }
                 else if (Settings.ShowWhileOsuTop)

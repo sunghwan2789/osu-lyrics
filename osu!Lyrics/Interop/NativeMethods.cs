@@ -135,13 +135,49 @@ namespace osu_Lyrics.Interop
         [DllImport(ExternDll.User32)]
         public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
+        public const int SW_HIDE = 0;
+        public const int SW_SHOWNORMAL = 1;
+        public const int SW_NORMAL = 1;
+        public const int SW_SHOWMINIMIZED = 2;
+        public const int SW_SHOWMAXIMIZED = 3;
+        public const int SW_MAXIMIZE = 3;
+        public const int SW_SHOWNOACTIVATE = 4;
+        public const int SW_SHOW = 5;
+        public const int SW_MINIMIZE = 6;
+        public const int SW_SHOWMINNOACTIVE = 7;
+        public const int SW_SHOWNA = 8;
+        public const int SW_RESTORE = 9;
+        public const int SW_SHOWDEFAULT = 10;
+        public const int SW_FORCEMINIMIZE = 11;
+        public const int SW_MAX = 11;
+
         [DllImport(ExternDll.User32)]
         public static extern bool SetForegroundWindow(IntPtr hWnd);
 
         [DllImport(ExternDll.User32)]
         public static extern IntPtr SetWindowsHookEx(int idHook, HookProc lpfn, IntPtr hMod, uint dwThreadId);
 
+        public const int WH_KEYBOARD_LL = 13;
+
         public delegate IntPtr HookProc(int nCode, IntPtr wParam, IntPtr lParam);
+
+        public const int HC_ACTION = 0;
+        public const int HC_GETNEXT = 1;
+        public const int HC_SKIP = 2;
+        public const int HC_NOREMOVE = 3;
+        public const int HC_NOREM = HC_NOREMOVE;
+        public const int HC_SYSMODALON = 4;
+        public const int HC_SYSMODALOFF = 5;
+
+        public const int WM_KEYFIRST = 0x0100;
+        public const int WM_KEYDOWN = 0x0100;
+        public const int WM_KEYUP = 0x0101;
+        public const int WM_CHAR = 0x0102;
+        public const int WM_DEADCHAR = 0x0103;
+        public const int WM_SYSKEYDOWN = 0x0104;
+        public const int WM_SYSKEYUP = 0x0105;
+        public const int WM_SYSCHAR = 0x0106;
+        public const int WM_SYSDEADCHAR = 0x0107;
 
         [DllImport(ExternDll.User32)]
         public static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);

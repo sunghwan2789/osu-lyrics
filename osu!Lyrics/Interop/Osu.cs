@@ -59,45 +59,24 @@ namespace osu_Lyrics.Interop
 
         #region Show()
 
-        public static bool IsForeground()
-        {
-            if (GetForegroundWindow() == Process.MainWindowHandle)
-            {
-                return true;
-            }
-            return Lyrics.Settings?.Visible ?? false;
-        }
+        public static bool IsForeground() => GetForegroundWindow() == Process.MainWindowHandle;
 
-        /// <summary>
-        /// 창이 활성화되어 있는지 확인하거나 활성화함.
-        /// 이미 창이 활성화되어 있다면 false를 반환.
-        /// </summary>
-        /// <returns>bool</returns>
-        public static bool Show(bool checkOnly = false)
+        public static void Show()
         {
-            const int SW_SHOWNORMAL = 1;
-
-            if (GetForegroundWindow() == Process.MainWindowHandle)
-            {
-                return false;
-            }
             ShowWindow(Process.MainWindowHandle, SW_SHOWNORMAL);
             SetForegroundWindow(Process.MainWindowHandle);
-            return !Lyrics.Settings?.Visible ?? true;
         }
 
         #endregion
 
         #region HookKeyboard(Action<Keys> action), UnhookKeyboard()
 
-        private static IntPtr _hhkk; // hookHandleKeyKeyboard
+        private static IntPtr _hhkk = IntPtr.Zero; // hookHandleKeyKeyboard
         private static HookProc _hpk; // hookProcKeyboard
         private static Func<Keys, bool> _hak; // hookActionKeyboard
 
         public static void HookKeyboard(Func<Keys, bool> action)
         {
-            const int WH_KEYBOARD_LL = 13;
-
             if (_hhkk != IntPtr.Zero)
             {
                 throw new StackOverflowException();
@@ -110,17 +89,14 @@ namespace osu_Lyrics.Interop
 
         private static IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam)
         {
-            const int HC_ACTION = 0;
-            const int WM_KEYDOWN = 0x100;
-            const int WM_SYSKEYDOWN = 0x104;
-
             if (IsForeground() && nCode == HC_ACTION)
             {
                 var state = wParam.ToInt32();
                 // 설정 중이면 키보드 후킹 안 하기!
-                if (Lyrics.Settings == null &&
-                    (state == WM_KEYDOWN || state == WM_SYSKEYDOWN) &&
-                    _hak((Keys) Marshal.ReadInt32(lParam)) && Settings.SuppressKey)
+                if (!(Lyrics.Settings?.Visible ?? false)
+                    && (state == WM_KEYDOWN || state == WM_SYSKEYDOWN)
+                    && _hak((Keys) Marshal.ReadInt32(lParam))
+                    && Settings.SuppressKey)
                 {
                     // 설정 중 "핫키 전송 막기" 활성화시 osu!로 핫기 전송 막는 부분..
                     return (IntPtr) 1;
@@ -131,14 +107,19 @@ namespace osu_Lyrics.Interop
 
         public static void UnhookKeyboard()
         {
-            UnhookWindowsHookEx(_hhkk);
+            if (_hhkk != IntPtr.Zero)
+            {
+                UnhookWindowsHookEx(_hhkk);
+                _hpk = null;
+                _hak = null;
+            }
         }
 
         #endregion
 
         #region Listen(Action<string[]> onSignal)
         
-        private static bool InjectDLL(string dllPath)
+        private static bool InjectDll(string dllPath)
         {
             var hProcess = OpenProcess(PROCESS_ALL_ACCESS, false, Process.Id);
 
@@ -168,7 +149,7 @@ namespace osu_Lyrics.Interop
             IO.FileEx.Extract(Assembly.GetExecutingAssembly().GetManifestResourceStream("osu_Lyrics.Server.dll"), Constants._Server);
             var dest = Constants._Server + "." + FileVersionInfo.GetVersionInfo(Constants._Server).FileVersion;
             IO.FileEx.Move(Constants._Server, dest);
-            if (!InjectDLL(dest))
+            if (!InjectDll(dest))
             {
                 return false;
             }
