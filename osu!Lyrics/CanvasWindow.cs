@@ -14,18 +14,18 @@ using osu_Lyrics.Properties;
 using System.Threading;
 using osu_Lyrics.Interop;
 using osu_Lyrics.Forms;
-using osu_Lyrics.Models;
-using osu_Lyrics.Formats;
+using osu_Lyrics.Audio;
+using osu_Lyrics.Lyrics;
 
 namespace osu_Lyrics
 {
-    internal partial class Lyrics : GhostLayeredWindow
+    internal partial class CanvasWindow : GhostLayeredWindow
     {
         #region Lyrics()
 
-        public static Lyrics Constructor;
+        public static CanvasWindow Constructor;
 
-        public Lyrics()
+        public CanvasWindow()
         {
             if (Constructor == null)
             {
@@ -182,7 +182,7 @@ namespace osu_Lyrics
 
 
 
-        private Audio curAudio = new Audio();
+        private AudioInfo curAudio = new AudioInfo();
 
         private double _curTimeChanged;
         private double _curTime;
@@ -237,12 +237,12 @@ namespace osu_Lyrics
             {
                 using (var fs = new FileStream(data[1], FileMode.Open, FileAccess.Read))
                 {
-                    curAudio = AudioDecoder.GetDecoder(fs)?.Decode(fs);
+                    curAudio = Audio.Formats.AudioDecoder.GetDecoder(fs)?.Decode(fs);
                 }
                 curAudio.Path = data[1];
                 using (var sr = new StreamReader(data[4]))
                 {
-                    curAudio.Beatmap = BeatmapDecoder.GetDecoder(sr)?.Decode(sr);
+                    curAudio.Beatmap = Beatmap.Formats.BeatmapDecoder.GetDecoder(sr)?.Decode(sr);
                 }
                 UpdateLyrics();
             }

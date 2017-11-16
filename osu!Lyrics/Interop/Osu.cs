@@ -92,7 +92,7 @@ namespace osu_Lyrics.Interop
             {
                 var state = wParam.ToInt32();
                 // 설정 중이면 키보드 후킹 안 하기!
-                if (!(Lyrics.Settings?.Visible ?? false)
+                if (!(CanvasWindow.Settings?.Visible ?? false)
                     && (state == WM_KEYDOWN || state == WM_SYSKEYDOWN)
                     && _hak((Keys) Marshal.ReadInt32(lParam))
                     && Settings.SuppressKey)

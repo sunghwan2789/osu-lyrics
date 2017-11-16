@@ -1,11 +1,10 @@
-﻿using osu_Lyrics.Models;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 
-namespace osu_Lyrics.Formats
+namespace osu_Lyrics.Audio.Formats
 {
     using Predicate = Predicate<Stream>;
     internal abstract class AudioDecoder
@@ -39,25 +38,25 @@ namespace osu_Lyrics.Formats
             decoders.Add(new Tuple<Predicate, Type>(predict, typeof(T)));
         }
 
-        public virtual Audio Decode(Stream stream)
+        public virtual AudioInfo Decode(Stream stream)
         {
             return ParseFile(stream);
         }
 
-        public virtual void Decode(Stream stream, Audio audio)
+        public virtual void Decode(Stream stream, AudioInfo audio)
         {
             ParseFile(stream, audio);
         }
 
-        protected virtual Audio ParseFile(Stream stream)
+        protected virtual AudioInfo ParseFile(Stream stream)
         {
-            var audio = new Audio();
+            var audio = new AudioInfo();
 
             ParseFile(stream, audio);
             return audio;
         }
 
-        protected abstract void ParseFile(Stream stream, Audio audio);
+        protected abstract void ParseFile(Stream stream, AudioInfo audio);
 
         protected static string GetCheckSum(Stream s)
         {

@@ -1,12 +1,11 @@
-﻿using osu_Lyrics.Models;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace osu_Lyrics.Formats
+namespace osu_Lyrics.Beatmap.Formats
 {
     using Predicate = Predicate<string>;
     internal abstract class BeatmapDecoder
@@ -50,24 +49,24 @@ namespace osu_Lyrics.Formats
             decoders.Add(new Tuple<Predicate, Type>(predict, typeof(T)));
         }
 
-        public virtual Beatmap Decode(StreamReader stream)
+        public virtual BeatmapMetadata Decode(StreamReader stream)
         {
             return ParseFile(stream);
         }
 
-        public virtual void Decode(StreamReader stream, Beatmap beatmap)
+        public virtual void Decode(StreamReader stream, BeatmapMetadata beatmap)
         {
             ParseFile(stream, beatmap);
         }
 
-        protected virtual Beatmap ParseFile(StreamReader stream)
+        protected virtual BeatmapMetadata ParseFile(StreamReader stream)
         {
-            var beatmap = new Beatmap();
+            var beatmap = new BeatmapMetadata();
 
             ParseFile(stream, beatmap);
             return beatmap;
         }
 
-        protected abstract void ParseFile(StreamReader stream, Beatmap beatmap);
+        protected abstract void ParseFile(StreamReader stream, BeatmapMetadata beatmap);
     }
 }

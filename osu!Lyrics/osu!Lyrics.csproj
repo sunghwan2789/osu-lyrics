@@ -51,23 +51,23 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Formats\BeatmapDecoder.cs" />
-    <Compile Include="Formats\OsuLegacyDecoder.cs" />
-    <Compile Include="Models\Audio.cs" />
-    <Compile Include="Formats\AudioDecoder.cs" />
-    <Compile Include="Models\Beatmap.cs" />
+    <Compile Include="Beatmap\Formats\BeatmapDecoder.cs" />
+    <Compile Include="Beatmap\Formats\OsuLegacyDecoder.cs" />
+    <Compile Include="Audio\AudioInfo.cs" />
+    <Compile Include="Audio\Formats\AudioDecoder.cs" />
+    <Compile Include="Beatmap\BeatmapMetadata.cs" />
     <Compile Include="Constants.cs" />
     <Compile Include="Forms\GhostLayeredWindow.cs" />
     <Compile Include="IO\FileEx.cs" />
     <Compile Include="Interop\ExternDll.cs" />
     <Compile Include="Forms\LayeredWindow.cs" />
-    <Compile Include="Models\Lyric.cs" />
-    <Compile Include="Lyrics.cs" />
-    <Compile Include="Lyrics.Designer.cs">
-      <DependentUpon>Lyrics.cs</DependentUpon>
+    <Compile Include="Lyrics\Lyric.cs" />
+    <Compile Include="CanvasWindow.cs" />
+    <Compile Include="CanvasWindow.Designer.cs">
+      <DependentUpon>CanvasWindow.cs</DependentUpon>
     </Compile>
-    <Compile Include="Formats\MpegDecoder.cs" />
-    <Compile Include="Formats\OggDecoder.cs" />
+    <Compile Include="Audio\Formats\MpegDecoder.cs" />
+    <Compile Include="Audio\Formats\OggDecoder.cs" />
     <Compile Include="Interop\Osu.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

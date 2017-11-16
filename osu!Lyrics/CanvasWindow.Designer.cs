@@ -1,6 +1,6 @@
 ﻿namespace osu_Lyrics
 {
-    partial class Lyrics
+    partial class CanvasWindow
     {
         /// <summary>
         /// Required designer variable.

@@ -1,8 +1,7 @@
 ﻿using System;
 using System.IO;
-using osu_Lyrics.Models;
 
-namespace osu_Lyrics.Formats
+namespace osu_Lyrics.Audio.Formats
 {
     internal class MpegDecoder : AudioDecoder
     {
@@ -88,7 +87,7 @@ namespace osu_Lyrics.Formats
         private static int ParseSampleRate(int header) => (header >> 10) & 3;
         private static int ParseEmphasis(int header) => header & 3;
 
-        protected override void ParseFile(Stream stream, Audio audio)
+        protected override void ParseFile(Stream stream, AudioInfo audio)
         {
             if (audio == null)
             {

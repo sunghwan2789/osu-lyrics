@@ -1,18 +1,15 @@
-﻿using osu_Lyrics.Formats;
-using System.IO;
-
-namespace osu_Lyrics.Models
+﻿namespace osu_Lyrics.Audio
 {
-    internal class Audio
+    internal class AudioInfo
     {
         public string Path { get; set; }
 
         public string CheckSum { get; set; }
-        public Beatmap Beatmap { get; set; }
+        public Beatmap.BeatmapMetadata Beatmap { get; set; }
 
         public double Sync;
 
-        public Audio()
+        public AudioInfo()
         {
             this.Sync = 0;
         }

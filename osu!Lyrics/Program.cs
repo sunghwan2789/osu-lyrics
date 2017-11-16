@@ -21,7 +21,7 @@ namespace osu_Lyrics
 
                     Application.EnableVisualStyles();
                     Application.SetCompatibleTextRenderingDefault(false);
-                    Application.Run(new Lyrics());
+                    Application.Run(new CanvasWindow());
                 }
             }
         }

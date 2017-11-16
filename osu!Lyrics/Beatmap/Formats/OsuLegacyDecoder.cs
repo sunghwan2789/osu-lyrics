@@ -4,9 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using osu_Lyrics.Models;
 
-namespace osu_Lyrics.Formats
+namespace osu_Lyrics.Beatmap.Formats
 {
     class OsuLegacyDecoder : BeatmapDecoder
     {
@@ -38,7 +37,7 @@ namespace osu_Lyrics.Formats
             Variables,
         }
 
-        private void handleMetadata(Beatmap beatmap, string line)
+        private void handleMetadata(BeatmapMetadata beatmap, string line)
         {
             if (beatmap == null)
             {
@@ -77,7 +76,7 @@ namespace osu_Lyrics.Formats
             }
         }
 
-        protected override void ParseFile(StreamReader stream, Beatmap beatmap)
+        protected override void ParseFile(StreamReader stream, BeatmapMetadata beatmap)
         {
             if (beatmap == null)
             {
