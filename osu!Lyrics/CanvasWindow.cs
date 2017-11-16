@@ -32,6 +32,9 @@ namespace osu_Lyrics
                 Constructor = this;
             }
             InitializeComponent();
+
+            Osu.MessageReceived += Osu_MessageReceived;
+            Osu.KeyDown += Osu_KeyDown;
         }
 
         public override void Render(Graphics g)
@@ -47,9 +50,7 @@ namespace osu_Lyrics
 
         private void Lyrics_Load(object sender, EventArgs e)
         {
-            Notice(Osu.Listen(Osu_Signal) ? Constants._MutexName : "초기화 실패");
-            Osu.KeyDown += Osu_KeyDown;
-            Osu.HookKeyboard();
+            Notice(Constants._MutexName);
         }
 
         private async void Lyrics_Shown(object sender, EventArgs e)
@@ -97,10 +98,6 @@ namespace osu_Lyrics
             Close();
         }
 
-        private void Lyrics_FormClosing(object sender, FormClosingEventArgs e)
-        {
-            Osu.UnhookKeyboard();
-        }
 
 
 
@@ -225,32 +222,24 @@ namespace osu_Lyrics
             }
         }
 
-        private void Osu_Signal(string line)
+        private void Osu_MessageReceived(object sender, MessageReceivedEventArgs e)
         {
-            var data = line.Split('|');
-            if (data.Length != 5)
-            {
-                return;
-            }
-            // [ time, audioPath, audioCurrentTime, audioPlaybackRate, beatmapPath ]
             // 재생 중인 곡이 바꼈다!
-            if (data[1] != curAudio.Path)
+            if (e.AudioPath != curAudio.Path)
             {
-                using (var fs = new FileStream(data[1], FileMode.Open, FileAccess.Read))
+                using (var fs = new FileStream(e.AudioPath, FileMode.Open, FileAccess.Read))
                 {
                     curAudio = Audio.Formats.AudioDecoder.GetDecoder(fs)?.Decode(fs);
                 }
-                curAudio.Path = data[1];
-                using (var sr = new StreamReader(data[4]))
+                curAudio.Path = e.AudioPath;
+                using (var sr = new StreamReader(e.BeatmapPath))
                 {
                     curAudio.Beatmap = Beatmap.Formats.BeatmapDecoder.GetDecoder(sr)?.Decode(sr);
                 }
                 UpdateLyrics();
             }
-            curTime = DateTimeOffset.Now.Subtract(
-                DateTimeOffset.FromFileTime(Convert.ToInt64(data[0], 16))
-            ).TotalSeconds + Convert.ToDouble(data[2]);
-            _playbackRate = 1 + Convert.ToDouble(data[3]) / 100;
+            curTime = DateTimeOffset.Now.Subtract(DateTimeOffset.FromFileTime(e.SystemTime)).TotalSeconds + e.AudioPlayTime;
+            _playbackRate = 1 + e.AudioPlaySpeed / 100;
         }
 
         private CancellationTokenSource cts;

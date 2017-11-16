@@ -70,7 +70,7 @@ namespace osu_Lyrics.Interop
 
         #region HookKeyboard(Action<Keys> action), UnhookKeyboard()
 
-        public static event KeyEventHandler KeyDown;
+        public static event EventHandler<KeyEventArgs> KeyDown;
 
         private static IntPtr _hhkk = IntPtr.Zero; // hookHandleKeyKeyboard
         private static HookProc _hpk; // hookProcKeyboard
@@ -118,9 +118,9 @@ namespace osu_Lyrics.Interop
 
         #region Listen(Action<string[]> onSignal)
 
-        public static event Action<string> ReceivedMessage;
+        public static event EventHandler<MessageReceivedEventArgs> MessageReceived;
 
-        private static bool PrepareIPC()
+        public static void RunMessageServer()
         {
             // dll의 fileVersion을 바탕으로 버전별로 겹치지 않는 경로에 압축 풀기:
             // 시스템 커널에 이전 버전의 dll이 같은 이름으로 남아있을 수 있음
@@ -128,7 +128,7 @@ namespace osu_Lyrics.Interop
             var dest = Constants._Server + "." + FileVersionInfo.GetVersionInfo(Constants._Server).FileVersion;
             IO.FileEx.Move(Constants._Server, dest);
 
-            return InjectDll(dest);
+            InjectDll(dest);
         }
 
         private static bool InjectDll(string dllPath)
@@ -154,7 +154,7 @@ namespace osu_Lyrics.Interop
             return hThread != IntPtr.Zero;
         }
 
-        private static void ListenIPC(Action<string> onSignal)
+        private static void ListenMessage()
         {
             // 백그라운드에서 서버로부터 데이터를 받아 전달
             using (var pipe = new NamedPipeClientStream(".", "osu!Lyrics", PipeDirection.In, PipeOptions.None))
@@ -163,22 +163,13 @@ namespace osu_Lyrics.Interop
                 pipe.Connect();
                 while (pipe.IsConnected && !sr.EndOfStream)
                 {
-                    onSignal.BeginInvoke(sr.ReadLine(), null, null);
+                    var e = new MessageReceivedEventArgs(sr.ReadLine());
+                    MessageReceived?.BeginInvoke(null, e, null, null);
                 }
             }
         }
 
-        public static bool Listen(Action<string> onSignal)
-        {
-            if (!PrepareIPC())
-            {
-                return false;
-            }
-            ReceivedMessage += onSignal;
-
-            Task.Run(() => ListenIPC(onSignal));
-            return true;
-        }
+        public static Task ListenMessageAsync() => Task.Run(() => ListenMessage());
 
         #endregion
 

@@ -13,6 +13,11 @@ namespace osu_Lyrics.Forms
     [System.ComponentModel.DesignerCategory("code")]
     class LayeredWindow : Form
     {
+        public LayeredWindow()
+        {
+            FormBorderStyle = FormBorderStyle.None;
+        }
+
         protected override CreateParams CreateParams
         {
             get

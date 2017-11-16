@@ -10,7 +10,7 @@ namespace osu_Lyrics.Forms
 {
     class GhostLayeredWindow : LayeredWindow
     {
-        public GhostLayeredWindow() : base()
+        public GhostLayeredWindow()
         {
             ShowInTaskbar = false;
         }

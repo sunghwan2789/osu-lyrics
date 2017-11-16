@@ -73,7 +73,6 @@
             // 
             this.Name = "Lyrics";
             this.Text = "osu!Lyrics";
-            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Lyrics_FormClosing);
             this.Load += new System.EventHandler(this.Lyrics_Load);
             this.Shown += new System.EventHandler(this.Lyrics_Shown);
             this.trayMenu.ResumeLayout(false);

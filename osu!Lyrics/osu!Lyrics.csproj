@@ -58,6 +58,7 @@
     <Compile Include="Beatmap\BeatmapMetadata.cs" />
     <Compile Include="Constants.cs" />
     <Compile Include="Forms\GhostLayeredWindow.cs" />
+    <Compile Include="Interop\MessageReceivedEventArgs.cs" />
     <Compile Include="IO\FileEx.cs" />
     <Compile Include="Interop\ExternDll.cs" />
     <Compile Include="Forms\LayeredWindow.cs" />
