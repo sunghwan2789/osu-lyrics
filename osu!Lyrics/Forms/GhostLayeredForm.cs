@@ -8,9 +8,9 @@ using static osu_Lyrics.Interop.NativeMethods;
 
 namespace osu_Lyrics.Forms
 {
-    class GhostLayeredWindow : LayeredWindow
+    class GhostLayeredForm : LayeredForm
     {
-        public GhostLayeredWindow()
+        public GhostLayeredForm()
         {
             ShowInTaskbar = false;
         }

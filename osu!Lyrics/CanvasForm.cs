@@ -19,13 +19,13 @@ using osu_Lyrics.Lyrics;
 
 namespace osu_Lyrics
 {
-    internal partial class CanvasWindow : GhostLayeredWindow
+    internal partial class CanvasForm : GhostLayeredForm
     {
         #region Lyrics()
 
-        public static CanvasWindow Constructor;
+        public static CanvasForm Constructor;
 
-        public CanvasWindow()
+        public CanvasForm()
         {
             if (Constructor == null)
             {

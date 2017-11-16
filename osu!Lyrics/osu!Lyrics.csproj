@@ -57,15 +57,15 @@
     <Compile Include="Audio\Formats\AudioDecoder.cs" />
     <Compile Include="Beatmap\BeatmapMetadata.cs" />
     <Compile Include="Constants.cs" />
-    <Compile Include="Forms\GhostLayeredWindow.cs" />
+    <Compile Include="Forms\GhostLayeredForm.cs" />
     <Compile Include="Interop\MessageReceivedEventArgs.cs" />
     <Compile Include="IO\FileEx.cs" />
     <Compile Include="Interop\ExternDll.cs" />
-    <Compile Include="Forms\LayeredWindow.cs" />
+    <Compile Include="Forms\LayeredForm.cs" />
     <Compile Include="Lyrics\Lyric.cs" />
-    <Compile Include="CanvasWindow.cs" />
-    <Compile Include="CanvasWindow.Designer.cs">
-      <DependentUpon>CanvasWindow.cs</DependentUpon>
+    <Compile Include="CanvasForm.cs" />
+    <Compile Include="CanvasForm.Designer.cs">
+      <DependentUpon>CanvasForm.cs</DependentUpon>
     </Compile>
     <Compile Include="Audio\Formats\MpegDecoder.cs" />
     <Compile Include="Audio\Formats\OggDecoder.cs" />

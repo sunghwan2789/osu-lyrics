@@ -11,9 +11,9 @@ using static osu_Lyrics.Interop.NativeMethods;
 namespace osu_Lyrics.Forms
 {
     [System.ComponentModel.DesignerCategory("code")]
-    class LayeredWindow : Form
+    class LayeredForm : Form
     {
-        public LayeredWindow()
+        public LayeredForm()
         {
             FormBorderStyle = FormBorderStyle.None;
         }
@@ -70,32 +70,32 @@ namespace osu_Lyrics.Forms
 
         protected void UpdateLayer()
         {
-            var hScreenDC = GetDC(IntPtr.Zero);
-            var hDC = CreateCompatibleDC(hScreenDC);
+            // スクリーンのGraphicsと、hdcを取得
+            var gScreen = Graphics.FromHwnd(IntPtr.Zero);
+            var hdcScreen = gScreen.GetHdc();
 
-            try
-            {
-                var hBitmap = IntPtr.Zero;
-                using (var bmp = new Bitmap(Width, Height, PixelFormat.Format32bppArgb))
-                using (var g = Graphics.FromImage(bmp))
-                {
-                    Render(g);
-                    hBitmap = bmp.GetHbitmap(Color.FromArgb(0));
-                }
-                var hOldBitmap = SelectObject(hDC, hBitmap);
+            // BITMAPのGraphicsと、hdcを取得
+            var bitmap = new Bitmap(Width, Height, PixelFormat.Format32bppArgb);
+            var gBitmap = Graphics.FromImage(bitmap);
+            Render(gBitmap);
+            var hdcBitmap = gBitmap.GetHdc();
 
-                UpdateLayeredWindow(Handle, hScreenDC, ref DestinationPoint, ref DestinationSize, hDC, ref SourcePoint, 0, ref BlendFunction, ULW_ALPHA);
+            // BITMAPのhdcで、サーフェイスのBITMAPを選択する
+            // このとき背景を無色透明にしておく
+            var hOldBitmap = SelectObject(hdcBitmap, bitmap.GetHbitmap(Color.FromArgb(0)));
 
-                if (hBitmap != IntPtr.Zero)
-                {
-                    SelectObject(hDC, hOldBitmap);
-                    DeleteObject(hBitmap);
-                }
-            }
-            catch { }
+            // レイヤードウィンドウの設定
+            UpdateLayeredWindow(
+                Handle, hdcScreen, ref DestinationPoint, ref DestinationSize,
+                hdcBitmap, ref SourcePoint, 0, ref BlendFunction, ULW_ALPHA);
 
-            DeleteDC(hDC);
-            ReleaseDC(IntPtr.Zero, hScreenDC);
+            // 後始末
+            gScreen.ReleaseHdc(hdcScreen);
+            gScreen.Dispose();
+            DeleteObject(SelectObject(hdcBitmap, hOldBitmap));
+            gBitmap.ReleaseHdc(hdcBitmap);
+            gBitmap.Dispose();
+            bitmap.Dispose();
         }
 
         public virtual void Render(Graphics g) { }

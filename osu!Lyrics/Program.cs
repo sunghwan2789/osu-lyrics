@@ -26,7 +26,7 @@ namespace osu_Lyrics
 
                     Application.EnableVisualStyles();
                     Application.SetCompatibleTextRenderingDefault(false);
-                    Application.Run(new CanvasWindow());
+                    Application.Run(new CanvasForm());
 
                     Osu.UnhookKeyboard();
                 }

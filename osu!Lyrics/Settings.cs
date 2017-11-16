@@ -539,8 +539,8 @@ namespace osu_Lyrics
                 if (_DrawingOrigin.IsEmpty)
                 {
                     _DrawingOrigin = new Point(
-                        HorizontalOffset + (int) HorizontalAlign * CanvasWindow.Constructor.Width / 2,
-                        VerticalOffset + (int) VerticalAlign * CanvasWindow.Constructor.Height / 2);
+                        HorizontalOffset + (int) HorizontalAlign * CanvasForm.Constructor.Width / 2,
+                        VerticalOffset + (int) VerticalAlign * CanvasForm.Constructor.Height / 2);
                 }
                 return _DrawingOrigin;
             }
@@ -663,10 +663,10 @@ namespace osu_Lyrics
             _Border = null;
             _DrawingOrigin = Point.Empty;
 
-            CanvasWindow.Constructor.Invoke(new MethodInvoker(() =>
+            CanvasForm.Constructor.Invoke(new MethodInvoker(() =>
             {
-                CanvasWindow.Constructor.Visible = true;
-                CanvasWindow.Constructor.Refresh();
+                CanvasForm.Constructor.Visible = true;
+                CanvasForm.Constructor.Refresh();
             }));
         }
 
