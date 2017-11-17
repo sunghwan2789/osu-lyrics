@@ -16,7 +16,7 @@ namespace osu_Lyrics.Interop
             dataFetched = data.Split('|');
         }
 
-        public long SystemTime => long.Parse(dataFetched[0], NumberStyles.HexNumber);
+        public DateTime CreatedTime => DateTime.FromFileTime(long.Parse(dataFetched[0], NumberStyles.HexNumber));
 
         public string AudioPath => dataFetched[1];
 

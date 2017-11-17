@@ -7,11 +7,8 @@
         public string CheckSum { get; set; }
         public Beatmap.BeatmapMetadata Beatmap { get; set; }
 
-        public double Sync;
+        public double Sync = 0;
 
-        public AudioInfo()
-        {
-            this.Sync = 0;
-        }
+        public AudioInfo() { }
     }
 }

@@ -1,30 +1,29 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace osu_Lyrics.Lyrics
 {
-    internal class Lyric
+    class Lyric : List<LyricLine>
     {
-        public double Time { get; private set; }
-        public string Text { get; private set; }
+        public string Title { get; set; }
+        public string Artist { get; set; }
+        public double Sync { get; set; }
 
-        public Lyric(string data)
+        public Lyric() { }
+
+        public Lyric(string[] data)
         {
-            // [0:2.4]가사@
-            var lyric = data.Split(new[] { ']' }, 2);
-            var time = lyric[0].Substring(1).Split(':');
-            Time = Convert.ToDouble(time[0]) * 60 + Convert.ToDouble(time[1]);
-            Text = lyric[1].Trim();
+            AddRange(data.Select(i => new LyricLine(i)));
         }
 
-        public Lyric()
+        public Lyric(string line)
         {
-            Text = "";
+            Add(new LyricLine(0, line));
         }
 
-        public Lyric(double time, string text)
-        {
-            Time = time;
-            Text = text;
-        }
+        public IEnumerator<LyricLine> EnumeratorAt(double time) => this.SkipWhile(i => i.Time < time).GetEnumerator();
     }
 }

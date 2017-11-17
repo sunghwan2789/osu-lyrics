@@ -24,6 +24,7 @@ namespace osu_Lyrics
         #region Lyrics()
 
         public static CanvasForm Constructor;
+        public LyricManager lyricManager = new LyricManager();
 
         public CanvasForm()
         {
@@ -33,8 +34,18 @@ namespace osu_Lyrics
             }
             InitializeComponent();
 
-            Osu.MessageReceived += Osu_MessageReceived;
+            //Osu.MessageReceived += Osu_MessageReceived;
+            // Invoke these
+            lyricManager.LyricChanged += (s, e) => Refresh();
+            lyricManager.PlaySpeedChanged += (s, e) => Refresh();
+            lyricManager.PlayTimeChanged += (s, e) => Refresh();
+            lyricManager.AudioChanged += (s, e) => Refresh();
             Osu.KeyDown += Osu_KeyDown;
+        }
+
+        ~CanvasForm()
+        {
+            Osu.KeyDown -= Osu_KeyDown;
         }
 
         public override void Render(Graphics g)
@@ -88,10 +99,7 @@ namespace osu_Lyrics
                     Visible = false;
                 }
 
-                if (NewLyricAvailable())
-                {
-                    Refresh();
-                }
+                Refresh();
 
                 await Task.Delay(Settings.RefreshRate);
             }
@@ -131,234 +139,6 @@ namespace osu_Lyrics
 
         #endregion
 
-        private static double Now() => new TimeSpan(DateTime.Now.Ticks).TotalSeconds;
-
-        /// <summary>
-        /// 알송 서버에서 가사를 가져옴.
-        /// </summary>
-        /// <param name="data">[HASH]: ... | [ARTIST]: ..., [TITLE]: ...</param>
-        /// <returns>List&lt;string&gt;</returns>
-        private static async Task<List<Lyric>> GetLyricsAsync(IDictionary<string, string> data)
-        {
-            try
-            {
-                var act = "GetLyric5";
-                if (!data.ContainsKey("[HASH]"))
-                {
-                    act = "GetResembleLyric2";
-                }
-                var content = data.Aggregate(Resources.ResourceManager.GetString(act), (o, i) => o.Replace(i.Key, i.Value));
-
-                var wr = Request.Create(@"http://lyrics.alsong.co.kr/alsongwebservice/service1.asmx");
-                wr.Method = "POST";
-                wr.UserAgent = "gSOAP";
-                wr.ContentType = "application/soap+xml; charset=UTF-8";
-                wr.Headers.Add("SOAPAction", "ALSongWebServer/" + act);
-
-                using (var rq = new StreamWriter(wr.GetRequestStream()))
-                {
-                    rq.Write(content);
-                }
-
-                using (var rp = new StreamReader(wr.GetResponse().GetResponseStream()))
-                {
-                    return WebUtility.HtmlDecode(rp.ReadToEnd().Split(new[] { "<strLyric>", "</strLyric>" }, StringSplitOptions.None)[1])
-                        .Split(new[] { "<br>" }, StringSplitOptions.RemoveEmptyEntries)
-                        .Select(i => new Lyric(i))
-                        .Where(i => i.Text.Length != 0)
-                        .ToList();
-                }
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-
-
-
-
-
-        private AudioInfo curAudio = new AudioInfo();
-
-        private double _curTimeChanged;
-        private double _curTime;
-        private double _playbackRate;
-
-        private double curTime
-        {
-            get
-            {
-                var elapsedTime = (Now() - _curTimeChanged) *_playbackRate;
-                return _curTime + elapsedTime - curAudio.Sync;
-            }
-            set
-            {
-                if (value < _curTime)
-                {
-                    lyricsCache = lyricsCache;
-                }
-                _curTimeChanged = Now();
-                _curTime = value;
-            }
-        }
-        
-        private readonly Queue<Lyric> lyrics = new Queue<Lyric>();
-        private List<Lyric> _lyricsCache = new List<Lyric> { new Lyric() };
-
-        private List<Lyric> lyricsCache
-        {
-            get
-            {
-                return _lyricsCache;
-            }
-            set
-            {
-                _lyricsCache = value;
-                lyrics.Clear();
-                value.ForEach(lyrics.Enqueue);
-                curLyric = new Lyric();
-            }
-        }
-
-        private void Osu_MessageReceived(object sender, MessageReceivedEventArgs e)
-        {
-            // 재생 중인 곡이 바꼈다!
-            if (e.AudioPath != curAudio.Path)
-            {
-                using (var fs = new FileStream(e.AudioPath, FileMode.Open, FileAccess.Read))
-                {
-                    curAudio = Audio.Formats.AudioDecoder.GetDecoder(fs)?.Decode(fs);
-                }
-                curAudio.Path = e.AudioPath;
-                using (var sr = new StreamReader(e.BeatmapPath))
-                {
-                    curAudio.Beatmap = Beatmap.Formats.BeatmapDecoder.GetDecoder(sr)?.Decode(sr);
-                }
-                UpdateLyrics();
-            }
-            curTime = DateTimeOffset.Now.Subtract(DateTimeOffset.FromFileTime(e.SystemTime)).TotalSeconds + e.AudioPlayTime;
-            _playbackRate = 1 + e.AudioPlaySpeed / 100;
-        }
-
-        private CancellationTokenSource cts;
-
-        private void UpdateLyrics()
-        {
-            if (cts != null)
-            {
-                cts.Cancel();
-                return;
-            }
-
-            lyricsCache = new List<Lyric>
-            {
-                new Lyric(0, "가사 받는 중...")
-            };
-            cts = new CancellationTokenSource();
-            Task.Run(async () =>
-            {
-                cts.Token.ThrowIfCancellationRequested();
-                // 파일 해시로 가사 검색
-                var newLyrics = await GetLyricsAsync(new Dictionary<string, string>
-                {
-                    { "[HASH]", curAudio.CheckSum }
-                });
-
-                if (newLyrics == null && curAudio.Beatmap != null)
-                {
-                    cts.Token.ThrowIfCancellationRequested();
-                    // 음악 정보로 가사 검색
-                    newLyrics = await GetLyricsAsync(new Dictionary<string, string>
-                    {
-                        { "[TITLE]", curAudio.Beatmap.TitleUnicode ?? curAudio.Beatmap.Title },
-                        { "[ARTIST]", curAudio.Beatmap.ArtistUnicode ?? curAudio.Beatmap.Artist }
-                    });
-                }
-
-                if (newLyrics != null)
-                {
-                    newLyrics.Insert(0, new Lyric());
-                }
-                else
-                {
-                    newLyrics = new List<Lyric>
-                    {
-                        new Lyric(0, "가사 없음")
-                    };
-                }
-
-                cts.Token.ThrowIfCancellationRequested();
-                Invoke(new MethodInvoker(() =>
-                {
-                    lyricsCache = newLyrics;
-                }));
-            }, cts.Token).ContinueWith(result => Invoke(new MethodInvoker(() =>
-            {
-                cts = null;
-                if (result.IsCanceled)
-                {
-                    UpdateLyrics();
-                }
-            })));
-        }
-
-
-
-
-        private Lyric _curLyric = new Lyric();
-
-        private Lyric curLyric
-        {
-            get { return _curLyric; }
-            set
-            {
-                _curLyric = value;
-                lyricBuffer.Clear();
-            }
-        }
-
-        private readonly List<string> lyricBuffer = new List<string>
-        {
-            "선곡하세요"
-        };
-
-        private bool NewLyricAvailable()
-        {
-            var flag = false;
-            while (lyrics.Count > 0)
-            {
-                var lyric = lyrics.Peek();
-
-                if (lyric.Time < curLyric.Time)
-                {
-                    lyrics.Dequeue();
-                    continue;
-                }
-
-                if (lyric.Time <= curTime)
-                {
-                    if (!lyric.Time.Equals(curLyric.Time) || (lyric.Time.Equals(0) && curLyric.Time.Equals(0)))
-                    {
-                        curLyric = lyric;
-                        flag = true;
-                    }
-                    lyricBuffer.Add(lyric.Text);
-                    lyrics.Dequeue();
-                }
-                else
-                {
-                    break;
-                }
-            }
-            return flag;
-        }
-
-
-
-
-
         private bool showLyric = true;
 
         private void DrawLyric(Graphics g)
@@ -384,19 +164,20 @@ namespace osu_Lyrics
             }
 
             var lyricBuilder = new StringBuilder();
+            var lyricBuffer = lyricManager.GetLyric();
             var lyricCount = lyricBuffer.Count;
             if (Settings.LineCount == 0)
             {
                 foreach (var i in lyricBuffer)
                 {
-                    lyricBuilder.AppendLine(i);
+                    lyricBuilder.AppendLine(i.Text);
                 }
             }
             else if (Settings.LineCount > 0)
             {
                 for (var i = 0; i < Settings.LineCount && i < lyricCount; i++)
                 {
-                    lyricBuilder.AppendLine(lyricBuffer[i]);
+                    lyricBuilder.AppendLine(lyricBuffer[i].Text);
                 }
             }
             else
@@ -408,7 +189,7 @@ namespace osu_Lyrics
                 }
                 for (; i < lyricCount; i++)
                 {
-                    lyricBuilder.AppendLine(lyricBuffer[i]);
+                    lyricBuilder.AppendLine(lyricBuffer[i].Text);
                 }
             }
 
@@ -452,15 +233,14 @@ namespace osu_Lyrics
             {
                 if (e.KeyData == Settings.KeyBackward)
                 {
-                    curAudio.Sync += 0.5;
-                    lyricsCache = lyricsCache;
-                    Notice("싱크 느리게({0}초)", curAudio.Sync.ToString("F1"));
+                    lyricManager.LyricSync += 0.5;
+                    Notice("싱크 느리게({0}초)", lyricManager.LyricSync.ToString("F1"));
                     return;
                 }
                 if (e.KeyData == Settings.KeyForward)
                 {
-                    curAudio.Sync -= 0.5;
-                    Notice("싱크 빠르게({0}초)", curAudio.Sync.ToString("F1"));
+                    lyricManager.LyricSync -= 0.5;
+                    Notice("싱크 빠르게({0}초)", lyricManager.LyricSync.ToString("F1"));
                     return;
                 }
             }
@@ -495,6 +275,7 @@ namespace osu_Lyrics
                     TopMost = true
                 };
                 Settings.ShowDialog();
+                Settings.Dispose();
                 Settings = null;
             }
             else

@@ -31,13 +31,13 @@ namespace osu_Lyrics.Forms
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
-            UpdateLayer();
+            UpdateWindow();
         }
 
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
-            UpdateLayer();
+            UpdateWindow();
         }
 
         private Point DestinationPoint = Point.Empty;
@@ -46,7 +46,7 @@ namespace osu_Lyrics.Forms
         {
             base.OnLocationChanged(e);
             DestinationPoint = Location;
-            UpdateLayer();
+            UpdateWindow();
         }
 
         private Size DestinationSize = Size.Empty;
@@ -55,7 +55,7 @@ namespace osu_Lyrics.Forms
         {
             base.OnSizeChanged(e);
             DestinationSize = Size;
-            UpdateLayer();
+            UpdateWindow();
         }
 
         protected Point SourcePoint = Point.Empty;
@@ -68,7 +68,7 @@ namespace osu_Lyrics.Forms
             AlphaFormat = AC_SRC_ALPHA
         };
 
-        protected void UpdateLayer()
+        protected void UpdateWindow()
         {
             // スクリーンのGraphicsと、hdcを取得
             var gScreen = Graphics.FromHwnd(IntPtr.Zero);
