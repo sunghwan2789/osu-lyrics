@@ -1,4 +1,5 @@
 ﻿using osu_Lyrics.Interop;
+using osu_Lyrics.Lyrics.Sources;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -130,42 +131,32 @@ namespace osu_Lyrics.Lyrics
             AudioChanged?.BeginInvoke(null, null, null, null);
             Task.Run(async () =>
             {
-                cts.Token.ThrowIfCancellationRequested();
-                // 파일 해시로 가사 검색
-                var newLyrics = await GetLyricsAsync(new Dictionary<string, string>
-                {
-                    { "[HASH]", AudioInfo.CheckSum }
-                });
-
-                if (newLyrics == null && BeatmapMetadata != null)
+                Lyric ret = null;
+                foreach (var source in LyricSource.sources)
                 {
                     cts.Token.ThrowIfCancellationRequested();
-                    // 음악 정보로 가사 검색
-                    newLyrics = await GetLyricsAsync(new Dictionary<string, string>
+                    ret = await source.GetLyricAsync(AudioInfo);
+                    if (ret != null)
                     {
-                        { "[TITLE]", BeatmapMetadata.TitleUnicode ?? BeatmapMetadata.Title },
-                        { "[ARTIST]", BeatmapMetadata.ArtistUnicode ?? BeatmapMetadata.Artist }
-                    });
+                        break;
+                    }
                 }
 
-                newLyrics?.Insert(0, new LyricLine());
+                ret?.Insert(0, new LyricLine());
 
                 cts.Token.ThrowIfCancellationRequested();
-                if (newLyrics == null)
-                {
-                    status = "가사 없음";
-                    Lyric.Clear();
-                }
-                else
-                {
-                    Lyric = newLyrics;
-                }
+                Lyric = ret ?? throw new Exception();
             }, cts.Token).ContinueWith(result =>
             {
                 cts = null;
                 if (result.IsCanceled)
                 {
                     FetchLyric();
+                }
+                else if (result.IsFaulted)
+                {
+                    status = "가사 없음";
+                    lyric.Clear();
                 }
             });
         }
@@ -196,46 +187,6 @@ namespace osu_Lyrics.Lyrics
                 ret.Add(line);
             }
             return ret;
-        }
-
-        /// <summary>
-        /// 알송 서버에서 가사를 가져옴.
-        /// </summary>
-        /// <param name="data">[HASH]: ... | [ARTIST]: ..., [TITLE]: ...</param>
-        /// <returns>List&lt;string&gt;</returns>
-        private static async Task<Lyric> GetLyricsAsync(IDictionary<string, string> data)
-        {
-            try
-            {
-                var act = "GetLyric5";
-                if (!data.ContainsKey("[HASH]"))
-                {
-                    act = "GetResembleLyric2";
-                }
-                var content = data.Aggregate(Properties.Resources.ResourceManager.GetString(act), (o, i) => o.Replace(i.Key, i.Value));
-
-                var wr = Request.Create(@"http://lyrics.alsong.co.kr/alsongwebservice/service1.asmx");
-                wr.Method = "POST";
-                wr.UserAgent = "gSOAP";
-                wr.ContentType = "application/soap+xml; charset=UTF-8";
-                wr.Headers.Add("SOAPAction", "ALSongWebServer/" + act);
-
-                using (var rq = new StreamWriter(wr.GetRequestStream()))
-                {
-                    rq.Write(content);
-                }
-
-                using (var rp = new StreamReader(wr.GetResponse().GetResponseStream()))
-                {
-                    return new Lyric(System.Net.WebUtility.HtmlDecode(
-                        rp.ReadToEnd().Split(new[] { "<strLyric>", "</strLyric>" }, StringSplitOptions.None)[1])
-                            .Split(new[] { "<br>" }, StringSplitOptions.RemoveEmptyEntries));
-                }
-            }
-            catch
-            {
-                return null;
-            }
         }
     }
 }
