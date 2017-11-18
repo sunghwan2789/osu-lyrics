@@ -13,6 +13,8 @@ namespace osu_Lyrics.Forms
     [System.ComponentModel.DesignerCategory("code")]
     class LayeredForm : Form
     {
+        public bool ClickThrough { get; set; } = true;
+
         public LayeredForm()
         {
             FormBorderStyle = FormBorderStyle.None;
@@ -24,6 +26,10 @@ namespace osu_Lyrics.Forms
             {
                 var cp = base.CreateParams;
                 cp.ExStyle |= WS_EX_LAYERED;
+                if (ClickThrough)
+                {
+                    cp.ExStyle |= WS_EX_TRANSPARENT;
+                }
                 return cp;
             }
         }
