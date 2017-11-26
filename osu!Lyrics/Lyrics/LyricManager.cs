@@ -161,7 +161,7 @@ namespace osu_Lyrics.Lyrics
             });
         }
 
-        public Lyric GetLyric()
+        public Lyric GetLyricAtNow()
         {
             if (!lyric.Any())
             {
@@ -187,6 +187,22 @@ namespace osu_Lyrics.Lyrics
                 ret.Add(line);
             }
             return ret;
+        }
+
+        public Lyric TruncateLyric(Lyric lyric)
+        {
+            if (Settings.LineCount == 0)
+            {
+                return lyric;
+            }
+            else if (Settings.LineCount > 0)
+            {
+                return (Lyric) lyric.Take(Settings.LineCount);
+            }
+            else
+            {
+                return (Lyric) lyric.Skip(Math.Max(0, lyric.Count + Settings.LineCount));
+            }
         }
     }
 }

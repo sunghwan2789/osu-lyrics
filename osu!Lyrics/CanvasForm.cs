@@ -164,33 +164,10 @@ namespace osu_Lyrics
             }
 
             var lyricBuilder = new StringBuilder();
-            var lyricBuffer = lyricManager.GetLyric();
-            var lyricCount = lyricBuffer.Count;
-            if (Settings.LineCount == 0)
+            var lyric = lyricManager.GetLyricAtNow();
+            foreach (var l in lyricManager.TruncateLyric(lyric))
             {
-                foreach (var i in lyricBuffer)
-                {
-                    lyricBuilder.AppendLine(i.Text);
-                }
-            }
-            else if (Settings.LineCount > 0)
-            {
-                for (var i = 0; i < Settings.LineCount && i < lyricCount; i++)
-                {
-                    lyricBuilder.AppendLine(lyricBuffer[i].Text);
-                }
-            }
-            else
-            {
-                var i = lyricCount + Settings.LineCount;
-                if (i < 0)
-                {
-                    i = 0;
-                }
-                for (; i < lyricCount; i++)
-                {
-                    lyricBuilder.AppendLine(lyricBuffer[i].Text);
-                }
+                lyricBuilder.AppendLine(l.Text);
             }
 
             using (var path = new GraphicsPath())
