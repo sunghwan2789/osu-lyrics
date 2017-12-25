@@ -15,6 +15,11 @@ namespace osu_Lyrics.Lyrics.Sources
             AddSource<AlsongSource>();
         }
 
+        /// <summary>
+        /// TODO CONFIRM GETLYRIC5ASYNC RETURNS NULL
+        /// </summary>
+        /// <param name="audio"></param>
+        /// <returns></returns>
         public override Task<Lyric> GetLyricAsync(AudioInfo audio)
         {
             return GetLyric5Async(audio.CheckSum)
@@ -45,7 +50,7 @@ namespace osu_Lyrics.Lyrics.Sources
                 wr.Method = "POST";
                 wr.UserAgent = "gSOAP";
                 wr.ContentType = "application/soap+xml; charset=UTF-8";
-                wr.Headers.Add("SOAPAction", "ALSongWebServer/" + action);
+                wr.Headers.Add("SOAPAction", $@"""ALSongWebServer/{action}""");
 
                 using (var rq = new StreamWriter(wr.GetRequestStream()))
                 {

@@ -141,7 +141,7 @@ namespace osu_Lyrics.Interop
             WriteProcessMemory(hProcess, pParameter, szFileName, nFileNameLength, out _);
             Marshal.FreeHGlobal(szFileName);
 
-            var pThreadProc = GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryW");
+            var pThreadProc = GetProcAddress(GetModuleHandle(ExternDll.Kernel32), "LoadLibraryW");
 
             var hThread = CreateRemoteThread(hProcess, IntPtr.Zero, 0, pThreadProc, pParameter, 0, IntPtr.Zero);
             WaitForSingleObject(hThread, INFINITE);

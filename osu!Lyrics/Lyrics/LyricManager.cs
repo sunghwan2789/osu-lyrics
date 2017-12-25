@@ -132,10 +132,10 @@ namespace osu_Lyrics.Lyrics
             Task.Run(async () =>
             {
                 Lyric ret = null;
-                foreach (var source in LyricSource.sources)
+                foreach (var lyricTask in LyricSource.sources.Select(i => i.GetLyricAsync(AudioInfo)))
                 {
                     cts.Token.ThrowIfCancellationRequested();
-                    ret = await source.GetLyricAsync(AudioInfo);
+                    ret = await lyricTask;
                     if (ret != null)
                     {
                         break;
