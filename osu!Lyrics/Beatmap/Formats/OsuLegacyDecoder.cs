@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace osu_Lyrics.Beatmap.Formats
 {
-    class OsuLegacyDecoder : BeatmapDecoder
+    internal class OsuLegacyDecoder : BeatmapDecoder
     {
         public static void Register()
         {

@@ -1,6 +1,6 @@
 ﻿namespace osu_Lyrics.Audio
 {
-    internal class AudioInfo
+    public class AudioInfo
     {
         public string Path { get; set; }
 

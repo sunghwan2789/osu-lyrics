@@ -2,7 +2,7 @@
 
 namespace osu_Lyrics.Lyrics
 {
-    internal class LyricLine
+    public class LyricLine
     {
         public double Time { get; private set; }
         public string Text { get; private set; }

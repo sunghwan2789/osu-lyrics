@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace osu_Lyrics.Lyrics.Sources
 {
-    internal abstract class LyricSource
+    public abstract class LyricSource
     {
         public static readonly List<LyricSource> sources = new List<LyricSource>();
 

@@ -1,6 +1,6 @@
 ﻿namespace osu_Lyrics.Beatmap
 {
-    internal class BeatmapMetadata
+    public class BeatmapMetadata
     {
         public string Title { get; set; }
         public string TitleUnicode { get; set; }

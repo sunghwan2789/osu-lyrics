@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace osu_Lyrics.Lyrics
 {
-    class Lyric : List<LyricLine>
+    public class Lyric : List<LyricLine>
     {
         public string Title { get; set; }
         public string Artist { get; set; }

@@ -8,7 +8,7 @@ using System.IO;
 
 namespace osu_Lyrics.Lyrics.Sources
 {
-    class AlsongSource : LyricSource
+    public class AlsongSource : LyricSource
     {
         public static void Register()
         {
