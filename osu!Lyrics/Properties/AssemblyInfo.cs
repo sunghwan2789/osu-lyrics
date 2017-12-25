@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Resources;
+using System.Runtime.CompilerServices;
 
 // 어셈블리의 일반 정보는 다음 특성 집합을 통해 제어됩니다.
 // 어셈블리와 관련된 정보를 수정하려면
@@ -33,3 +34,5 @@ using System.Resources;
 [assembly: AssemblyFileVersion("1.8.62")]
 [assembly: AssemblyInformationalVersion("1.8.64")]
 [assembly: NeutralResourcesLanguageAttribute("ko-KR")]
+
+[assembly: InternalsVisibleTo("osu!Lyrics.Test")]

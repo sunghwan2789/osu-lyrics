@@ -49,6 +49,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Lyrics\Sources\AlsongSourceTests.cs" />
+    <Compile Include="Lyrics\Sources\LyricSourceTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

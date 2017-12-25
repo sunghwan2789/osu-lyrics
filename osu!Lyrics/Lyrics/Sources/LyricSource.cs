@@ -13,7 +13,8 @@ namespace osu_Lyrics.Lyrics.Sources
 
         static LyricSource()
         {
-            AlsongSource.Register();
+            AlsongGetLyric5.Register();
+            AlsongGetResembleLyric2.Register();
         }
 
         protected static void AddSource<T>() where T : LyricSource
@@ -27,5 +28,7 @@ namespace osu_Lyrics.Lyrics.Sources
         }
 
         public abstract Task<Lyric> GetLyricAsync(AudioInfo audio);
+
+        public static IEnumerable<Task<Lyric>> GetLyricsAsync(AudioInfo audio) => sources.Select(i => i.GetLyricAsync(audio));
     }
 }

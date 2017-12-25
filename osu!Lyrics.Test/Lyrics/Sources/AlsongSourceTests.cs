@@ -18,25 +18,28 @@ namespace osu_Lyrics.Lyrics.Sources.Tests
         }
 
         [TestMethod()]
-        public void GetLyricAsyncTest()
-        {
-            var al = new AlsongSource();
-            Assert.IsNull(al.GetLyricAsync(new Audio.AudioInfo()).GetAwaiter().GetResult());
-            Assert.IsNotNull(al.GetLyricAsync(new Audio.AudioInfo { Beatmap = new Beatmap.BeatmapMetadata { Artist = "아이유", Title = "좋은 날" } }).GetAwaiter().GetResult());
-        }
-
-        [TestMethod()]
         public void GetLyric5AsyncTest()
         {
-            var al = new AlsongSource();
-            Assert.IsNull(al.GetLyric5Async("좋은 날").GetAwaiter().GetResult());
+            var al = new AlsongGetLyric5();
+            var au = new Audio.AudioInfo { CheckSum = "좋은 날" };
+            try
+            {
+                al.GetLyricAsync(au).GetAwaiter().GetResult();
+                Assert.Fail();
+            }
+            catch (IndexOutOfRangeException) { }
         }
 
         [TestMethod()]
         public void GetResembleLyric2AsyncTest()
         {
-            var al = new AlsongSource();
-            Assert.IsNotNull(al.GetResembleLyric2Async("좋은 날", "아이유").GetAwaiter().GetResult());
+            var al = new AlsongGetResembleLyric2();
+            var au = new Audio.AudioInfo { Beatmap = new Beatmap.BeatmapMetadata { Artist = "아이유", Title = "좋은 날" } };
+            try
+            {
+                Assert.IsNotNull(al.GetLyricAsync(au).GetAwaiter().GetResult());
+            }
+            catch (IndexOutOfRangeException) { }
         }
     }
 }
