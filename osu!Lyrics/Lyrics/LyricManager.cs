@@ -147,7 +147,7 @@ namespace osu_Lyrics.Lyrics
                 ret?.Insert(0, new LyricLine());
 
                 cts.Token.ThrowIfCancellationRequested();
-                Lyric = ret ?? throw new Exception();
+                Lyric = ret ?? throw new LyricNotFoundException();
             }, cts.Token).ContinueWith(result =>
             {
                 cts = null;

@@ -72,6 +72,7 @@
     <Compile Include="Audio\Formats\OggDecoder.cs" />
     <Compile Include="Interop\Osu.cs" />
     <Compile Include="Lyrics\LyricManager.cs" />
+    <Compile Include="Lyrics\LyricNotFoundException.cs" />
     <Compile Include="Lyrics\Sources\AlsongGetLyric5.cs" />
     <Compile Include="Lyrics\Sources\AlsongGetResembleLyric2.cs" />
     <Compile Include="Lyrics\Sources\AlsongSource.cs" />

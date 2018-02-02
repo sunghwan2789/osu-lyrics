@@ -18,12 +18,12 @@ namespace osu_Lyrics.Lyrics.Sources
             wr.ContentType = "application/soap+xml; charset=UTF-8";
             wr.Headers.Add("SOAPAction", $@"""ALSongWebServer/{action}""");
 
-            using (var rq = new StreamWriter(wr.GetRequestStream()))
+            using (var rq = new StreamWriter(await wr.GetRequestStreamAsync()))
             {
-                rq.Write(data);
+                await rq.WriteAsync(data);
             }
 
-            using (var rp = new StreamReader(wr.GetResponse().GetResponseStream()))
+            using (var rp = new StreamReader((await wr.GetResponseAsync()).GetResponseStream()))
             {
                 return new Lyric(System.Net.WebUtility.HtmlDecode(
                     rp.ReadToEnd().Split(new[] { "<strLyric>", "</strLyric>" }, StringSplitOptions.None)[1])
