@@ -133,6 +133,11 @@ namespace osu_Lyrics.Interop
             MessageServerHandle = LoadLibrary(dest);
         }
 
+        public static void ShutdownMessageServer()
+        {
+            FreeLibrary(MessageServerHandle);
+        }
+
         private static IntPtr LoadLibrary(string dllPath)
         {
             uint dwExitCode;
@@ -157,6 +162,24 @@ namespace osu_Lyrics.Interop
             CloseHandle(hProcess);
 
             return new IntPtr(dwExitCode);
+        }
+
+        private static bool FreeLibrary(IntPtr hModule)
+        {
+            uint dwExitCode;
+
+            var hProcess = OpenProcess(PROCESS_ALL_ACCESS, false, Process.Id);
+
+            var pThreadProc = GetProcAddress(GetModuleHandle(ExternDll.Kernel32), "FreeLibrary");
+
+            var hThread = CreateRemoteThread(hProcess, IntPtr.Zero, 0, pThreadProc, hModule, 0, IntPtr.Zero);
+            WaitForSingleObject(hThread, INFINITE);
+            GetExitCodeThread(hThread, out dwExitCode);
+            CloseHandle(hThread);
+
+            CloseHandle(hProcess);
+
+            return dwExitCode != 0;
         }
 
         private static void ListenMessage()

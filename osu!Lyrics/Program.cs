@@ -29,6 +29,7 @@ namespace osu_Lyrics
                     Application.Run(new CanvasForm());
 
                     Osu.UnhookKeyboard();
+                    Osu.ShutdownMessageServer();
                 }
             }
         }
