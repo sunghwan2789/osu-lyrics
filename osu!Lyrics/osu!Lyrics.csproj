@@ -51,24 +51,32 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Formats\BeatmapDecoder.cs" />
-    <Compile Include="Formats\OsuLegacyDecoder.cs" />
-    <Compile Include="Models\Audio.cs" />
-    <Compile Include="Formats\AudioDecoder.cs" />
-    <Compile Include="Models\Beatmap.cs" />
+    <Compile Include="Beatmap\Formats\BeatmapDecoder.cs" />
+    <Compile Include="Beatmap\Formats\OsuLegacyDecoder.cs" />
+    <Compile Include="Audio\AudioInfo.cs" />
+    <Compile Include="Audio\Formats\AudioDecoder.cs" />
+    <Compile Include="Beatmap\BeatmapMetadata.cs" />
     <Compile Include="Constants.cs" />
-    <Compile Include="Forms\GhostLayeredWindow.cs" />
+    <Compile Include="Forms\GhostLayeredForm.cs" />
+    <Compile Include="Interop\MessageReceivedEventArgs.cs" />
     <Compile Include="IO\FileEx.cs" />
     <Compile Include="Interop\ExternDll.cs" />
-    <Compile Include="Forms\LayeredWindow.cs" />
-    <Compile Include="Models\Lyric.cs" />
-    <Compile Include="Lyrics.cs" />
-    <Compile Include="Lyrics.Designer.cs">
-      <DependentUpon>Lyrics.cs</DependentUpon>
+    <Compile Include="Forms\LayeredForm.cs" />
+    <Compile Include="Lyrics\Lyric.cs" />
+    <Compile Include="Lyrics\LyricLine.cs" />
+    <Compile Include="CanvasForm.cs" />
+    <Compile Include="CanvasForm.Designer.cs">
+      <DependentUpon>CanvasForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="Formats\MpegDecoder.cs" />
-    <Compile Include="Formats\OggDecoder.cs" />
+    <Compile Include="Audio\Formats\MpegDecoder.cs" />
+    <Compile Include="Audio\Formats\OggDecoder.cs" />
     <Compile Include="Interop\Osu.cs" />
+    <Compile Include="Lyrics\LyricManager.cs" />
+    <Compile Include="Lyrics\LyricNotFoundException.cs" />
+    <Compile Include="Lyrics\Sources\AlsongGetLyric5.cs" />
+    <Compile Include="Lyrics\Sources\AlsongGetResembleLyric2.cs" />
+    <Compile Include="Lyrics\Sources\AlsongSource.cs" />
+    <Compile Include="Lyrics\Sources\LyricSource.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Properties\Resources.Designer.cs">

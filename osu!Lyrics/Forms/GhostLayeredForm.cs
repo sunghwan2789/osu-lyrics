@@ -8,9 +8,9 @@ using static osu_Lyrics.Interop.NativeMethods;
 
 namespace osu_Lyrics.Forms
 {
-    class GhostLayeredWindow : LayeredWindow
+    class GhostLayeredForm : LayeredForm
     {
-        public GhostLayeredWindow() : base()
+        public GhostLayeredForm()
         {
             ShowInTaskbar = false;
         }
@@ -20,7 +20,7 @@ namespace osu_Lyrics.Forms
             get
             {
                 var cp = base.CreateParams;
-                cp.ExStyle |= WS_EX_NOACTIVATE | WS_EX_TRANSPARENT;
+                cp.ExStyle |= WS_EX_NOACTIVATE;
                 return cp;
             }
         }

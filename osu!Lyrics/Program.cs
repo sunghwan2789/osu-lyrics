@@ -1,4 +1,5 @@
-﻿using System;
+﻿using osu_Lyrics.Interop;
+using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,15 +14,21 @@ namespace osu_Lyrics
         {
             using (new Mutex(true, Constants._MutexName, out bool createdNew))
             {
-                Interop.Osu.Show();
+                Osu.Show();
                 if (createdNew)
                 {
                     // 업데이트 전의 파일 삭제
                     Task.Run(() => IO.FileEx.PostDel(Application.ExecutablePath + Constants._BakExt));
 
+                    Osu.RunMessageServer();
+                    Osu.ListenMessageAsync();
+                    Osu.HookKeyboard();
+
                     Application.EnableVisualStyles();
                     Application.SetCompatibleTextRenderingDefault(false);
-                    Application.Run(new Lyrics());
+                    Application.Run(new CanvasForm());
+
+                    Osu.UnhookKeyboard();
                 }
             }
         }

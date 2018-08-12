@@ -112,6 +112,10 @@ namespace osu_Lyrics.Interop
 
         public const uint INFINITE = 0xFFFFFFFF;
 
+        [return: MarshalAs(UnmanagedType.Bool)]
+        [DllImport(ExternDll.Kernel32, SetLastError = true)]
+        public static extern bool GetExitCodeThread(IntPtr hThread, out uint lpExitCode);
+
         [DllImport(ExternDll.Kernel32, SetLastError = true)]
         public static extern uint GlobalSize(IntPtr hMem);
 
@@ -178,6 +182,16 @@ namespace osu_Lyrics.Interop
         public const int WM_SYSKEYUP = 0x0105;
         public const int WM_SYSCHAR = 0x0106;
         public const int WM_SYSDEADCHAR = 0x0107;
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct KBDLLHOOKSTRUCT
+        {
+            public int vkCode;
+            public int scanCode;
+            public int flags;
+            public int time;
+            public IntPtr dwExtraInfo;
+        }
 
         [DllImport(ExternDll.User32)]
         public static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);

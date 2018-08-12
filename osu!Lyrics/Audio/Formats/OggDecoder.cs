@@ -1,8 +1,7 @@
 ﻿using System;
 using System.IO;
-using osu_Lyrics.Models;
 
-namespace osu_Lyrics.Formats
+namespace osu_Lyrics.Audio.Formats
 {
     internal class OggDecoder : AudioDecoder
     {
@@ -48,7 +47,7 @@ namespace osu_Lyrics.Formats
                 && Program.IntB(buff, 8, 3) == 0x424356; // "BCV" codebook?
         }
 
-        protected override void ParseFile(Stream stream, Audio audio)
+        protected override void ParseFile(Stream stream, AudioInfo audio)
         {
             if (audio == null)
             {

@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.24720.0
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2010
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osu!Lyrics", "osu!Lyrics\osu!Lyrics.csproj", "{9161CC52-C03B-4CCD-AC44-A94C208D31F3}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -14,6 +14,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		LICENSE = LICENSE
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osu!Lyrics.Test", "osu!Lyrics.Test\osu!Lyrics.Test.csproj", "{04660BB7-C1AB-430D-988B-33D8A29B37B4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -29,8 +31,15 @@ Global
 		{55B49E76-AA07-447F-ADE2-B170269EC1EB}.Debug|Win32.Build.0 = Debug|Win32
 		{55B49E76-AA07-447F-ADE2-B170269EC1EB}.Release|Win32.ActiveCfg = Release|Win32
 		{55B49E76-AA07-447F-ADE2-B170269EC1EB}.Release|Win32.Build.0 = Release|Win32
+		{04660BB7-C1AB-430D-988B-33D8A29B37B4}.Debug|Win32.ActiveCfg = Debug|Any CPU
+		{04660BB7-C1AB-430D-988B-33D8A29B37B4}.Debug|Win32.Build.0 = Debug|Any CPU
+		{04660BB7-C1AB-430D-988B-33D8A29B37B4}.Release|Win32.ActiveCfg = Release|Any CPU
+		{04660BB7-C1AB-430D-988B-33D8A29B37B4}.Release|Win32.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7195031E-664B-44D8-8EB0-E7060C85AFB5}
 	EndGlobalSection
 EndGlobal

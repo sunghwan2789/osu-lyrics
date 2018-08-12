@@ -58,7 +58,7 @@ namespace osu_Lyrics.Interop
 
         #region Show()
 
-        public static bool IsForeground() => GetForegroundWindow() == Process.MainWindowHandle;
+        public static bool IsForeground => GetForegroundWindow() == Process.MainWindowHandle;
 
         public static void Show()
         {
@@ -70,35 +70,36 @@ namespace osu_Lyrics.Interop
 
         #region HookKeyboard(Action<Keys> action), UnhookKeyboard()
 
+        public static event EventHandler<KeyEventArgs> KeyDown;
+
         private static IntPtr _hhkk = IntPtr.Zero; // hookHandleKeyKeyboard
         private static HookProc _hpk; // hookProcKeyboard
-        private static Func<Keys, bool> _hak; // hookActionKeyboard
 
-        public static void HookKeyboard(Func<Keys, bool> action)
+        public static void HookKeyboard()
         {
             if (_hhkk != IntPtr.Zero)
             {
-                throw new StackOverflowException();
+                throw new InvalidOperationException();
             }
 
-            _hak = action;
             _hpk = new HookProc(LowLevelKeyboardProc);
             _hhkk = SetWindowsHookEx(WH_KEYBOARD_LL, _hpk, IntPtr.Zero, 0);
         }
 
         private static IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam)
         {
-            if (IsForeground() && nCode == HC_ACTION)
+            if (IsForeground && nCode == HC_ACTION)
             {
                 var state = wParam.ToInt32();
-                // 설정 중이면 키보드 후킹 안 하기!
-                if (!(Lyrics.Settings?.Visible ?? false)
-                    && (state == WM_KEYDOWN || state == WM_SYSKEYDOWN)
-                    && _hak((Keys) Marshal.ReadInt32(lParam))
-                    && Settings.SuppressKey)
+                if (state == WM_KEYDOWN || state == WM_SYSKEYDOWN)
                 {
-                    // 설정 중 "핫키 전송 막기" 활성화시 osu!로 핫기 전송 막는 부분..
-                    return (IntPtr) 1;
+                    //var keyData = (Marshal.PtrToStructure(lParam, typeof(KBDLLHOOKSTRUCT)) as KBDLLHOOKSTRUCT)?.vkCode;
+                    var e = new KeyEventArgs((Keys) Marshal.ReadInt32(lParam));
+                    KeyDown?.Invoke(null, e);
+                    if (e.SuppressKeyPress)
+                    {
+                        return (IntPtr) 1;
+                    }
                 }
             }
             return CallNextHookEx(_hhkk, nCode, wParam, lParam);
@@ -110,7 +111,6 @@ namespace osu_Lyrics.Interop
             {
                 UnhookWindowsHookEx(_hhkk);
                 _hpk = null;
-                _hak = null;
             }
         }
 
@@ -118,7 +118,11 @@ namespace osu_Lyrics.Interop
 
         #region Listen(Action<string[]> onSignal)
 
-        private static bool PrepareIPC()
+        public static event EventHandler<MessageReceivedEventArgs> MessageReceived;
+
+        private static IntPtr MessageServerHandle;
+
+        public static void RunMessageServer()
         {
             // dll의 fileVersion을 바탕으로 버전별로 겹치지 않는 경로에 압축 풀기:
             // 시스템 커널에 이전 버전의 dll이 같은 이름으로 남아있을 수 있음
@@ -126,11 +130,13 @@ namespace osu_Lyrics.Interop
             var dest = Constants._Server + "." + FileVersionInfo.GetVersionInfo(Constants._Server).FileVersion;
             IO.FileEx.Move(Constants._Server, dest);
 
-            return InjectDll(dest);
+            MessageServerHandle = LoadLibrary(dest);
         }
 
-        private static bool InjectDll(string dllPath)
+        private static IntPtr LoadLibrary(string dllPath)
         {
+            uint dwExitCode;
+
             var hProcess = OpenProcess(PROCESS_ALL_ACCESS, false, Process.Id);
 
             var szFileName = Marshal.StringToHGlobalUni(dllPath);
@@ -139,20 +145,21 @@ namespace osu_Lyrics.Interop
             WriteProcessMemory(hProcess, pParameter, szFileName, nFileNameLength, out _);
             Marshal.FreeHGlobal(szFileName);
 
-            var pThreadProc = GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryW");
+            var pThreadProc = GetProcAddress(GetModuleHandle(ExternDll.Kernel32), "LoadLibraryW");
 
             var hThread = CreateRemoteThread(hProcess, IntPtr.Zero, 0, pThreadProc, pParameter, 0, IntPtr.Zero);
             WaitForSingleObject(hThread, INFINITE);
+            GetExitCodeThread(hThread, out dwExitCode);
             CloseHandle(hThread);
 
             VirtualFreeEx(hProcess, pParameter, 0, MEM_RELEASE);
 
             CloseHandle(hProcess);
 
-            return hThread != IntPtr.Zero;
+            return new IntPtr(dwExitCode);
         }
 
-        private static void ListenIPC(Action<string> onSignal)
+        private static void ListenMessage()
         {
             // 백그라운드에서 서버로부터 데이터를 받아 전달
             using (var pipe = new NamedPipeClientStream(".", "osu!Lyrics", PipeDirection.In, PipeOptions.None))
@@ -161,21 +168,13 @@ namespace osu_Lyrics.Interop
                 pipe.Connect();
                 while (pipe.IsConnected && !sr.EndOfStream)
                 {
-                    onSignal.BeginInvoke(sr.ReadLine(), null, null);
+                    var e = new MessageReceivedEventArgs(sr.ReadLine());
+                    MessageReceived?.BeginInvoke(null, e, null, null);
                 }
             }
         }
 
-        public static bool Listen(Action<string> onSignal)
-        {
-            if (!PrepareIPC())
-            {
-                return false;
-            }
-
-            Task.Run(() => ListenIPC(onSignal));
-            return true;
-        }
+        public static Task ListenMessageAsync() => Task.Run(() => ListenMessage());
 
         #endregion
 

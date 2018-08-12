@@ -1,8 +1,6 @@
-﻿using System.IO;
-
-namespace osu_Lyrics.Models
+﻿namespace osu_Lyrics.Beatmap
 {
-    internal class Beatmap
+    public class BeatmapMetadata
     {
         public string Title { get; set; }
         public string TitleUnicode { get; set; }
@@ -15,7 +13,7 @@ namespace osu_Lyrics.Models
         public string AudioFile { get; set; }
         public string BackgroundFile { get; set; }
 
-        public Beatmap(Beatmap original = null)
+        public BeatmapMetadata(BeatmapMetadata original = null)
         {
             if (original == null)
             {
