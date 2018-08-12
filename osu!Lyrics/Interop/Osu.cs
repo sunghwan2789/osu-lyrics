@@ -120,6 +120,8 @@ namespace osu_Lyrics.Interop
 
         public static event EventHandler<MessageReceivedEventArgs> MessageReceived;
 
+        private static IntPtr MessageServerHandle;
+
         public static void RunMessageServer()
         {
             // dll의 fileVersion을 바탕으로 버전별로 겹치지 않는 경로에 압축 풀기:
@@ -128,11 +130,13 @@ namespace osu_Lyrics.Interop
             var dest = Constants._Server + "." + FileVersionInfo.GetVersionInfo(Constants._Server).FileVersion;
             IO.FileEx.Move(Constants._Server, dest);
 
-            InjectDll(dest);
+            MessageServerHandle = LoadLibrary(dest);
         }
 
-        private static bool InjectDll(string dllPath)
+        private static IntPtr LoadLibrary(string dllPath)
         {
+            uint dwExitCode;
+
             var hProcess = OpenProcess(PROCESS_ALL_ACCESS, false, Process.Id);
 
             var szFileName = Marshal.StringToHGlobalUni(dllPath);
@@ -145,13 +149,14 @@ namespace osu_Lyrics.Interop
 
             var hThread = CreateRemoteThread(hProcess, IntPtr.Zero, 0, pThreadProc, pParameter, 0, IntPtr.Zero);
             WaitForSingleObject(hThread, INFINITE);
+            GetExitCodeThread(hThread, out dwExitCode);
             CloseHandle(hThread);
 
             VirtualFreeEx(hProcess, pParameter, 0, MEM_RELEASE);
 
             CloseHandle(hProcess);
 
-            return hThread != IntPtr.Zero;
+            return new IntPtr(dwExitCode);
         }
 
         private static void ListenMessage()

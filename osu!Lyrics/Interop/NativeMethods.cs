@@ -112,6 +112,10 @@ namespace osu_Lyrics.Interop
 
         public const uint INFINITE = 0xFFFFFFFF;
 
+        [return: MarshalAs(UnmanagedType.Bool)]
+        [DllImport(ExternDll.Kernel32, SetLastError = true)]
+        public static extern bool GetExitCodeThread(IntPtr hThread, out uint lpExitCode);
+
         [DllImport(ExternDll.Kernel32, SetLastError = true)]
         public static extern uint GlobalSize(IntPtr hMem);
 
