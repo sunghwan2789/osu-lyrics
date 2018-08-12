@@ -113,13 +113,15 @@ public:
             while (m_isThreadRunning)
             {
                 //
-                // ConnectNamedPipe는 클라이언트와 연결될\ 때까지 무한 대기함:
+                // ConnectNamedPipe는 클라이언트와 연결될 때까지 무한 대기함:
                 // 취소는 DisconnectNamedPipe로 가능
                 //
                 if (ConnectNamedPipe(m_hPipe, NULL) || GetLastError() == ERROR_PIPE_CONNECTED)
                 {
                     m_isPipeConnected = true;
 
+                    // 메시지 큐가 비었을 때 최대 3초간 기다리고 다시 시도:
+                    // 클라이언트 접속을 대기해야 하기 때문에 INTINITE 지양
                     if (!m_ThreadQueues.try_pop(wMessage))
                     {
                         WaitForSingleObject(m_hEvent, 3000);
@@ -130,12 +132,15 @@ public:
                     {
                         continue;
                     }
-
-                    m_isPipeConnected = false;
-                    DisconnectNamedPipe(m_hPipe);
                 }
+
+                // ConnectedNamedPipe 또는 WriteFile 실패 시
+                // 이전 client가 연결을 끊은 것이므로 handle 정리
+                m_isPipeConnected = false;
+                DisconnectNamedPipe(m_hPipe);
             }
 
+            // 클라이언트 연결 종료
             m_isPipeConnected = false;
             DisconnectNamedPipe(m_hPipe);
             CloseHandle(m_hPipe);
@@ -147,6 +152,8 @@ public:
     void Stop()
     {
         m_isThreadRunning = false;
+        // 무한 대기 중인 ConnectNamedPipe 취소
+        DisconnectNamedPipe(m_hPipe);
         m_ThreadObject->join();
         delete m_ThreadObject;
 
