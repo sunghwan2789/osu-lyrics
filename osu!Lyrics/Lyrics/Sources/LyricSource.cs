@@ -13,7 +13,7 @@ namespace osu_Lyrics.Lyrics.Sources
 
         static LyricSource()
         {
-            AlsongGetLyric5.Register();
+            AlsongGetLyric7.Register();
             AlsongGetResembleLyric2.Register();
         }
 

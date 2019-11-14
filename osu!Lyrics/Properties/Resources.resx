@@ -120,6 +120,22 @@
   <data name="GetLyric5" xml:space="preserve">
     <value>&lt;Envelope xmlns="http://www.w3.org/2003/05/soap-envelope"&gt;&lt;Body&gt;&lt;GetLyric5 xmlns="ALSongWebServer"&gt;&lt;stQuery&gt;&lt;strChecksum&gt;[HASH]&lt;/strChecksum&gt;&lt;strVersion/&gt;&lt;strMACAddress/&gt;&lt;strIPAddress/&gt;&lt;/stQuery&gt;&lt;/GetLyric5&gt;&lt;/Body&gt;&lt;/Envelope&gt;</value>
   </data>
+  <data name="GetLyric7" xml:space="preserve">
+    <value>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope" xmlns:SOAP-ENC="http://www.w3.org/2003/05/soap-encoding" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:ns2="ALSongWebServer/Service1Soap" xmlns:ns1="ALSongWebServer" xmlns:ns3="ALSongWebServer/Service1Soap12"&gt;
+	&lt;SOAP-ENV:Body&gt;
+		&lt;ns1:GetLyric7&gt;
+			&lt;ns1:encData&gt;7c2d15b8f51ac2f3b2a37d7a445c3158455defb8a58d621eb77a3ff8ae4921318e49cefe24e515f79892a4c29c9a3e204358698c1cfe79c151c04f9561e945096ccd1d1c0a8d8f265a2f3fa7995939b21d8f663b246bbc433c7589da7e68047524b80e16f9671b6ea0faaf9d6cde1b7dbcf1b89aa8a1d67a8bbc566664342e12&lt;/ns1:encData&gt;
+			&lt;ns1:stQuery&gt;
+				&lt;ns1:strChecksum&gt;[HASH]&lt;/ns1:strChecksum&gt;
+				&lt;ns1:strVersion/&gt;
+				&lt;ns1:strMACAddress/&gt;
+				&lt;ns1:strIPAddress/&gt;
+			&lt;/ns1:stQuery&gt;
+		&lt;/ns1:GetLyric7&gt;
+	&lt;/SOAP-ENV:Body&gt;
+&lt;/SOAP-ENV:Envelope&gt;</value>
+  </data>
   <data name="GetResembleLyric2" xml:space="preserve">
     <value>&lt;Envelope xmlns="http://www.w3.org/2003/05/soap-envelope"&gt;&lt;Body&gt;&lt;GetResembleLyric2 xmlns="ALSongWebServer"&gt;&lt;stQuery&gt;&lt;strTitle&gt;[TITLE]&lt;/strTitle&gt;&lt;strArtistName&gt;[ARTIST]&lt;/strArtistName&gt;&lt;/stQuery&gt;&lt;/GetResembleLyric2&gt;&lt;/Body&gt;&lt;/Envelope&gt;</value>
   </data>

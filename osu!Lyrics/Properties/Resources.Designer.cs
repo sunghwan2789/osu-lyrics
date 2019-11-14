@@ -19,7 +19,7 @@ namespace osu_Lyrics.Properties {
     // 클래스에서 자동으로 생성되었습니다.
     // 멤버를 추가하거나 제거하려면 .ResX 파일을 편집한 다음 /str 옵션을 사용하여 ResGen을
     // 다시 실행하거나 VS 프로젝트를 다시 빌드하십시오.
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "4.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "15.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     internal class Resources {
@@ -66,6 +66,19 @@ namespace osu_Lyrics.Properties {
         internal static string GetLyric5 {
             get {
                 return ResourceManager.GetString("GetLyric5", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   &lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+        ///&lt;SOAP-ENV:Envelope xmlns:SOAP-ENV=&quot;http://www.w3.org/2003/05/soap-envelope&quot; xmlns:SOAP-ENC=&quot;http://www.w3.org/2003/05/soap-encoding&quot; xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot; xmlns:xsd=&quot;http://www.w3.org/2001/XMLSchema&quot; xmlns:ns2=&quot;ALSongWebServer/Service1Soap&quot; xmlns:ns1=&quot;ALSongWebServer&quot; xmlns:ns3=&quot;ALSongWebServer/Service1Soap12&quot;&gt;
+        ///	&lt;SOAP-ENV:Body&gt;
+        ///		&lt;ns1:GetLyric7&gt;
+        ///			&lt;ns1:encData&gt;7c2d15b8f51ac2f3b2a37d7a445c3158455defb8a58d621eb77a3ff8ae4921318e49cefe2[나머지 문자열은 잘림]&quot;;과(와) 유사한 지역화된 문자열을 찾습니다.
+        /// </summary>
+        internal static string GetLyric7 {
+            get {
+                return ResourceManager.GetString("GetLyric7", resourceCulture);
             }
         }
         
