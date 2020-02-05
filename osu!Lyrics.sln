@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27130.2010
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29728.190
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osu!Lyrics", "osu!Lyrics\osu!Lyrics.csproj", "{9161CC52-C03B-4CCD-AC44-A94C208D31F3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "osu!Lyrics", "osu!Lyrics\osu!Lyrics.csproj", "{9161CC52-C03B-4CCD-AC44-A94C208D31F3}"
 	ProjectSection(ProjectDependencies) = postProject
 		{55B49E76-AA07-447F-ADE2-B170269EC1EB} = {55B49E76-AA07-447F-ADE2-B170269EC1EB}
 	EndProjectSection
@@ -12,10 +12,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Server", "Server\Server.vcx
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{D28D2AA9-2B4A-44A6-8DDC-5EA3BD35B112}"
 	ProjectSection(SolutionItems) = preProject
+		Directory.Build.props = Directory.Build.props
 		LICENSE = LICENSE
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osu!Lyrics.Test", "osu!Lyrics.Test\osu!Lyrics.Test.csproj", "{04660BB7-C1AB-430D-988B-33D8A29B37B4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "osu!Lyrics.Tests", "osu!Lyrics.Tests\osu!Lyrics.Tests.csproj", "{04660BB7-C1AB-430D-988B-33D8A29B37B4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -23,10 +24,10 @@ Global
 		Release|Win32 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{9161CC52-C03B-4CCD-AC44-A94C208D31F3}.Debug|Win32.ActiveCfg = Debug|x86
-		{9161CC52-C03B-4CCD-AC44-A94C208D31F3}.Debug|Win32.Build.0 = Debug|x86
-		{9161CC52-C03B-4CCD-AC44-A94C208D31F3}.Release|Win32.ActiveCfg = Release|x86
-		{9161CC52-C03B-4CCD-AC44-A94C208D31F3}.Release|Win32.Build.0 = Release|x86
+		{9161CC52-C03B-4CCD-AC44-A94C208D31F3}.Debug|Win32.ActiveCfg = Debug|Any CPU
+		{9161CC52-C03B-4CCD-AC44-A94C208D31F3}.Debug|Win32.Build.0 = Debug|Any CPU
+		{9161CC52-C03B-4CCD-AC44-A94C208D31F3}.Release|Win32.ActiveCfg = Release|Any CPU
+		{9161CC52-C03B-4CCD-AC44-A94C208D31F3}.Release|Win32.Build.0 = Release|Any CPU
 		{55B49E76-AA07-447F-ADE2-B170269EC1EB}.Debug|Win32.ActiveCfg = Debug|Win32
 		{55B49E76-AA07-447F-ADE2-B170269EC1EB}.Debug|Win32.Build.0 = Debug|Win32
 		{55B49E76-AA07-447F-ADE2-B170269EC1EB}.Release|Win32.ActiveCfg = Release|Win32

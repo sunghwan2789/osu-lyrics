@@ -1,120 +1,41 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{9161CC52-C03B-4CCD-AC44-A94C208D31F3}</ProjectGuid>
     <OutputType>WinExe</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <TargetFramework>net45</TargetFramework>
     <RootNamespace>osu_Lyrics</RootNamespace>
-    <AssemblyName>osu!Lyrics</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <TargetFrameworkProfile />
   </PropertyGroup>
+
   <PropertyGroup>
+    <AssemblyTitle>osu!Lyrics</AssemblyTitle>
+    <Company>https://github.com/sunghwan2789/osu-lyrics</Company>
+    <Product>osu!Lyrics</Product>
+    <NeutralLanguage>ko-KR</NeutralLanguage>
+    <Description>가사가 궁금해</Description>
+    <Copyright>BloodCat 2014-2020</Copyright>
+    <Version>1.8.65</Version>
+    <FileVersion>1.8.65</FileVersion>
     <ApplicationIcon>Icon.ico</ApplicationIcon>
-  </PropertyGroup>
-  <PropertyGroup>
-    <StartupObject />
-  </PropertyGroup>
-  <PropertyGroup>
     <NoWin32Manifest>true</NoWin32Manifest>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
-    <DebugSymbols>true</DebugSymbols>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <DebugType>full</DebugType>
-    <PlatformTarget>x86</PlatformTarget>
-    <ErrorReport>prompt</ErrorReport>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-    <LangVersion>latest</LangVersion>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <Optimize>true</Optimize>
-    <DebugType>pdbonly</DebugType>
-    <PlatformTarget>x86</PlatformTarget>
-    <ErrorReport>prompt</ErrorReport>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-  </PropertyGroup>
+
   <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Drawing" />
+    <InternalsVisibleTo Include="osu!Lyrics.Tests" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <PreBuildEvent>copy /y "$(SolutionDir)Server\bin\$(Configuration)\Server.dll" "$(MSBuildProjectDirectory)"</PreBuildEvent>
+  </PropertyGroup>
+
+  <ItemGroup>
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Windows.Forms" />
-    <Reference Include="System.Xml" />
   </ItemGroup>
+
   <ItemGroup>
-    <Compile Include="Beatmap\Formats\BeatmapDecoder.cs" />
-    <Compile Include="Beatmap\Formats\OsuLegacyDecoder.cs" />
-    <Compile Include="Audio\AudioInfo.cs" />
-    <Compile Include="Audio\Formats\AudioDecoder.cs" />
-    <Compile Include="Beatmap\BeatmapMetadata.cs" />
-    <Compile Include="Constants.cs" />
-    <Compile Include="Forms\GhostLayeredForm.cs" />
-    <Compile Include="Interop\MessageReceivedEventArgs.cs" />
-    <Compile Include="IO\FileEx.cs" />
-    <Compile Include="Interop\ExternDll.cs" />
-    <Compile Include="Forms\LayeredForm.cs" />
-    <Compile Include="Lyrics\Lyric.cs" />
-    <Compile Include="Lyrics\LyricLine.cs" />
-    <Compile Include="CanvasForm.cs" />
-    <Compile Include="CanvasForm.Designer.cs">
-      <DependentUpon>CanvasForm.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Audio\Formats\MpegDecoder.cs" />
-    <Compile Include="Audio\Formats\OggDecoder.cs" />
-    <Compile Include="Interop\Osu.cs" />
-    <Compile Include="Lyrics\LyricManager.cs" />
-    <Compile Include="Lyrics\LyricNotFoundException.cs" />
-    <Compile Include="Lyrics\Sources\AlsongGetLyric7.cs" />
-    <Compile Include="Lyrics\Sources\AlsongGetResembleLyric2.cs" />
-    <Compile Include="Lyrics\Sources\AlsongSource.cs" />
-    <Compile Include="Lyrics\Sources\LyricSource.cs" />
-    <Compile Include="Program.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Properties\Resources.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>Resources.resx</DependentUpon>
-    </Compile>
-    <Compile Include="Request.cs" />
-    <Compile Include="Settings.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Settings.Designer.cs">
-      <DependentUpon>Settings.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Interop\NativeMethods.cs" />
   </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Properties\Resources.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-    </EmbeddedResource>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Icon.ico" />
-  </ItemGroup>
+
   <ItemGroup>
     <EmbeddedResource Include="Server.dll" />
   </ItemGroup>
-  <ItemGroup />
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <PropertyGroup>
-    <PreBuildEvent>copy /y "$(SolutionDir)Server\bin\$(ConfigurationName)\Server.dll" "$(ProjectDir)"</PreBuildEvent>
-  </PropertyGroup>
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
 </Project>

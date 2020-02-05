@@ -1,4 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using osu_Lyrics.Lyrics;
 using osu_Lyrics.Lyrics.Sources;
 using System;
 using System.Collections.Generic;
@@ -8,11 +9,11 @@ using System.Threading.Tasks;
 
 namespace osu_Lyrics.Lyrics.Sources.Tests
 {
-    [TestClass()]
+    [TestClass]
     public class LyricSourceTests
     {
-        [TestMethod()]
-        public void GetLyricsAsyncTest()
+        [TestMethod]
+        public async Task GetLyricsAsyncTest()
         {
             var au = new Audio.AudioInfo { CheckSum = "좋은 날", Beatmap = new Beatmap.BeatmapMetadata { Artist = "아이유", Title = "좋은 날" } };
             var a = LyricSource.GetLyricsAsync(au);
@@ -22,7 +23,7 @@ namespace osu_Lyrics.Lyrics.Sources.Tests
             {
                 try
                 {
-                    ret = lyricTask.GetAwaiter().GetResult();
+                    ret = await lyricTask;
                     break;
                 }
                 catch { }

@@ -9,15 +9,15 @@ using System.Threading.Tasks;
 
 namespace osu_Lyrics.Lyrics.Sources.Tests
 {
-    [TestClass()]
+    [TestClass]
     public class AlsongSourceTests
     {
-        [TestMethod()]
+        [TestMethod]
         public void RegisterTest()
         {
         }
 
-        [TestMethod()]
+        [TestMethod]
         public void GetLyric7AsyncTest()
         {
             var al = new AlsongGetLyric7();
@@ -30,7 +30,7 @@ namespace osu_Lyrics.Lyrics.Sources.Tests
             catch (IndexOutOfRangeException) { }
         }
 
-        [TestMethod()]
+        [TestMethod]
         public void GetResembleLyric2AsyncTest()
         {
             var al = new AlsongGetResembleLyric2();

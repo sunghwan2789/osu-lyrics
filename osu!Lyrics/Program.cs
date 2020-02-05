@@ -5,6 +5,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("osu!Lyrics.Tests")]
+
 namespace osu_Lyrics
 {
     internal class Program
@@ -54,7 +56,7 @@ namespace osu_Lyrics
                 len = 8;
             }
             len -= 4;
-            return (long) IntB(buff, offset) << 8 * len | IntB(buff, offset + 4, len);
+            return (long)IntB(buff, offset) << 8 * len | IntB(buff, offset + 4, len);
         }
 
         public static int Int(byte[] buff, int offset, int len = 4)
