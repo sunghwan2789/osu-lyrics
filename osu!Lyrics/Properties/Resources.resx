@@ -117,12 +117,6 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="GetLyric5" xml:space="preserve">
-    <value>&lt;Envelope xmlns="http://www.w3.org/2003/05/soap-envelope"&gt;&lt;Body&gt;&lt;GetLyric5 xmlns="ALSongWebServer"&gt;&lt;stQuery&gt;&lt;strChecksum&gt;[HASH]&lt;/strChecksum&gt;&lt;strVersion/&gt;&lt;strMACAddress/&gt;&lt;strIPAddress/&gt;&lt;/stQuery&gt;&lt;/GetLyric5&gt;&lt;/Body&gt;&lt;/Envelope&gt;</value>
-  </data>
-  <data name="GetResembleLyric2" xml:space="preserve">
-    <value>&lt;Envelope xmlns="http://www.w3.org/2003/05/soap-envelope"&gt;&lt;Body&gt;&lt;GetResembleLyric2 xmlns="ALSongWebServer"&gt;&lt;stQuery&gt;&lt;strTitle&gt;[TITLE]&lt;/strTitle&gt;&lt;strArtistName&gt;[ARTIST]&lt;/strArtistName&gt;&lt;/stQuery&gt;&lt;/GetResembleLyric2&gt;&lt;/Body&gt;&lt;/Envelope&gt;</value>
-  </data>
   <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
   <data name="Icon" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Icon.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>

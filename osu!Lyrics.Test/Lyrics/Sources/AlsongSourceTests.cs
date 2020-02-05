@@ -18,9 +18,9 @@ namespace osu_Lyrics.Lyrics.Sources.Tests
         }
 
         [TestMethod()]
-        public void GetLyric5AsyncTest()
+        public void GetLyric7AsyncTest()
         {
-            var al = new AlsongGetLyric5();
+            var al = new AlsongGetLyric7();
             var au = new Audio.AudioInfo { CheckSum = "좋은 날" };
             try
             {

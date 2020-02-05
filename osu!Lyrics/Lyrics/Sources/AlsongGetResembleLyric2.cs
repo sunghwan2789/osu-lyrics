@@ -7,20 +7,24 @@ using System.Threading.Tasks;
 
 namespace osu_Lyrics.Lyrics.Sources
 {
-    class AlsongGetResembleLyric2 : AlsongSource
+    internal class AlsongGetResembleLyric2 : AlsongSource
     {
         public static void Register()
         {
             AddSource<AlsongGetResembleLyric2>();
         }
 
-        public override Task<Lyric> GetLyricAsync(AudioInfo audio)
-        {
-            var data = Properties.Resources.ResourceManager.GetString("GetResembleLyric2");
-            var title = audio.Beatmap.TitleUnicode ?? audio.Beatmap.Title;
-            var artist = audio.Beatmap.ArtistUnicode ?? audio.Beatmap.Artist;
-            data = data.Replace("[TITLE]", title).Replace("[ARTIST]", artist);
-            return GetLyricAsync("GetResembleLyric2", data);
-        }
+        public override Task<Lyric> GetLyricAsync(AudioInfo audio) =>
+            GetLyricAsync("GetResembleLyric2", $@"<?xml version='1.0' encoding='UTF-8'?>
+<Envelope xmlns='http://www.w3.org/2003/05/soap-envelope'>
+    <Body>
+        <GetResembleLyric2 xmlns='ALSongWebServer'>
+            <stQuery>
+                <strTitle>{audio.Beatmap.TitleUnicode ?? audio.Beatmap.Title}</strTitle>
+                <strArtistName>{audio.Beatmap.ArtistUnicode ?? audio.Beatmap.Artist}</strArtistName>
+            </stQuery>
+        </GetResembleLyric2>
+    </Body>
+</Envelope>");
     }
 }
